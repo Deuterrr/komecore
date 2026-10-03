@@ -1,0 +1,22 @@
+meta {
+  name: Midtrans Payment Webhook
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/midtrans/webhook
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "order_id": "ORD-20260930-001",
+    "transaction_status": "settlement",
+    "status_code": "200",
+    "gross_amount": "185000.00",
+    "payment_type": "bank_transfer",
+    "signature_key": "9a3f2b4c1d8e7f..."
+  }
+}

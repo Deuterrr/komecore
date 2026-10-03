@@ -1,0 +1,41 @@
+# Air configuration for komecore live reload daemon
+# https://github.com/air-verse/air
+
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+  args_bin = []
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd/komecore"
+  delay = 1000
+  exclude_dir = ["assets", "tmp", "vendor", "docs", "migrations", "seeds", "tools", "bin"]
+  exclude_file = []
+  exclude_regex = ["_test.go"]
+  exclude_unchanged = false
+  follow_symlink = false
+  include_dir = ["cmd", "internal", "pkg"]
+  include_ext = ["go", "env"]
+  kill_delay = "0s"
+  log = "build-errors.log"
+  poll = false
+  poll_interval = 0
+  rerun = false
+  rerun_delay = 500
+  send_interrupt = false
+  stop_on_error = true
+
+[color]
+  app = ""
+  build = "yellow"
+  main = "magenta"
+  watcher = "cyan"
+
+[log]
+  main_only = false
+  time = false
+
+[screen]
+  clear_on_rebuild = false
+  keep_scroll = true

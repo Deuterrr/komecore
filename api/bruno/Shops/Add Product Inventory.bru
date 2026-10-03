@@ -1,0 +1,21 @@
+meta {
+  name: Add Product Inventory
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/shops/{{shopId}}/products/{{productId}}/inventories
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "stock": 100
+  }
+}

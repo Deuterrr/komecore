@@ -1,0 +1,18 @@
+meta {
+  name: Verify Account OTP
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/verify
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "challenge_id": "a0000000-0000-0000-0000-000000000001",
+    "otp": "123456"
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Get My Order Tracking (Customer)
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/me/orders/{{orderId}}/tracking
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}

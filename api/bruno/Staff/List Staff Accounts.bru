@@ -1,0 +1,15 @@
+meta {
+  name: List Staff Accounts
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/staff/{{staffId}}/accounts
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}

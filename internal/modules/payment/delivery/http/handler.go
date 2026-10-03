@@ -1,0 +1,276 @@
+package http
+
+import (
+	"net/http"
+
+	apperrors "komecore/internal/common/errors"
+	apphttp "komecore/internal/common/http"
+	authenDomain "komecore/internal/modules/auth/domain"
+	paymentDomain "komecore/internal/modules/payment/domain"
+	"komecore/internal/modules/payment/usecase"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+)
+
+type PaymentHandler struct {
+	savePaymentMethod      *usecase.SavePaymentMethodUsecase
+	listPaymentMethod      *usecase.ListPaymentMethodUsecase
+	processPaymentWebhook  *usecase.ProcessPaymentWebhookUsecase
+	savePaymentInstruction *usecase.SavePaymentInstructionUsecase
+	getPaymentDetail       *usecase.GetPaymentDetailUsecase
+	checkPaymentStatus     *usecase.CheckPaymentStatusUsecase
+}
+
+func NewPaymentHandler(
+	savePaymentMethod *usecase.SavePaymentMethodUsecase,
+	listPaymentMethod *usecase.ListPaymentMethodUsecase,
+	processPaymentWebhook *usecase.ProcessPaymentWebhookUsecase,
+	savePaymentInstruction *usecase.SavePaymentInstructionUsecase,
+	getPaymentDetail *usecase.GetPaymentDetailUsecase,
+	checkPaymentStatus *usecase.CheckPaymentStatusUsecase,
+) *PaymentHandler {
+	return &PaymentHandler{
+		savePaymentMethod:      savePaymentMethod,
+		listPaymentMethod:      listPaymentMethod,
+		processPaymentWebhook:  processPaymentWebhook,
+		savePaymentInstruction: savePaymentInstruction,
+		getPaymentDetail:       getPaymentDetail,
+		checkPaymentStatus:     checkPaymentStatus,
+	}
+}
+
+func (h *PaymentHandler) UpdatePaymentMethodActive(w http.ResponseWriter, r *http.Request) error {
+	idStr := chi.URLParam(r, "methodID")
+	methodID, err := uuid.Parse(idStr)
+	if err != nil {
+		return apperrors.NewBadRequest("invalid payment method ID")
+	}
+
+	var req updatePaymentMethodActiveRequest
+	if err := apphttp.DecodeJSON(r, &req); err != nil {
+		return apperrors.NewBadRequest("invalid body request")
+	}
+
+	input := usecase.SavePaymentMethodInput{
+		ID:       methodID,
+		IsActive: req.IsActive,
+	}
+
+	err = h.savePaymentMethod.Execute(r.Context(), input)
+	if err != nil {
+		return err
+	}
+
+	response := map[string]string{
+		"message": "payment method successfully updated",
+	}
+
+	apphttp.WriteJSON(w, http.StatusOK, response)
+	return nil
+}
+
+func (h *PaymentHandler) ListPaymentMethod(w http.ResponseWriter, r *http.Request) error {
+	sortParam := apphttp.Query(r, "sort")
+	input := usecase.ListPaymentMethodInput{
+		Sort: sortParam,
+	}
+
+	payMethods, err := h.listPaymentMethod.ListAll(r.Context(), input)
+	if err != nil {
+		return err
+	}
+
+	paymentMthds := make([]paymentMethodResponse, 0, len(payMethods))
+	for _, p := range payMethods {
+		pM := paymentMethodResponse{
+			ID:            p.ID,
+			Name:          p.Name,
+			Code:          p.Code,
+			Provider:      p.Provider,
+			Type:          string(p.Type),
+			IsActive:      p.IsActive,
+			Description:   p.Description,
+			FeeType:       string(p.FeeType),
+			FeeFixed:      p.FeeFixed,
+			FeePercentage: p.FeePercentage,
+			FeeMax:        p.FeeMax,
+		}
+
+		if p.Instruction != nil {
+			pM.Instruction = &paymentInstructionResponse{
+				ID:        p.Instruction.ID,
+				Content:   p.Instruction.Content,
+				CreatedAt: p.Instruction.CreatedAt,
+			}
+		}
+
+		paymentMthds = append(paymentMthds, pM)
+	}
+
+	response := map[string][]paymentMethodResponse{
+		"methods": paymentMthds,
+	}
+
+	apphttp.WriteJSON(w, http.StatusOK, response)
+	return nil
+}
+
+func (h *PaymentHandler) HandleMidtransWebhook(w http.ResponseWriter, r *http.Request) error {
+	var payload map[string]any
+	if err := apphttp.DecodeJSON(r, &payload); err != nil {
+		return apperrors.NewBadRequest("invalid payload")
+	}
+
+	input := usecase.ProcessPaymentWebhookInput{
+		Payload: payload,
+	}
+
+	if err := h.processPaymentWebhook.Execute(r.Context(), input); err != nil {
+		return err
+	}
+
+	response := map[string]string{
+		"message": "webhook processed successfully",
+	}
+
+	apphttp.WriteJSON(w, http.StatusOK, response)
+	return nil
+}
+
+func (h *PaymentHandler) SavePaymentInstruction(w http.ResponseWriter, r *http.Request) error {
+	methodIDStr := chi.URLParam(r, "methodID")
+	methodID, err := uuid.Parse(methodIDStr)
+	if err != nil {
+		return apperrors.NewBadRequest("invalid payment method ID")
+	}
+
+	var req savePaymentInstructionRequest
+	if err := apphttp.DecodeJSON(r, &req); err != nil {
+		return apperrors.NewBadRequest("invalid body request")
+	}
+
+	if req.Content == "" {
+		return apperrors.NewBadRequest("content cannot be empty")
+	}
+
+	input := usecase.SavePaymentInstructionInput{
+		PaymentMethodID: methodID,
+		Content:         req.Content,
+	}
+
+	err = h.savePaymentInstruction.Execute(r.Context(), input)
+	if err != nil {
+		return err
+	}
+
+	response := map[string]string{
+		"message": "payment instruction successfully saved",
+	}
+
+	apphttp.WriteJSON(w, http.StatusOK, response)
+	return nil
+}
+
+func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Request) error {
+	authCtx, ok := authenDomain.GetAuthContext(r.Context())
+	if !ok || !authCtx.IsAuthenticated {
+		return apperrors.NewUnauthorized("authentication required")
+	}
+	if authCtx.CustomerID == nil {
+		return apperrors.NewForbidden("customer account required")
+	}
+
+	customerID := *authCtx.CustomerID
+
+	orderIDStr := chi.URLParam(r, "orderID")
+	orderID, err := uuid.Parse(orderIDStr)
+	if err != nil {
+		return apperrors.NewBadRequest("invalid order id")
+	}
+
+	result, err := h.getPaymentDetail.Execute(r.Context(), usecase.GetPaymentDetailInput{
+		OrderID:    orderID,
+		CustomerID: &customerID,
+	})
+	if err != nil {
+		return err
+	}
+
+	resp := getPaymentDetailResponse{
+		PaymentID: result.Payment.ID.String(),
+		Status:    string(result.Payment.Status),
+		Amount:    result.Payment.Amount,
+		ExpiresAt: result.Payment.ExpiresAt,
+	}
+
+	if result.ChannelData != nil {
+		channelTypeStr := string(result.ChannelData.ChannelType)
+		resp.ChannelType = &channelTypeStr
+		resp.DisplayName = &result.ChannelData.DisplayName
+		resp.ActionURL = result.ChannelData.ActionURL
+
+		resp.ChannelData = &paymentChannelDataResponse{
+			ChannelType: channelTypeStr,
+			DisplayName: result.ChannelData.DisplayName,
+			ActionURL:   result.ChannelData.ActionURL,
+			ExpiresAt:   result.ChannelData.ExpiresAt,
+		}
+
+		if result.ChannelData.AccountNumber != nil {
+			resp.AccountName = &result.ChannelData.DisplayName
+			resp.AccountNumber = result.ChannelData.AccountNumber
+		} else if result.ChannelData.ChannelType == paymentDomain.TypeBankTransfer {
+			resp.AccountName = &result.ChannelData.DisplayName
+			resp.AccountNumber = result.ChannelData.ActionURL
+		}
+
+		if result.ChannelData.QRString != nil {
+			resp.QRString = result.ChannelData.QRString
+		} else if result.ChannelData.ChannelType == paymentDomain.TypeQRCode {
+			resp.QRString = result.ChannelData.ActionURL
+		}
+	}
+
+	resp.Instruction = result.Instruction
+
+	apphttp.WriteJSON(w, http.StatusOK, resp)
+	return nil
+}
+
+// CheckMyOrderPaymentStatus is the customer-triggered payment sync endpoint.
+//
+// When a customer's payment appears stuck as 'pending' after they have paid,
+// calling this endpoint immediately queries Midtrans for the current status
+// and resolves the payment — without waiting for the background reconciler.
+func (h *PaymentHandler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *http.Request) error {
+	authCtx, ok := authenDomain.GetAuthContext(r.Context())
+	if !ok || !authCtx.IsAuthenticated {
+		return apperrors.NewUnauthorized("authentication required")
+	}
+	if authCtx.CustomerID == nil {
+		return apperrors.NewForbidden("customer account required")
+	}
+
+	orderIDStr := chi.URLParam(r, "orderID")
+	orderID, err := uuid.Parse(orderIDStr)
+	if err != nil {
+		return apperrors.NewBadRequest("invalid order id")
+	}
+
+	input := usecase.CheckPaymentStatusInput{
+		OrderID:    orderID,
+		CustomerID: *authCtx.CustomerID,
+	}
+
+	result, err := h.checkPaymentStatus.Execute(r.Context(), input)
+	if err != nil {
+		return err
+	}
+
+	apphttp.WriteJSON(w, http.StatusOK, checkPaymentStatusResponse{
+		Status: string(result.Status),
+		Synced: result.Synced,
+	})
+	return nil
+}

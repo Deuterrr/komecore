@@ -1,0 +1,15 @@
+meta {
+  name: Get User by ID
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/{{userId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}

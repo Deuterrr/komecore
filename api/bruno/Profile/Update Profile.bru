@@ -1,0 +1,23 @@
+meta {
+  name: Update Profile
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/v1/profile
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "name": "Johnathan Doe",
+    "phone": "+6281298765432",
+    "avatar_url": "https://example.com/avatar.jpg"
+  }
+}

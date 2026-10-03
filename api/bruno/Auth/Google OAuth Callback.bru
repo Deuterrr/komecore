@@ -1,0 +1,16 @@
+meta {
+  name: Google OAuth Callback
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/google/callback?state=xyz&code=abc
+  body: none
+  auth: none
+}
+
+params:query {
+  state: xyz
+  code: abc
+}

@@ -1,0 +1,17 @@
+meta {
+  name: Refresh Token (Staff)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/staff/refresh
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "refresh_token": "sample_staff_refresh_token_string"
+  }
+}

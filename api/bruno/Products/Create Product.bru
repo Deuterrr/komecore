@@ -1,0 +1,29 @@
+meta {
+  name: Create Product
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/products
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "sku": "PRD-RICE-001",
+    "name": "Organic Japonica Rice 5kg",
+    "description": "Premium short-grain sushi rice from vetted local farmers.",
+    "is_available": true,
+    "status": "active",
+    "price": 85000,
+    "weight": 5000.0,
+    "cost_price": 60000,
+    "supplier_lead_time_days": 2
+  }
+}

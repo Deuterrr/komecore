@@ -1,0 +1,15 @@
+meta {
+  name: Get Order Detail (Staff)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/orders/{{orderId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}

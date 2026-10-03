@@ -1,0 +1,24 @@
+meta {
+  name: Update Cart Item by ID (PUT)
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/v1/carts/items/{{cartItemId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "quantity": 3,
+    "item_options": {
+      "variant": "5kg"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Remove Cart Item by Shop/Product
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/carts/items/{{shopId}}/{{productId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}

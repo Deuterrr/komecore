@@ -1,0 +1,21 @@
+meta {
+  name: Update Product Inventory
+  type: http
+  seq: 12
+}
+
+put {
+  url: {{baseUrl}}/api/v1/shops/{{shopId}}/products/{{productId}}/inventories
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "stock": 150
+  }
+}

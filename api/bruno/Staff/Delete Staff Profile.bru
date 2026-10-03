@@ -1,0 +1,15 @@
+meta {
+  name: Delete Staff Profile
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/staff/{{staffId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}

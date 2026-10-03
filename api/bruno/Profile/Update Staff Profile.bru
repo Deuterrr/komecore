@@ -1,0 +1,22 @@
+meta {
+  name: Update Staff Profile
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/profile/staff
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "name": "Senior Admin",
+    "phone": "+6281298765432"
+  }
+}

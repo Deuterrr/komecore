@@ -1,0 +1,24 @@
+meta {
+  name: Create Shop
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/shops
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "name": "Kome West Jakarta Hub",
+    "description": "Fulfillment center serving West Jakarta & Tangerang",
+    "is_active": "true",
+    "approval_status": "approved"
+  }
+}

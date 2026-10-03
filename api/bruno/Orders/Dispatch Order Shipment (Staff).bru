@@ -1,0 +1,28 @@
+meta {
+  name: Dispatch Order Shipment (Staff)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/orders/{{orderId}}/shipments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "shop_id": "c0000000-0000-0000-0000-000000000001",
+    "fulfillment_method": "courier",
+    "courier": "jne",
+    "service": "REG",
+    "tracking_number": "JNE9876543210",
+    "item_ids": [
+      "b0000000-0000-0000-0000-000000000001"
+    ]
+  }
+}

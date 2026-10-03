@@ -1,0 +1,21 @@
+meta {
+  name: List My Orders (Customer)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/me/orders?page=1&limit=10&sort=created_at_desc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+  sort: created_at_desc
+}

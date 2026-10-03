@@ -1,0 +1,23 @@
+meta {
+  name: Update Shipment Details (Staff)
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/shipments/{{shipmentId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "tracking_number": "JNE9876543210",
+    "courier": "jne",
+    "service": "REG"
+  }
+}

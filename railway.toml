@@ -1,0 +1,25 @@
+# komecore — Railway Config
+# Docs: https://docs.railway.com/reference/config-as-code
+#
+# Railway Environments:
+#   - production  → main branch
+#   - staging     → staging branch
+#
+# Required Railway Variables (set in dashboard per environment):
+#   APP_NAME, APP_HOST, APP_PORT, APP_ENV, APP_CORS_ALLOWED_ORIGINS,
+#   POSTGRES_DB_HOST, POSTGRES_DB_PORT, POSTGRES_DB_NAME, POSTGRES_DB_USER,
+#   POSTGRES_DB_PASSWORD, POSTGRES_DB_SSLMODE, JWT_SECRET,
+#   STORAGE_BUCKET, STORAGE_SIGNED_URL_EXPIRY,
+#   SUPABASE_PROJECT_URL, SUPABASE_SUPA_KEY,
+#   MIDTRANS_*, SMTP_*
+
+[build]
+builder        = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath        = "/health"
+healthcheckTimeout     = 300
+restartPolicyType      = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+numReplicas            = 1

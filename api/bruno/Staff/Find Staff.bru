@@ -1,0 +1,21 @@
+meta {
+  name: Find Staff
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/staff?page=1&limit=10&sort=created_at_desc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+  sort: created_at_desc
+}

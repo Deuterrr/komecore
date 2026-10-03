@@ -1,0 +1,17 @@
+meta {
+  name: Find Shops
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/shops?page=1&limit=10&active=true
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  limit: 10
+  active: true
+}

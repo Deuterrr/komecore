@@ -1,0 +1,18 @@
+meta {
+  name: Find Products Catalog
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products?page=1&limit=10&status=active&sort=price_asc
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  limit: 10
+  status: active
+  sort: price_asc
+}

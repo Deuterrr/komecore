@@ -1,0 +1,25 @@
+meta {
+  name: Estimate Shipping Cost
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/shipping/cost
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "shop_id": "c0000000-0000-0000-0000-000000000001",
+    "origin": 3173,
+    "destination": 3174,
+    "weight": 1000,
+    "price_filter": "lowest"
+  }
+}

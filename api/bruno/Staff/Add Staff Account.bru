@@ -1,0 +1,22 @@
+meta {
+  name: Add Staff Account
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/staff/{{staffId}}/accounts
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "email": "ops.staff@example.com",
+    "password": "StaffPassword123!"
+  }
+}

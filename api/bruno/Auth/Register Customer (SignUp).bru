@@ -1,0 +1,21 @@
+meta {
+  name: Register Customer (SignUp)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/signup
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "John Doe",
+    "username": "johndoe",
+    "email": "johndoe@example.com",
+    "password": "Password123!",
+    "phone": "+6281234567890"
+  }
+}

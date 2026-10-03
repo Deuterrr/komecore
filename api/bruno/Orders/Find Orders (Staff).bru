@@ -1,0 +1,22 @@
+meta {
+  name: Find Orders (Staff)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/orders?page=1&limit=10&statuses=pending,processing&sort=created_at_desc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+params:query {
+  page: 1
+  limit: 10
+  statuses: pending,processing
+  sort: created_at_desc
+}

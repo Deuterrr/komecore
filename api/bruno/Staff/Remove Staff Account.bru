@@ -1,0 +1,15 @@
+meta {
+  name: Remove Staff Account
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/staff/{{staffId}}/accounts/{{accountId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}

@@ -1,0 +1,19 @@
+meta {
+  name: List Payment Methods
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/payments/methods?sort=name_asc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+params:query {
+  sort: name_asc
+}

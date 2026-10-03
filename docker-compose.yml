@@ -1,0 +1,63 @@
+# KomeCore — Backend Standalone Stack
+# Usage:
+#   docker compose up --build
+
+name: komecore
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: komecore-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+      POSTGRES_USER: ${POSTGRES_DB_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DB_PASSWORD}
+      PGTZ: Asia/Jakarta
+      TZ: Asia/Jakarta
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_DB_USER:-komecore} -d $${POSTGRES_DB_NAME:-komecore_db}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  service-core:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: komecore/api:local
+    container_name: komecore-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB_HOST: postgres
+      POSTGRES_DB_PORT: 5432
+      APP_NAME: komecore
+      APP_HOST: 0.0.0.0
+      APP_PORT: 7129
+      TZ: Asia/Jakarta
+    ports:
+      - "7129:7129"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7129/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  postgres_data:
+    name: komecore-postgres-data

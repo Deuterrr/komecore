@@ -1,0 +1,15 @@
+meta {
+  name: Delete Shop Address
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/shops/{{shopId}}/addresses/{{addressId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}

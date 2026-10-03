@@ -1,0 +1,23 @@
+meta {
+  name: Update Shipment Status (Staff)
+  type: http
+  seq: 1
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/shipments/{{shipmentId}}/status
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "status": "shipped",
+    "description": "Departed sorting facility Jakarta Hub",
+    "location": "Jakarta Hub"
+  }
+}

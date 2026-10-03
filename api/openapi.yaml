@@ -1,0 +1,3185 @@
+openapi: 3.0.3
+info:
+  title: Komecore API Specification
+  description: High-performance general e-commerce engine REST API built in Go (Chi v5). Contains full, exact documentation for all endpoints matching Go DTO structs.
+  version: 1.0.0
+servers:
+  - url: http://localhost:7129
+    description: Local Development Server
+
+tags:
+  - name: Health
+    description: Health check and service readiness
+  - name: Authentication
+    description: Identity, session cookies, tokens, and OAuth
+  - name: Profile
+    description: Current actor profile retrieval and updates
+  - name: Users
+    description: Customer user accounts and saved addresses
+  - name: Staff Administration
+    description: Staff management and administrative account controls
+  - name: Catalog
+    description: Product listings, management, stats, and image uploads
+  - name: Shops & Inventories
+    description: Merchant shop profiles, addresses, and stock levels
+  - name: Cart & Checkout
+    description: Customer shopping cart, estimation, and order checkout
+  - name: Couriers & Logistics
+    description: Available couriers and shipping rate calculation
+  - name: Orders
+    description: Order placement, tracking, and status lifecycle
+  - name: Shipments
+    description: Shipment tracking, waybills, and dispatching
+  - name: Payments
+    description: Payment methods, instructions, and Midtrans webhook
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: healthy }
+
+  # ==============================================================================
+  # AUTHENTICATION & IDENTITY
+  # ==============================================================================
+  /api/v1/auth/signin:
+    post:
+      summary: Customer Sign In
+      description: Authenticates a customer by email and password. Sets HTTP-only session cookies (kome_customer_access, kome_customer_refresh).
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInEmailRequest'
+      responses:
+        '200':
+          description: Authenticated successfully. Cookies are set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "login success"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/staff/signin:
+    post:
+      summary: Staff / Admin Sign In
+      description: Authenticates a staff member by email and password. Sets HTTP-only session cookies (kome_staff_access, kome_staff_refresh).
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInEmailRequest'
+      responses:
+        '200':
+          description: Staff authenticated successfully. Cookies are set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "login success"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/signup:
+    post:
+      summary: Register Customer Account
+      description: Registers a new customer and sends an OTP verification code.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: Verification code sent with challenge ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignUpResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/auth/verify:
+    post:
+      summary: Verify Account OTP
+      description: Verifies customer OTP code using the challenge ID. Authenticates customer upon success.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyAccountRequest'
+      responses:
+        '200':
+          description: Verification success. Session cookies are set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "verify success"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Request Password Reset (Customer)
+      description: Initiates a password reset challenge for a customer account.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset challenge initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPasswordResponse'
+
+  /api/v1/auth/staff/forgot-password:
+    post:
+      summary: Request Password Reset (Staff)
+      description: Initiates a password reset challenge for a staff account.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset challenge initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPasswordResponse'
+
+  /api/v1/auth/forgot-password/verify:
+    post:
+      summary: Verify Password Reset OTP
+      description: Validates the 6-digit OTP code against the challenge ID.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyPasswordResetRequest'
+      responses:
+        '200':
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyPasswordResetResponse'
+
+  /api/v1/auth/forgot-password/reset:
+    post:
+      summary: Reset Password
+      description: Resets password using the verified challenge ID.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "password reset successful"
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh Customer Token
+      description: Obtains a new access token using a refresh token (from body or kome_customer_refresh cookie).
+      tags:
+        - Authentication
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+
+  /api/v1/auth/staff/refresh:
+    post:
+      summary: Refresh Staff Token
+      description: Obtains a new access token for staff (from body or kome_staff_refresh cookie).
+      tags:
+        - Authentication
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: Customer Logout
+      description: Invalidates customer session and clears cookies.
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "logout success"
+
+  /api/v1/auth/staff/logout:
+    post:
+      summary: Staff Logout
+      description: Invalidates staff session and clears cookies.
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "logout success"
+
+  /api/v1/auth/me:
+    get:
+      summary: Get Current Customer Identity & Roles
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      responses:
+        '200':
+          description: Customer auth info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+
+  /api/v1/auth/staff/me:
+    get:
+      summary: Get Current Staff Identity & Roles
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      responses:
+        '200':
+          description: Staff auth info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+
+  /api/v1/auth/google/login:
+    get:
+      summary: Initiate Google OAuth2 Login
+      tags:
+        - Authentication
+      responses:
+        '302':
+          description: Redirect to Google authorization screen
+
+  /api/v1/auth/google/callback:
+    get:
+      summary: Google OAuth2 Callback
+      tags:
+        - Authentication
+      parameters:
+        - name: state
+          in: query
+          required: true
+          schema: { type: string }
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Authenticated successfully via Google. Session cookies set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  # ==============================================================================
+  # PROFILE & USERS
+  # ==============================================================================
+  /api/v1/profile:
+    get:
+      summary: Get Current Profile
+      description: Returns profile details of the currently authenticated customer or staff member.
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+        - CookieStaffAuth: []
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    $ref: '#/components/schemas/ProfileResponse'
+    put:
+      summary: Update Current Profile
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    $ref: '#/components/schemas/ProfileResponse'
+    delete:
+      summary: Delete Customer Account
+      description: Soft deletes the customer account and invalidates sessions.
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "account deleted successfully"
+
+  /api/v1/profile/staff:
+    get:
+      summary: Get Current Staff Profile
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      responses:
+        '200':
+          description: Staff profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    $ref: '#/components/schemas/ProfileResponse'
+    put:
+      summary: Update Current Staff Profile
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Staff profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    $ref: '#/components/schemas/ProfileResponse'
+
+  /api/v1/users/{id}:
+    get:
+      summary: Get User by ID (Staff Admin)
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /api/v1/users/me:
+    get:
+      summary: Get Current User Account (Customer)
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  me:
+                    $ref: '#/components/schemas/UserResponse'
+
+  /api/v1/users/me/addresses:
+    get:
+      summary: List Saved Customer Addresses
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      responses:
+        '200':
+          description: Customer addresses list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomerAddressResponse'
+    post:
+      summary: Create or Save Customer Address
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveCustomerAddressRequest'
+      responses:
+        '200':
+          description: Address created or updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address:
+                    $ref: '#/components/schemas/CustomerAddressResponse'
+
+  /api/v1/users/me/addresses/{addressID}:
+    delete:
+      summary: Delete Customer Address
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: addressID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Address deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "address deleted"
+
+  # ==============================================================================
+  # STAFF ADMINISTRATION
+  # ==============================================================================
+  /api/v1/staff:
+    get:
+      summary: Find Staff Members (Staff Admin)
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: id
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated staff list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  staff:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StaffResponse'
+    post:
+      summary: Create Staff Member Profile (Staff Admin)
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffRequest'
+      responses:
+        '201':
+          description: Staff profile created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffResponse'
+
+  /api/v1/staff/{staffID}:
+    put:
+      summary: Update Staff Member Profile (Staff Admin)
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: staffID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStaffRequest'
+      responses:
+        '200':
+          description: Staff profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffResponse'
+    delete:
+      summary: Delete Staff Member (Staff Admin)
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: staffID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Staff deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /api/v1/staff/{staffID}/accounts:
+    get:
+      summary: List Staff Accounts (Staff Admin)
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: staffID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: List of linked accounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListStaffAccountsResponse'
+    post:
+      summary: Add Staff Account with Login Credentials (Staff Admin)
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: staffID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddStaffAccountRequest'
+      responses:
+        '201':
+          description: Staff account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAccountResponse'
+
+  /api/v1/staff/{staffID}/accounts/{accountID}:
+    delete:
+      summary: Remove Staff Account (Staff Admin)
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: staffID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: accountID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Account removed
+
+  # ==============================================================================
+  # CATALOG & PRODUCTS
+  # ==============================================================================
+  /api/v1/products:
+    get:
+      summary: Find & Filter Products Catalog
+      tags:
+        - Catalog
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: id
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, example: "price_asc" }
+        - name: shop_id
+          in: query
+          schema: { type: string }
+        - name: shop_slug
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, inactive, archived] }
+        - name: include_archived
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Paginated products catalog
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductCatalogResponse'
+    post:
+      summary: Create or Save Product (Staff)
+      tags:
+        - Catalog
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveProductRequest'
+      responses:
+        '201':
+          description: Product created or saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+
+  /api/v1/products/stats:
+    get:
+      summary: Get Product Sales & Conversion Statistics (Staff Admin)
+      tags:
+        - Catalog
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: id
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Product performance stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductStatsResponse'
+
+  /api/v1/products/{slug}:
+    get:
+      summary: Get Product Detail by Slug
+      tags:
+        - Catalog
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Product details with stock availability and gallery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+
+  /api/v1/products/id/{id}:
+    delete:
+      summary: Delete Product (Staff Admin)
+      tags:
+        - Catalog
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Product deleted
+
+  /api/v1/products/id/{id}/images:
+    post:
+      summary: Upload Product Images (Staff)
+      description: Uploads one or more product images via multipart/form-data. The primary image is generated first.
+      tags:
+        - Catalog
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: One or more image files (JPEG, PNG, WEBP)
+      responses:
+        '200':
+          description: Images uploaded and resized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "images uploaded"
+
+  # ==============================================================================
+  # SHOPS & INVENTORIES
+  # ==============================================================================
+  /api/v1/shops:
+    get:
+      summary: Find Shops
+      tags:
+        - Shops & Inventories
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: id
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string }
+        - name: active
+          in: query
+          schema: { type: string }
+        - name: approval_status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Shops list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListShopsResponse'
+    post:
+      summary: Create Shop (Staff Admin)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveShopRequest'
+      responses:
+        '201':
+          description: Shop created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetShopResponse'
+
+  /api/v1/shops/{shopID}:
+    get:
+      summary: Get Shop by ID or Slug
+      tags:
+        - Shops & Inventories
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Shop details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetShopResponse'
+    put:
+      summary: Update Shop Profile (Staff with Permission)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveShopRequest'
+      responses:
+        '200':
+          description: Shop updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetShopResponse'
+    delete:
+      summary: Delete Shop (Staff Admin)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Shop deleted
+
+  /api/v1/shops/{shopID}/addresses:
+    get:
+      summary: List Shop Dispatch Addresses
+      tags:
+        - Shops & Inventories
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Shop addresses list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  addresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShopAddressResponse'
+    post:
+      summary: Add Shop Dispatch Address (Staff)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShopAddressRequest'
+      responses:
+        '201':
+          description: Address created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopAddressResponse'
+
+  /api/v1/shops/{shopID}/addresses/{addressID}:
+    put:
+      summary: Update Shop Address (Staff)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: addressID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShopAddressRequest'
+      responses:
+        '200':
+          description: Address updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopAddressResponse'
+    delete:
+      summary: Delete Shop Address (Staff)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: addressID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Address deleted
+
+  /api/v1/shops/{shopID}/products:
+    get:
+      summary: Get Shop Products & Stock Levels
+      tags:
+        - Shops & Inventories
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: sort
+          in: query
+          schema: { type: string }
+        - name: name
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Products belonging to shop
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShopProductResponse'
+
+  /api/v1/shops/{shopID}/products/{productID}/inventories:
+    post:
+      summary: Add Product Inventory to Shop (Staff)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: productID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInventoryRequest'
+      responses:
+        '200':
+          description: Inventory added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "inventory added"
+    put:
+      summary: Update Product Inventory in Shop (Staff)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: productID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInventoryRequest'
+      responses:
+        '200':
+          description: Inventory updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "inventory updated"
+    delete:
+      summary: Remove Product Inventory from Shop (Staff)
+      tags:
+        - Shops & Inventories
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: productID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Inventory deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "inventory deleted"
+
+  # ==============================================================================
+  # CART & CHECKOUT
+  # ==============================================================================
+  /api/v1/carts:
+    get:
+      summary: Get Customer Shopping Cart
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      responses:
+        '200':
+          description: Cart contents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+
+  /api/v1/carts/items:
+    post:
+      summary: Add Item to Cart
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddItemRequest'
+      responses:
+        '200':
+          description: Item added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "item added to cart"
+
+  /api/v1/carts/items/{shopID}/{productID}:
+    put:
+      summary: Update Cart Item Quantity by Shop and Product ID
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: productID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: Item updated
+    delete:
+      summary: Remove Item from Cart by Shop and Product ID
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: shopID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: productID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item removed from cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "item removed from cart"
+
+  /api/v1/carts/items/{cartItemID}:
+    put:
+      summary: Update Cart Item Quantity by Cart Item ID (PUT)
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: cartItemID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemByIDRequest'
+      responses:
+        '200':
+          description: Item updated
+    patch:
+      summary: Update Cart Item Quantity by Cart Item ID (PATCH)
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: cartItemID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemByIDRequest'
+      responses:
+        '200':
+          description: Item updated
+    delete:
+      summary: Remove Item from Cart by Cart Item ID
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: cartItemID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item removed from cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "item removed from cart"
+
+  /api/v1/carts/checkout/calculate:
+    post:
+      summary: Calculate Checkout Estimation (Pricing, Couriers, Fees)
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutCalculateRequest'
+      responses:
+        '200':
+          description: Checkout calculation breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutCalculateResponse'
+
+  /api/v1/carts/checkout:
+    post:
+      summary: Process Checkout & Create Order from Cart
+      tags:
+        - Cart & Checkout
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Checkout completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+
+  # ==============================================================================
+  # COURIERS & LOGISTICS
+  # ==============================================================================
+  /api/v1/couriers:
+    get:
+      summary: List Supported Logistics Couriers
+      tags:
+        - Couriers & Logistics
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+        - CookieStaffAuth: []
+      responses:
+        '200':
+          description: Couriers list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCouriersResponse'
+
+  /api/v1/shipping/cost:
+    post:
+      summary: Estimate Shipping Cost & Services
+      tags:
+        - Couriers & Logistics
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstimateShippingOptionsRequest'
+      responses:
+        '200':
+          description: Estimated shipping options and SLAs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EstimateShippingOptionsResponse'
+
+  # ==============================================================================
+  # ORDERS & FULFILLMENT
+  # ==============================================================================
+  /api/v1/order:
+    post:
+      summary: Create Direct Order (Customer)
+      description: Directly places an order without requiring previous cart items.
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+
+  /api/v1/orders:
+    get:
+      summary: List Orders (Staff)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: sort
+          in: query
+          schema: { type: string }
+        - name: id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: number
+          in: query
+          schema: { type: string }
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: statuses
+          in: query
+          schema: { type: string, example: "pending,processing" }
+          description: Comma-separated list of order statuses
+        - name: from_date
+          in: query
+          schema: { type: string, format: date-time, example: "2026-01-01T00:00:00Z" }
+        - name: to_date
+          in: query
+          schema: { type: string, format: date-time, example: "2026-12-31T23:59:59Z" }
+      responses:
+        '200':
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/orders/{orderID}:
+    get:
+      summary: Get Order Detail (Staff)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Full order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/orders/{orderID}/tracking:
+    get:
+      summary: Get Order Tracking Timeline (Staff)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Shipment tracking timeline
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderTrackingResponse'
+
+  /api/v1/orders/{orderID}/status:
+    patch:
+      summary: Update Order Status (Staff)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: Order status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/orders/{orderID}/shipments:
+    post:
+      summary: Dispatch Order Shipment (Staff)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchShopShipmentRequest'
+      responses:
+        '200':
+          description: Shipment dispatched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/users/me/orders:
+    get:
+      summary: List My Orders (Customer)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: sort
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: statuses
+          in: query
+          schema: { type: string, example: "pending,processing" }
+        - name: from_date
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to_date
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Customer order history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/users/me/orders/{orderID}:
+    get:
+      summary: Get My Order Detail (Customer)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+
+  /api/v1/users/me/orders/{orderID}/tracking:
+    get:
+      summary: Get My Order Tracking (Customer)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Tracking info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderTrackingResponse'
+
+  /api/v1/users/me/orders/{orderID}/payment:
+    get:
+      summary: Get My Order Payment Detail (Customer)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Payment details and channel info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentDetailResponse'
+
+  /api/v1/users/me/orders/{orderID}/payment/check:
+    post:
+      summary: Re-check Payment Status (Customer)
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: orderID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Payment reconciliation status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckPaymentStatusResponse'
+
+  # ==============================================================================
+  # SHIPMENTS
+  # ==============================================================================
+  /api/v1/shipments/{shipmentID}/status:
+    patch:
+      summary: Update Shipment Status (Staff)
+      tags:
+        - Shipments
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shipmentID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShipmentStatusRequest'
+      responses:
+        '200':
+          description: Shipment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentResponse'
+
+  /api/v1/shipments/{shipmentID}/dispatch:
+    patch:
+      summary: Dispatch Shipment Waybill (Staff)
+      tags:
+        - Shipments
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shipmentID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchShipmentRequest'
+      responses:
+        '200':
+          description: Shipment dispatched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentResponse'
+
+  /api/v1/shipments/{shipmentID}:
+    patch:
+      summary: Update Shipment Details (Staff)
+      tags:
+        - Shipments
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: shipmentID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShipmentRequest'
+      responses:
+        '200':
+          description: Shipment details updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentResponse'
+
+  # ==============================================================================
+  # PAYMENTS & WEBHOOKS
+  # ==============================================================================
+  /api/v1/payments/methods:
+    get:
+      summary: List Payment Methods (Staff)
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: sort
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Payment methods list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_methods:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PaymentMethodResponse'
+
+  /api/v1/payments/methods/{methodID}:
+    patch:
+      summary: Update Payment Method Status (Staff Admin)
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: methodID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePaymentMethodActiveRequest'
+      responses:
+        '200':
+          description: Payment method status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodResponse'
+
+  /api/v1/payments/methods/{methodID}/instruction:
+    post:
+      summary: Save Payment Method Instruction (Staff Admin)
+      tags:
+        - Payments
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: methodID
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePaymentInstructionRequest'
+      responses:
+        '200':
+          description: Instruction saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "instruction saved" }
+                  instruction:
+                    $ref: '#/components/schemas/PaymentInstructionResponse'
+
+  /api/v1/midtrans/webhook:
+    post:
+      summary: Midtrans Payment Notification Webhook
+      description: Receives asynchronous notifications from Midtrans Core API and updates order/payment state idempotently.
+      tags:
+        - Payments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                order_id: "order_123_midtrans"
+                transaction_status: "settlement"
+                status_code: "200"
+                gross_amount: "150000.00"
+                signature_key: "abc123hash"
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: "webhook processed successfully"
+
+# ==============================================================================
+# COMPONENTS & SCHEMAS
+# ==============================================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Pass JWT token in Authorization header (e.g. `Bearer <token>`).
+    CookieCustomerAuth:
+      type: apiKey
+      in: cookie
+      name: kome_customer_access
+      description: Standard HTTP-only cookie set on customer login.
+    CookieStaffAuth:
+      type: apiKey
+      in: cookie
+      name: kome_staff_access
+      description: Standard HTTP-only cookie set on staff login.
+
+  responses:
+    BadRequest:
+      description: Invalid request body, parameters, or malformed UUID
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required or invalid session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden - insufficient permissions or actor type mismatch
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Resource conflict (e.g. username or email already exists)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, example: "operation successful" }
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, example: "invalid request parameter" }
+
+    # Auth Schemas
+    SignUpRequest:
+      type: object
+      required: [name, username, email, password]
+      properties:
+        name: { type: string, example: "John Doe" }
+        username: { type: string, example: "johndoe" }
+        email: { type: string, format: email, example: "customer@example.com" }
+        password: { type: string, format: password, example: "Password123!" }
+        phone: { type: string, nullable: true, example: "+6281234567890" }
+
+    SignUpResponse:
+      type: object
+      required: [message, challenge_id]
+      properties:
+        message: { type: string, example: "verification code sent" }
+        challenge_id: { type: string, format: uuid, example: "a0000000-0000-0000-0000-000000000001" }
+
+    VerifyAccountRequest:
+      type: object
+      required: [challenge_id, otp]
+      properties:
+        challenge_id: { type: string, format: uuid, example: "a0000000-0000-0000-0000-000000000001" }
+        otp: { type: string, minLength: 6, maxLength: 6, example: "123456" }
+        user_agent: { type: string, nullable: true }
+        ip_address: { type: string, nullable: true }
+
+    SignInEmailRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: "customer@example.com" }
+        password: { type: string, format: password, example: "Password123!" }
+        remember_me: { type: boolean, default: false }
+        user_agent: { type: string, nullable: true }
+        ip_address: { type: string, nullable: true }
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email, example: "customer@example.com" }
+
+    ForgotPasswordResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, example: "password reset instructions sent" }
+        challenge_id: { type: string, format: uuid, nullable: true }
+
+    VerifyPasswordResetRequest:
+      type: object
+      required: [challenge_id, otp]
+      properties:
+        challenge_id: { type: string, format: uuid, example: "a0000000-0000-0000-0000-000000000001" }
+        otp: { type: string, minLength: 6, maxLength: 6, example: "123456" }
+
+    VerifyPasswordResetResponse:
+      type: object
+      required: [message, challenge_id]
+      properties:
+        message: { type: string, example: "otp verified" }
+        challenge_id: { type: string, format: uuid }
+
+    ResetPasswordRequest:
+      type: object
+      required: [challenge_id, new_password]
+      properties:
+        challenge_id: { type: string, format: uuid }
+        new_password: { type: string, format: password, example: "NewPassword123!" }
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refresh_token: { type: string }
+
+    RefreshTokenResponse:
+      type: object
+      required: [access_token]
+      properties:
+        access_token: { type: string }
+
+    RoleResponse:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, example: "staff_admin" }
+        name: { type: string, example: "Staff Administrator" }
+
+    PermissionResponse:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, example: "shop:update" }
+
+    MeResponse:
+      type: object
+      required: [account_id, account_type, is_authenticated]
+      properties:
+        account_id: { type: string, format: uuid }
+        account_type: { type: string, enum: [customer, staff] }
+        is_authenticated: { type: boolean }
+        avatar_url: { type: string, nullable: true }
+        staff_id: { type: string, format: uuid, nullable: true }
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleResponse'
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionResponse'
+        oauth_provider: { type: string, nullable: true }
+        last_login_at: { type: string, format: date-time, nullable: true }
+
+    # User & Profile Schemas
+    UserResponse:
+      type: object
+      required: [id, name, username]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: "John Doe" }
+        username: { type: string, example: "johndoe" }
+        phone: { type: string, nullable: true }
+        avatar_url: { type: string, nullable: true }
+        last_login_at: { type: string, format: date-time, nullable: true }
+
+    ProfileResponse:
+      type: object
+      required: [user_id, Name, Username, CreatedAt]
+      properties:
+        customer_id: { type: string, format: uuid, nullable: true }
+        staff_id: { type: string, format: uuid, nullable: true }
+        user_id: { type: string, format: uuid }
+        Name: { type: string, example: "John Doe" }
+        Username: { type: string, example: "johndoe" }
+        Phone: { type: string, nullable: true }
+        AvatarURL: { type: string, nullable: true }
+        LastLoginAt: { type: string, format: date-time, nullable: true }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time, nullable: true }
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name: { type: string, nullable: true, example: "Jane Doe" }
+        phone: { type: string, nullable: true, example: "+6281298765432" }
+        avatar_url: { type: string, nullable: true }
+
+    CustomerAddressResponse:
+      type: object
+      required: [address_id, customer_id, receiver_name, province, city, district, full_address, postal_code]
+      properties:
+        address_id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        receiver_name: { type: string, example: "Jane Doe" }
+        phone: { type: string, nullable: true }
+        is_default: { type: boolean }
+        province: { type: string, example: "DKI Jakarta" }
+        province_id: { type: string, example: "31" }
+        city: { type: string, example: "Jakarta Selatan" }
+        city_id: { type: string, example: "3174" }
+        district: { type: string, example: "Kebayoran Baru" }
+        district_id: { type: string, example: "317401" }
+        village_id: { type: string, nullable: true }
+        full_address: { type: string, example: "Jl. Senopati No. 12" }
+        postal_code: { type: string, example: "12190" }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    SaveCustomerAddressRequest:
+      type: object
+      required: [receiver_name, province, city, district, full_address, postal_code]
+      properties:
+        address_id: { type: string, format: uuid, nullable: true }
+        receiver_name: { type: string, example: "Jane Doe" }
+        phone: { type: string, nullable: true, example: "+6281234567890" }
+        is_default: { type: string, nullable: true, example: "true", description: "Boolean flag as string ('true' or 'false')" }
+        province: { type: string, example: "DKI Jakarta" }
+        province_id: { type: string, example: "31" }
+        city: { type: string, example: "Jakarta Selatan" }
+        city_id: { type: string, example: "3174" }
+        district: { type: string, example: "Kebayoran Baru" }
+        district_id: { type: string, example: "317401" }
+        village_id: { type: string, example: "3174011001" }
+        full_address: { type: string, example: "Jl. Senopati No. 12" }
+        postal_code: { type: string, example: "12190" }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+
+    # Staff Schemas
+    StaffResponse:
+      type: object
+      required: [id, user_id, name, username, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        name: { type: string, example: "Admin User" }
+        username: { type: string, example: "admin" }
+        phone: { type: string, nullable: true }
+        avatar_url: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    CreateStaffRequest:
+      type: object
+      required: [name, username]
+      properties:
+        name: { type: string, example: "Manager Name" }
+        username: { type: string, example: "manager1" }
+        description: { type: string, nullable: true }
+        logo_url: { type: string, nullable: true }
+        banner_url: { type: string, nullable: true }
+
+    UpdateStaffRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: "Updated Manager Name" }
+        description: { type: string, nullable: true }
+        logo_url: { type: string, nullable: true }
+        banner_url: { type: string, nullable: true }
+
+    StaffAccountRoleResponse:
+      type: object
+      required: [id, code, name]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: "staff" }
+        name: { type: string, example: "Staff" }
+
+    StaffAccountResponse:
+      type: object
+      required: [account_id, user_id, email, name, username, role, created_at]
+      properties:
+        account_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        email: { type: string, format: email, example: "staff@example.com" }
+        name: { type: string, example: "Staff Name" }
+        username: { type: string, example: "staff_username" }
+        phone: { type: string, nullable: true }
+        avatar_url: { type: string, nullable: true }
+        role:
+          $ref: '#/components/schemas/StaffAccountRoleResponse'
+        last_login_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    ListStaffAccountsResponse:
+      type: object
+      required: [staff_id, total, accounts]
+      properties:
+        staff_id: { type: string, format: uuid }
+        total: { type: integer }
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffAccountResponse'
+
+    AddStaffAccountRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: "newstaff@example.com" }
+        password: { type: string, format: password, example: "StaffPassword123!" }
+
+    # Product Schemas
+    ProductImageResponse:
+      type: object
+      properties:
+        thumbnail: { type: string, nullable: true }
+        preview: { type: string, nullable: true }
+        detail: { type: string, nullable: true }
+
+    ProductAvailabilityResponse:
+      type: object
+      required: [shop_id, slug, name, stock]
+      properties:
+        shop_id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        stock: { type: integer }
+
+    ProductCatalogResponse:
+      type: object
+      required: [id, sku, name, slug, status, is_available, price, stock, banner]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string, example: "PRD-001" }
+        name: { type: string, example: "Organic Kome Rice" }
+        slug: { type: string, example: "organic-kome-rice" }
+        status: { type: string, enum: [active, inactive, archived] }
+        is_available: { type: boolean }
+        price: { type: integer, format: int64, example: 75000 }
+        stock: { type: integer, example: 100 }
+        banner:
+          $ref: '#/components/schemas/ProductImageResponse'
+        availability:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductAvailabilityResponse'
+
+    ProductDetailResponse:
+      type: object
+      required: [id, sku, name, slug, status, is_available, price, stock, banner]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string }
+        is_available: { type: boolean }
+        price: { type: integer, format: int64 }
+        stock: { type: integer }
+        banner:
+          $ref: '#/components/schemas/ProductImageResponse'
+        description: { type: string, nullable: true }
+        weight: { type: number, format: double, nullable: true, example: 1000.0 }
+        updated_at: { type: string, format: date-time, nullable: true }
+        gallery:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImageResponse'
+        availability:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductAvailabilityResponse'
+
+    SaveProductRequest:
+      type: object
+      required: [sku, name, status, price, is_available]
+      properties:
+        id: { type: string, format: uuid, nullable: true }
+        sku: { type: string, example: "PRD-001" }
+        name: { type: string, example: "Organic Kome Rice" }
+        description: { type: string, nullable: true, example: "Premium organic white rice." }
+        is_available: { type: boolean, example: true }
+        status: { type: string, enum: [active, inactive, archived], example: "active" }
+        price: { type: integer, format: int64, example: 75000 }
+        weight: { type: number, format: double, nullable: true, example: 1000.0 }
+        cost_price: { type: integer, format: int64, nullable: true, example: 50000 }
+        supplier_lead_time_days: { type: integer, nullable: true, example: 3 }
+
+    ProductStatsResponse:
+      type: object
+      required: [id, sku, name, slug, status, price, stock, view_count, conversion_rate, revenue_contribution_percentage]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string }
+        price: { type: integer, format: int64 }
+        cost_price: { type: integer, format: int64, nullable: true }
+        supplier_lead_time_days: { type: integer, nullable: true }
+        gross_margin_pct: { type: number, format: double, nullable: true }
+        view_count: { type: integer, format: int64 }
+        stock: { type: integer }
+        sales_velocity_7d: { type: integer }
+        sales_velocity_30d: { type: integer }
+        sales_velocity_90d: { type: integer }
+        conversion_rate: { type: number, format: double }
+        revenue_contribution_percentage: { type: number, format: double }
+        return_rate: { type: number, format: double, nullable: true }
+        average_rating: { type: number, format: double, nullable: true }
+        review_count: { type: integer, nullable: true }
+        thumbnail: { type: string, nullable: true }
+
+    # Shop Schemas
+    SaveShopRequest:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, format: uuid, nullable: true }
+        name: { type: string, example: "Kome Central Store" }
+        description: { type: string, nullable: true, example: "Main warehouse and store." }
+        is_active: { type: string, nullable: true, example: "true" }
+        approval_status: { type: string, nullable: true, example: "approved" }
+
+    GetShopResponse:
+      type: object
+      required: [id, name, slug, is_active, approval_status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: "Kome Central Store" }
+        slug: { type: string, example: "kome-central-store" }
+        description: { type: string, nullable: true }
+        is_active: { type: boolean }
+        approval_status: { type: string, example: "approved" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    ListShopsResponse:
+      type: object
+      required: [page, limit, total, shops]
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        shops:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetShopResponse'
+
+    ShopAddressResponse:
+      type: object
+      required: [shop_id, label, is_active, province, city, district, full_address, postal_code, created_at]
+      properties:
+        shop_id: { type: string, format: uuid }
+        label: { type: string, example: "Main Warehouse" }
+        phone: { type: string, nullable: true }
+        is_active: { type: boolean }
+        province: { type: string, example: "DKI Jakarta" }
+        province_id: { type: string, example: "31" }
+        city: { type: string, example: "Jakarta Barat" }
+        city_id: { type: string, example: "3173" }
+        district: { type: string, example: "Kebon Jeruk" }
+        district_id: { type: string, example: "317305" }
+        village_id: { type: string, example: "3173051001" }
+        full_address: { type: string, example: "Jl. Panjang No. 8" }
+        postal_code: { type: string, example: "11530" }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    CreateShopAddressRequest:
+      type: object
+      required: [label, is_active, province, city, district, full_address, postal_code]
+      properties:
+        label: { type: string, example: "Main Warehouse" }
+        phone: { type: string, nullable: true, example: "+628123456789" }
+        is_active: { type: string, example: "true" }
+        province: { type: string, example: "DKI Jakarta" }
+        province_id: { type: string, example: "31" }
+        city: { type: string, example: "Jakarta Barat" }
+        city_id: { type: string, example: "3173" }
+        district: { type: string, example: "Kebon Jeruk" }
+        district_id: { type: string, example: "317305" }
+        village_id: { type: string, example: "3173051001" }
+        full_address: { type: string, example: "Jl. Panjang No. 8" }
+        postal_code: { type: string, example: "11530" }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+
+    ShopProductInventoryResponse:
+      type: object
+      required: [total_stock, reserved_stock, available]
+      properties:
+        total_stock: { type: integer }
+        reserved_stock: { type: integer }
+        available: { type: integer }
+
+    ShopProductResponse:
+      type: object
+      required: [id, sku, name, slug, status, price, inventory, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string }
+        price: { type: integer, format: int64 }
+        weight: { type: number, format: double, nullable: true }
+        inventory:
+          $ref: '#/components/schemas/ShopProductInventoryResponse'
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    CreateInventoryRequest:
+      type: object
+      required: [stock]
+      properties:
+        stock: { type: integer, minimum: 0, example: 50 }
+
+    UpdateInventoryRequest:
+      type: object
+      required: [stock]
+      properties:
+        stock: { type: integer, minimum: 0, example: 100 }
+
+    # Cart Schemas
+    AddItemRequest:
+      type: object
+      required: [product_id, shop_id, quantity]
+      properties:
+        product_id: { type: string, format: uuid, example: "b0000000-0000-0000-0000-000000000001" }
+        shop_id: { type: string, format: uuid, example: "c0000000-0000-0000-0000-000000000001" }
+        quantity: { type: integer, minimum: 1, example: 2 }
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+          example: { "variant": "5kg", "packaging": "box" }
+
+    UpdateItemRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: { type: integer, minimum: 1, example: 3 }
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+
+    UpdateItemByIDRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: { type: integer, minimum: 1, example: 4 }
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+
+    CartItemView:
+      type: object
+      required: [cart_item_id, product_id, shop_id, name, price, subtotal, quantity, images]
+      properties:
+        cart_item_id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        shop_id: { type: string, format: uuid }
+        shop_name: { type: string }
+        shop_slug: { type: string }
+        name: { type: string }
+        price: { type: integer, format: int64 }
+        subtotal: { type: integer, format: int64 }
+        quantity: { type: integer }
+        images:
+          $ref: '#/components/schemas/ProductImageResponse'
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+
+    CartResponse:
+      type: object
+      required: [cart_id, items, total]
+      properties:
+        cart_id: { type: string, format: uuid }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItemView'
+        total: { type: integer, format: int64 }
+
+    CheckoutItemRequest:
+      type: object
+      required: [quantity]
+      properties:
+        product_id: { type: string, format: uuid, nullable: true }
+        cart_item_id: { type: string, format: uuid, nullable: true }
+        quantity: { type: integer, minimum: 1, example: 2 }
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+
+    SelectedCourierRequest:
+      type: object
+      required: [code, service]
+      properties:
+        code: { type: string, example: "jne" }
+        service: { type: string, example: "REG" }
+
+    CheckoutShopRequest:
+      type: object
+      required: [shop_id, items]
+      properties:
+        shop_id: { type: string, format: uuid, example: "c0000000-0000-0000-0000-000000000001" }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutItemRequest'
+        courier:
+          $ref: '#/components/schemas/SelectedCourierRequest'
+
+    CheckoutCalculateRequest:
+      type: object
+      required: [shops]
+      properties:
+        payment_method_id: { type: string, format: uuid, nullable: true, example: "d0000000-0000-0000-0000-000000000001" }
+        address_id: { type: string, format: uuid, nullable: true, example: "e0000000-0000-0000-0000-000000000001" }
+        shops:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutShopRequest'
+
+    CheckoutRequest:
+      type: object
+      required: [shops]
+      properties:
+        shops:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutShopRequest'
+
+    CheckoutAddressResponse:
+      type: object
+      required: [id, recipient_name, full_address]
+      properties:
+        id: { type: string, format: uuid }
+        recipient_name: { type: string }
+        phone: { type: string, nullable: true }
+        full_address: { type: string }
+
+    CheckoutCouriersResponse:
+      type: object
+      required: [code, name, service, etd, fee]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        service: { type: string }
+        etd: { type: string }
+        fee: { type: integer, format: int64 }
+
+    CheckoutItemResponse:
+      type: object
+      required: [product_id, shop_id, name, price, quantity, subtotal]
+      properties:
+        product_id: { type: string, format: uuid }
+        cart_item_id: { type: string, format: uuid, nullable: true }
+        shop_id: { type: string, format: uuid }
+        name: { type: string }
+        price: { type: integer, format: int64 }
+        quantity: { type: integer }
+        subtotal: { type: integer, format: int64 }
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+
+    SelectedCourierResponse:
+      type: object
+      required: [code, service, fee]
+      properties:
+        code: { type: string }
+        service: { type: string }
+        fee: { type: integer, format: int64 }
+
+    PaymentMethodResponse:
+      type: object
+      required: [id, name, code, provider, type, is_active, description, fee_type, fee_fixed, fee_percentage]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: "BCA Virtual Account" }
+        code: { type: string, example: "bca_va" }
+        provider: { type: string, example: "midtrans" }
+        type: { type: string, example: "bank_transfer" }
+        is_active: { type: boolean }
+        description: { type: string }
+        fee_type: { type: string, example: "fixed" }
+        fee_fixed: { type: integer, format: int64, example: 4000 }
+        fee_percentage: { type: number, format: double, example: 0.0 }
+        fee_max: { type: integer, format: int64, nullable: true }
+        instruction:
+          $ref: '#/components/schemas/PaymentInstructionResponse'
+
+    ShopCalculateResponse:
+      type: object
+      required: [shop_id, name, slug, subtotal, selected_courier, items]
+      properties:
+        shop_id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        subtotal: { type: integer, format: int64 }
+        total: { type: integer, format: int64, nullable: true }
+        selected_courier:
+          $ref: '#/components/schemas/SelectedCourierResponse'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutItemResponse'
+
+    CheckoutCalculateResponse:
+      type: object
+      required: [address, shops, subtotal, total_shipping, selected_payment_method]
+      properties:
+        address:
+          $ref: '#/components/schemas/CheckoutAddressResponse'
+        shops:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShopCalculateResponse'
+        subtotal: { type: integer, format: int64 }
+        total_shipping: { type: integer, format: int64 }
+        total: { type: integer, format: int64, nullable: true }
+        selected_payment_method:
+          $ref: '#/components/schemas/PaymentMethodResponse'
+
+    ShopResponse:
+      type: object
+      required: [shop_id, name, slug, subtotal, items, cost_couriers]
+      properties:
+        shop_id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        subtotal: { type: integer, format: int64 }
+        total: { type: integer, format: int64, nullable: true }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutItemResponse'
+        cost_couriers:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckoutCouriersResponse'
+
+    CheckoutResponse:
+      type: object
+      required: [address, shops, subtotal, total_shipping, payment_methods]
+      properties:
+        address:
+          $ref: '#/components/schemas/CheckoutAddressResponse'
+        shops:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShopResponse'
+        subtotal: { type: integer, format: int64 }
+        total_shipping: { type: integer, format: int64 }
+        total: { type: integer, format: int64, nullable: true }
+        payment_methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodResponse'
+
+    # Logistics Schemas
+    ListCouriersResponse:
+      type: object
+      required: [couriers]
+      properties:
+        couriers:
+          type: array
+          items: { type: string, example: "jne" }
+
+    EstimateShippingOptionsRequest:
+      type: object
+      required: [shop_id, origin, destination, weight]
+      properties:
+        shop_id: { type: string, example: "c0000000-0000-0000-0000-000000000001" }
+        origin: { type: integer, example: 3173 }
+        destination: { type: integer, example: 3174 }
+        weight: { type: integer, example: 1000 }
+        price_filter: { type: string, nullable: true, example: "lowest" }
+
+    EstimateShippingOptionsResponse:
+      type: object
+      required: [name, code, service, description, cost, etd]
+      properties:
+        name: { type: string, example: "JNE Regular" }
+        code: { type: string, example: "jne" }
+        service: { type: string, example: "REG" }
+        description: { type: string, example: "Layanan Reguler JNE" }
+        cost: { type: integer, format: int64, example: 15000 }
+        etd: { type: string, example: "1-2" }
+        estimated_duration_hours: { type: number, format: double, nullable: true }
+        sla_confidence_score: { type: number, format: double, nullable: true }
+        delivery_status: { type: string, nullable: true }
+
+    # Order Schemas
+    CreateOrderItemRequest:
+      type: object
+      required: [product_id, name, quantity]
+      properties:
+        product_id: { type: string, format: uuid, example: "b0000000-0000-0000-0000-000000000001" }
+        name: { type: string, example: "Organic Kome Rice" }
+        quantity: { type: integer, minimum: 1, example: 2 }
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+
+    CreateOrderCourierRequest:
+      type: object
+      required: [code, service]
+      properties:
+        code: { type: string, example: "jne" }
+        service: { type: string, example: "REG" }
+
+    CreateOrderShopRequest:
+      type: object
+      required: [shop_id, name, items]
+      properties:
+        shop_id: { type: string, format: uuid, example: "c0000000-0000-0000-0000-000000000001" }
+        name: { type: string, example: "Kome Central Store" }
+        selected_courier:
+          $ref: '#/components/schemas/CreateOrderCourierRequest'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateOrderItemRequest'
+
+    CreateOrderPaymentRequest:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid, example: "d0000000-0000-0000-0000-000000000001" }
+
+    CreateOrderRequest:
+      type: object
+      required: [address_id, selected_payment, shops]
+      properties:
+        address_id: { type: string, format: uuid, example: "e0000000-0000-0000-0000-000000000001" }
+        selected_payment:
+          $ref: '#/components/schemas/CreateOrderPaymentRequest'
+        shops:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateOrderShopRequest'
+
+    CreateOrderPaymentAccountResponse:
+      type: object
+      required: [account_name]
+      properties:
+        account_name: { type: string }
+        account_number: { type: string, nullable: true }
+        phone_number: { type: string, nullable: true }
+        qr_string: { type: string, nullable: true }
+
+    PaymentChannelDataResponse:
+      type: object
+      required: [channel_type, display_name]
+      properties:
+        channel_type: { type: string }
+        display_name: { type: string }
+        action_url: { type: string, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+
+    CreateOrderResponse:
+      type: object
+      required: [order_id]
+      properties:
+        order_id: { type: string, format: uuid }
+        instruction: { type: string, nullable: true }
+        payment_account:
+          $ref: '#/components/schemas/CreateOrderPaymentAccountResponse'
+        channel_data:
+          $ref: '#/components/schemas/PaymentChannelDataResponse'
+
+    ShipmentDispatchRequest:
+      type: object
+      required: [fulfillment_method, courier, service, item_ids]
+      properties:
+        fulfillment_method: { type: string, example: "courier" }
+        courier: { type: string, example: "jne" }
+        service: { type: string, example: "REG" }
+        tracking_number: { type: string, nullable: true }
+        item_ids:
+          type: array
+          items: { type: string }
+
+    UpdateOrderStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, example: "processing" }
+        tracking_number: { type: string, nullable: true }
+        fulfillment_method: { type: string, nullable: true, example: "courier" }
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShipmentDispatchRequest'
+
+    DispatchShopShipmentRequest:
+      type: object
+      required: [shop_id, fulfillment_method, courier, service, item_ids]
+      properties:
+        shop_id: { type: string, format: uuid }
+        fulfillment_method: { type: string, example: "courier" }
+        courier: { type: string, example: "jne" }
+        service: { type: string, example: "REG" }
+        tracking_number: { type: string, nullable: true }
+        item_ids:
+          type: array
+          items: { type: string }
+
+    OrderItemResponse:
+      type: object
+      required: [id, product_id, product_name, quantity, unit_price, subtotal, shop_id, shop_name, shipping_fee]
+      properties:
+        id: { type: string }
+        shipment_id: { type: string, nullable: true }
+        product_id: { type: string }
+        product_name: { type: string }
+        quantity: { type: integer }
+        unit_price: { type: integer, format: int64 }
+        subtotal: { type: integer, format: int64 }
+        shop_id: { type: string }
+        shop_name: { type: string }
+        courier_code: { type: string, nullable: true }
+        courier_service: { type: string, nullable: true }
+        shipping_fee: { type: integer, format: int64 }
+        item_options:
+          type: object
+          additionalProperties: { type: string }
+
+    PaymentDetailResponse:
+      type: object
+      required: [id, status, provider, amount, created_at]
+      properties:
+        id: { type: string }
+        status: { type: string, example: "pending" }
+        provider: { type: string, example: "midtrans" }
+        amount: { type: integer, format: int64 }
+        expires_at: { type: string, format: date-time, nullable: true }
+        channel_data:
+          $ref: '#/components/schemas/PaymentChannelDataResponse'
+        created_at: { type: string, format: date-time }
+
+    ShipmentEventResponse:
+      type: object
+      required: [id, status, description, location, timestamp]
+      properties:
+        id: { type: string }
+        status: { type: string }
+        description: { type: string }
+        location: { type: string }
+        timestamp: { type: string, format: date-time }
+
+    ShipmentDetailResponse:
+      type: object
+      required: [id, order_id, status, fulfillment_method, courier, service, cost, created_at]
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        status: { type: string }
+        fulfillment_method: { type: string }
+        courier: { type: string }
+        service: { type: string }
+        tracking_number: { type: string, nullable: true }
+        cost: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShipmentEventResponse'
+        item_ids:
+          type: array
+          items: { type: string }
+
+    OrderAddressResponse:
+      type: object
+      required: [id, customer_id, receiver_name, is_default, province, city, district, full_address, postal_code]
+      properties:
+        id: { type: string }
+        customer_id: { type: string }
+        receiver_name: { type: string }
+        phone: { type: string, nullable: true }
+        is_default: { type: boolean }
+        province: { type: string }
+        city: { type: string }
+        district: { type: string }
+        province_id: { type: string, nullable: true }
+        city_id: { type: string, nullable: true }
+        district_id: { type: string, nullable: true }
+        village_id: { type: string, nullable: true }
+        full_address: { type: string }
+        postal_code: { type: string }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+
+    OrderResponse:
+      type: object
+      required: [id, number, customer_id, address_id, status, subtotal, shipping_fee, total, created_at, items, shipments]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string, example: "ORD-20260930-001" }
+        customer_id: { type: string, format: uuid }
+        address_id: { type: string, format: uuid }
+        status: { type: string, example: "pending" }
+        subtotal: { type: integer, format: int64 }
+        shipping_fee: { type: integer, format: int64 }
+        total: { type: integer, format: int64 }
+        confirmed_at: { type: string, format: date-time, nullable: true }
+        handling_expires_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        payment:
+          $ref: '#/components/schemas/PaymentDetailResponse'
+        shipment:
+          $ref: '#/components/schemas/ShipmentDetailResponse'
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShipmentDetailResponse'
+        address:
+          $ref: '#/components/schemas/OrderAddressResponse'
+
+    TrackingTimelineEventResponse:
+      type: object
+      required: [status, description, location, timestamp]
+      properties:
+        status: { type: string }
+        description: { type: string }
+        location: { type: string }
+        timestamp: { type: string, format: date-time }
+
+    OrderTrackingResponse:
+      type: object
+      required: [order_id, shipment_id, courier, timeline]
+      properties:
+        order_id: { type: string }
+        shipment_id: { type: string }
+        courier: { type: string }
+        tracking_number: { type: string, nullable: true }
+        warning: { type: string, nullable: true }
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingTimelineEventResponse'
+
+    # Shipment Schemas
+    UpdateShipmentStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, example: "shipped" }
+        description: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+
+    UpdateShipmentRequest:
+      type: object
+      properties:
+        tracking_number: { type: string, nullable: true, example: "JNE123456789" }
+        courier: { type: string, nullable: true, example: "jne" }
+        service: { type: string, nullable: true, example: "REG" }
+
+    DispatchShipmentRequest:
+      type: object
+      required: [tracking_number]
+      properties:
+        tracking_number: { type: string, example: "JNE123456789" }
+
+    ShipmentResponse:
+      type: object
+      required: [id, order_id, status, fulfillment_method, courier, service, cost, weight, created_at]
+      properties:
+        id: { type: string }
+        order_id: { type: string }
+        status: { type: string }
+        fulfillment_method: { type: string }
+        tracking_number: { type: string, nullable: true }
+        courier: { type: string }
+        service: { type: string }
+        cost: { type: integer, format: int64 }
+        weight: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    # Payment Schemas
+    UpdatePaymentMethodActiveRequest:
+      type: object
+      required: [is_active]
+      properties:
+        is_active: { type: boolean, example: true }
+
+    SavePaymentInstructionRequest:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, example: "Transfer to BCA account 1234567890." }
+
+    PaymentInstructionResponse:
+      type: object
+      required: [id, content, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        content: { type: string }
+        created_at: { type: string, format: date-time }
+
+    CheckPaymentStatusResponse:
+      type: object
+      required: [status, synced]
+      properties:
+        status: { type: string, example: "settlement" }
+        synced: { type: boolean, example: true }

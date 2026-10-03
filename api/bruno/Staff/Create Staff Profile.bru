@@ -1,0 +1,25 @@
+meta {
+  name: Create Staff Profile
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/staff
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "name": "Operations Manager",
+    "username": "ops_manager",
+    "description": "Logistics and warehouse operations supervisor",
+    "logo_url": "https://example.com/logo.png",
+    "banner_url": "https://example.com/banner.png"
+  }
+}

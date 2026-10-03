@@ -1,0 +1,825 @@
+# ==============================================================================
+# KOMECORE REST API - COMPLETE TEST SPECIFICATION (MATCHING GO DTOS)
+# ==============================================================================
+# Usage: Install VS Code REST Client extension (humao.rest-client)
+# Click 'Send Request' directly above any endpoint.
+# ==============================================================================
+
+@baseUrl = http://localhost:7129
+@customerToken =
+@staffToken =
+@userId = a0000000-0000-0000-0000-000000000001
+@staffId = a0000000-0000-0000-0000-000000000002
+@accountId = a0000000-0000-0000-0000-000000000003
+@shopId = c0000000-0000-0000-0000-000000000001
+@productId = b0000000-0000-0000-0000-000000000001
+@productSlug = organic-japonica-rice-5kg
+@addressId = e0000000-0000-0000-0000-000000000001
+@cartItemId = f0000000-0000-0000-0000-000000000001
+@orderId = 10000000-0000-0000-0000-000000000001
+@shipmentId = 20000000-0000-0000-0000-000000000001
+@methodId = d0000000-0000-0000-0000-000000000001
+
+# ==============================================================================
+# 01. Health & Infrastructure
+# ==============================================================================
+
+### Check Health
+GET {{baseUrl}}/health
+
+
+# ==============================================================================
+# 02. Authentication & Identity
+# ==============================================================================
+
+### Sign In Customer
+POST {{baseUrl}}/api/v1/auth/signin
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "password": "Password123!",
+  "remember_me": true
+}
+
+
+### Sign In Staff
+POST {{baseUrl}}/api/v1/auth/staff/signin
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "AdminPassword123!",
+  "remember_me": true
+}
+
+
+### Register Customer (SignUp)
+POST {{baseUrl}}/api/v1/auth/signup
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "username": "johndoe",
+  "email": "johndoe@example.com",
+  "password": "Password123!",
+  "phone": "+6281234567890"
+}
+
+
+### Verify Account OTP
+POST {{baseUrl}}/api/v1/auth/verify
+Content-Type: application/json
+
+{
+  "challenge_id": "a0000000-0000-0000-0000-000000000001",
+  "otp": "123456"
+}
+
+
+### Forgot Password (Customer)
+POST {{baseUrl}}/api/v1/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "customer@example.com"
+}
+
+
+### Forgot Password (Staff)
+POST {{baseUrl}}/api/v1/auth/staff/forgot-password
+Content-Type: application/json
+
+{
+  "email": "admin@example.com"
+}
+
+
+### Verify Password Reset OTP
+POST {{baseUrl}}/api/v1/auth/forgot-password/verify
+Content-Type: application/json
+
+{
+  "challenge_id": "a0000000-0000-0000-0000-000000000001",
+  "otp": "123456"
+}
+
+
+### Reset Password
+POST {{baseUrl}}/api/v1/auth/forgot-password/reset
+Content-Type: application/json
+
+{
+  "challenge_id": "a0000000-0000-0000-0000-000000000001",
+  "new_password": "NewPassword123!"
+}
+
+
+### Refresh Token (Customer)
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "sample_refresh_token_string"
+}
+
+
+### Refresh Token (Staff)
+POST {{baseUrl}}/api/v1/auth/staff/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "sample_staff_refresh_token_string"
+}
+
+
+### Customer Logout
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{customerToken}}
+
+
+### Staff Logout
+POST {{baseUrl}}/api/v1/auth/staff/logout
+Authorization: Bearer {{staffToken}}
+
+
+### Get Customer Me
+GET {{baseUrl}}/api/v1/auth/me
+Authorization: Bearer {{customerToken}}
+
+
+### Get Staff Me
+GET {{baseUrl}}/api/v1/auth/staff/me
+Authorization: Bearer {{staffToken}}
+
+
+### Google OAuth Login
+GET {{baseUrl}}/api/v1/auth/google/login
+
+
+### Google OAuth Callback
+GET {{baseUrl}}/api/v1/auth/google/callback?state=xyz&code=abc
+
+
+# ==============================================================================
+# 03. User & Profile
+# ==============================================================================
+
+### Get Profile
+GET {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{customerToken}}
+
+
+### Update Profile
+PUT {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "name": "Johnathan Doe",
+  "phone": "+6281298765432",
+  "avatar_url": "https://example.com/avatar.jpg"
+}
+
+
+### Get Staff Profile
+GET {{baseUrl}}/api/v1/profile/staff
+Authorization: Bearer {{staffToken}}
+
+
+### Update Staff Profile
+PUT {{baseUrl}}/api/v1/profile/staff
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "name": "Senior Admin",
+  "phone": "+6281298765432"
+}
+
+
+### Delete Account
+DELETE {{baseUrl}}/api/v1/profile
+Authorization: Bearer {{customerToken}}
+
+
+### Get User by ID
+GET {{baseUrl}}/api/v1/users/{{userId}}
+Authorization: Bearer {{staffToken}}
+
+
+### Get Current User (Me)
+GET {{baseUrl}}/api/v1/users/me
+Authorization: Bearer {{customerToken}}
+
+
+# ==============================================================================
+# 04. Saved Addresses
+# ==============================================================================
+
+### List User Addresses
+GET {{baseUrl}}/api/v1/users/me/addresses
+Authorization: Bearer {{customerToken}}
+
+
+### Save User Address
+POST {{baseUrl}}/api/v1/users/me/addresses
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "receiver_name": "Jane Doe",
+  "phone": "+6281234567890",
+  "is_default": "true",
+  "province": "DKI Jakarta",
+  "province_id": "31",
+  "city": "Jakarta Selatan",
+  "city_id": "3174",
+  "district": "Kebayoran Baru",
+  "district_id": "317401",
+  "village_id": "3174011001",
+  "full_address": "Jl. Senopati No. 12, Senayan",
+  "postal_code": "12190",
+  "latitude": -6.2289,
+  "longitude": 106.8095
+}
+
+
+### Delete User Address
+DELETE {{baseUrl}}/api/v1/users/me/addresses/{{addressId}}
+Authorization: Bearer {{customerToken}}
+
+
+# ==============================================================================
+# 05. Staff Administration
+# ==============================================================================
+
+### Find Staff
+GET {{baseUrl}}/api/v1/staff?page=1&limit=10&sort=created_at_desc
+Authorization: Bearer {{staffToken}}
+
+
+### Create Staff Profile
+POST {{baseUrl}}/api/v1/staff
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "name": "Operations Manager",
+  "username": "ops_manager",
+  "description": "Logistics and warehouse operations supervisor",
+  "logo_url": "https://example.com/logo.png",
+  "banner_url": "https://example.com/banner.png"
+}
+
+
+### Update Staff Profile
+PUT {{baseUrl}}/api/v1/staff/{{staffId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "name": "Senior Operations Manager",
+  "description": "Head of logistics and fulfillment"
+}
+
+
+### Delete Staff Profile
+DELETE {{baseUrl}}/api/v1/staff/{{staffId}}
+Authorization: Bearer {{staffToken}}
+
+
+### List Staff Accounts
+GET {{baseUrl}}/api/v1/staff/{{staffId}}/accounts
+Authorization: Bearer {{staffToken}}
+
+
+### Add Staff Account
+POST {{baseUrl}}/api/v1/staff/{{staffId}}/accounts
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "email": "ops.staff@example.com",
+  "password": "StaffPassword123!"
+}
+
+
+### Remove Staff Account
+DELETE {{baseUrl}}/api/v1/staff/{{staffId}}/accounts/{{accountId}}
+Authorization: Bearer {{staffToken}}
+
+
+# ==============================================================================
+# 06. Catalog & Products
+# ==============================================================================
+
+### Find Products Catalog
+GET {{baseUrl}}/api/v1/products?page=1&limit=10&status=active&sort=price_asc
+
+
+### Create Product
+POST {{baseUrl}}/api/v1/products
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "sku": "PRD-RICE-001",
+  "name": "Organic Japonica Rice 5kg",
+  "description": "Premium short-grain sushi rice from vetted local farmers.",
+  "is_available": true,
+  "status": "active",
+  "price": 85000,
+  "weight": 5000.0,
+  "cost_price": 60000,
+  "supplier_lead_time_days": 2
+}
+
+
+### Get Product Stats
+GET {{baseUrl}}/api/v1/products/stats?page=1&limit=10
+Authorization: Bearer {{staffToken}}
+
+
+### Get Product by Slug
+GET {{baseUrl}}/api/v1/products/{{productSlug}}
+
+
+### Delete Product
+DELETE {{baseUrl}}/api/v1/products/id/{{productId}}
+Authorization: Bearer {{staffToken}}
+
+
+### Upload Product Images
+POST {{baseUrl}}/api/v1/products/id/{{productId}}/images
+Authorization: Bearer {{staffToken}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="image"; filename="sample.jpg"
+Content-Type: image/jpeg
+
+< ./sample.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+
+# ==============================================================================
+# 07. Shops & Inventories
+# ==============================================================================
+
+### Find Shops
+GET {{baseUrl}}/api/v1/shops?page=1&limit=10&active=true
+
+
+### Create Shop
+POST {{baseUrl}}/api/v1/shops
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "name": "Kome West Jakarta Hub",
+  "description": "Fulfillment center serving West Jakarta & Tangerang",
+  "is_active": "true",
+  "approval_status": "approved"
+}
+
+
+### Get Shop by ID
+GET {{baseUrl}}/api/v1/shops/{{shopId}}
+
+
+### Update Shop Profile
+PUT {{baseUrl}}/api/v1/shops/{{shopId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "name": "Kome West Jakarta Hub - Updated",
+  "description": "Expanded distribution hub with cold chain storage",
+  "is_active": "true",
+  "approval_status": "approved"
+}
+
+
+### Delete Shop
+DELETE {{baseUrl}}/api/v1/shops/{{shopId}}
+Authorization: Bearer {{staffToken}}
+
+
+### List Shop Addresses
+GET {{baseUrl}}/api/v1/shops/{{shopId}}/addresses
+
+
+### Add Shop Address
+POST {{baseUrl}}/api/v1/shops/{{shopId}}/addresses
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "label": "West Hub Warehouse",
+  "phone": "+628123456789",
+  "is_active": "true",
+  "province": "DKI Jakarta",
+  "province_id": "31",
+  "city": "Jakarta Barat",
+  "city_id": "3173",
+  "district": "Kebon Jeruk",
+  "district_id": "317305",
+  "village_id": "3173051001",
+  "full_address": "Jl. Panjang No. 8, Kebon Jeruk",
+  "postal_code": "11530",
+  "latitude": -6.1915,
+  "longitude": 106.7725
+}
+
+
+### Update Shop Address
+PUT {{baseUrl}}/api/v1/shops/{{shopId}}/addresses/{{addressId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "label": "West Hub Warehouse - Updated",
+  "phone": "+628123456789",
+  "is_active": "true",
+  "province": "DKI Jakarta",
+  "province_id": "31",
+  "city": "Jakarta Barat",
+  "city_id": "3173",
+  "district": "Kebon Jeruk",
+  "district_id": "317305",
+  "village_id": "3173051001",
+  "full_address": "Jl. Panjang No. 8B, Kebon Jeruk",
+  "postal_code": "11530"
+}
+
+
+### Delete Shop Address
+DELETE {{baseUrl}}/api/v1/shops/{{shopId}}/addresses/{{addressId}}
+Authorization: Bearer {{staffToken}}
+
+
+### Get Shop Products
+GET {{baseUrl}}/api/v1/shops/{{shopId}}/products?page=1&limit=10
+
+
+### Add Product Inventory
+POST {{baseUrl}}/api/v1/shops/{{shopId}}/products/{{productId}}/inventories
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "stock": 100
+}
+
+
+### Update Product Inventory
+PUT {{baseUrl}}/api/v1/shops/{{shopId}}/products/{{productId}}/inventories
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "stock": 150
+}
+
+
+### Remove Product Inventory
+DELETE {{baseUrl}}/api/v1/shops/{{shopId}}/products/{{productId}}/inventories
+Authorization: Bearer {{staffToken}}
+
+
+# ==============================================================================
+# 08. Cart & Checkout
+# ==============================================================================
+
+### Get Customer Cart
+GET {{baseUrl}}/api/v1/carts
+Authorization: Bearer {{customerToken}}
+
+
+### Add Item to Cart
+POST {{baseUrl}}/api/v1/carts/items
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "shop_id": "c0000000-0000-0000-0000-000000000001",
+  "product_id": "b0000000-0000-0000-0000-000000000001",
+  "quantity": 2,
+  "item_options": {
+    "variant": "5kg",
+    "packaging": "vacuum"
+  }
+}
+
+
+### Update Cart Item by Shop/Product
+PUT {{baseUrl}}/api/v1/carts/items/{{shopId}}/{{productId}}
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "quantity": 4,
+  "item_options": {
+    "variant": "5kg"
+  }
+}
+
+
+### Remove Cart Item by Shop/Product
+DELETE {{baseUrl}}/api/v1/carts/items/{{shopId}}/{{productId}}
+Authorization: Bearer {{customerToken}}
+
+
+### Update Cart Item by ID (PUT)
+PUT {{baseUrl}}/api/v1/carts/items/{{cartItemId}}
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "quantity": 3,
+  "item_options": {
+    "variant": "5kg"
+  }
+}
+
+
+### Update Cart Item by ID (PATCH)
+PATCH {{baseUrl}}/api/v1/carts/items/{{cartItemId}}
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "quantity": 5
+}
+
+
+### Remove Cart Item by ID
+DELETE {{baseUrl}}/api/v1/carts/items/{{cartItemId}}
+Authorization: Bearer {{customerToken}}
+
+
+### Calculate Checkout
+POST {{baseUrl}}/api/v1/carts/checkout/calculate
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "payment_method_id": "d0000000-0000-0000-0000-000000000001",
+  "address_id": "e0000000-0000-0000-0000-000000000001",
+  "shops": [
+    {
+      "shop_id": "c0000000-0000-0000-0000-000000000001",
+      "items": [
+        {
+          "product_id": "b0000000-0000-0000-0000-000000000001",
+          "quantity": 2,
+          "item_options": {
+            "variant": "5kg"
+          }
+        }
+      ],
+      "courier": {
+        "code": "jne",
+        "service": "REG"
+      }
+    }
+  ]
+}
+
+
+### Process Checkout
+POST {{baseUrl}}/api/v1/carts/checkout
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "shops": [
+    {
+      "shop_id": "c0000000-0000-0000-0000-000000000001",
+      "items": [
+        {
+          "product_id": "b0000000-0000-0000-0000-000000000001",
+          "quantity": 2,
+          "item_options": {
+            "variant": "5kg"
+          }
+        }
+      ],
+      "courier": {
+        "code": "jne",
+        "service": "REG"
+      }
+    }
+  ]
+}
+
+
+# ==============================================================================
+# 09. Couriers & Logistics
+# ==============================================================================
+
+### List Couriers
+GET {{baseUrl}}/api/v1/couriers
+Authorization: Bearer {{customerToken}}
+
+
+### Estimate Shipping Cost
+POST {{baseUrl}}/api/v1/shipping/cost
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "shop_id": "c0000000-0000-0000-0000-000000000001",
+  "origin": 3173,
+  "destination": 3174,
+  "weight": 1000,
+  "price_filter": "lowest"
+}
+
+
+# ==============================================================================
+# 10. Orders & Tracking
+# ==============================================================================
+
+### Create Direct Order
+POST {{baseUrl}}/api/v1/order
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "address_id": "e0000000-0000-0000-0000-000000000001",
+  "selected_payment": {
+    "id": "d0000000-0000-0000-0000-000000000001"
+  },
+  "shops": [
+    {
+      "shop_id": "c0000000-0000-0000-0000-000000000001",
+      "name": "Kome Central Store",
+      "selected_courier": {
+        "code": "jne",
+        "service": "REG"
+      },
+      "items": [
+        {
+          "product_id": "b0000000-0000-0000-0000-000000000001",
+          "name": "Organic Japonica Rice 5kg",
+          "quantity": 2,
+          "item_options": {
+            "variant": "5kg"
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+### Find Orders (Staff)
+GET {{baseUrl}}/api/v1/orders?page=1&limit=10&statuses=pending,processing&sort=created_at_desc
+Authorization: Bearer {{staffToken}}
+
+
+### Get Order Detail (Staff)
+GET {{baseUrl}}/api/v1/orders/{{orderId}}
+Authorization: Bearer {{staffToken}}
+
+
+### Get Order Tracking (Staff)
+GET {{baseUrl}}/api/v1/orders/{{orderId}}/tracking
+Authorization: Bearer {{staffToken}}
+
+
+### Update Order Status (Staff)
+PATCH {{baseUrl}}/api/v1/orders/{{orderId}}/status
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "status": "processing",
+  "fulfillment_method": "courier",
+  "tracking_number": "JNE9876543210"
+}
+
+
+### Dispatch Order Shipment (Staff)
+POST {{baseUrl}}/api/v1/orders/{{orderId}}/shipments
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "shop_id": "c0000000-0000-0000-0000-000000000001",
+  "fulfillment_method": "courier",
+  "courier": "jne",
+  "service": "REG",
+  "tracking_number": "JNE9876543210",
+  "item_ids": [
+    "b0000000-0000-0000-0000-000000000001"
+  ]
+}
+
+
+### List My Orders (Customer)
+GET {{baseUrl}}/api/v1/users/me/orders?page=1&limit=10&sort=created_at_desc
+Authorization: Bearer {{customerToken}}
+
+
+### Get My Order Detail (Customer)
+GET {{baseUrl}}/api/v1/users/me/orders/{{orderId}}
+Authorization: Bearer {{customerToken}}
+
+
+### Get My Order Tracking (Customer)
+GET {{baseUrl}}/api/v1/users/me/orders/{{orderId}}/tracking
+Authorization: Bearer {{customerToken}}
+
+
+### Get My Order Payment (Customer)
+GET {{baseUrl}}/api/v1/users/me/orders/{{orderId}}/payment
+Authorization: Bearer {{customerToken}}
+
+
+### Check My Order Payment Status (Customer)
+POST {{baseUrl}}/api/v1/users/me/orders/{{orderId}}/payment/check
+Authorization: Bearer {{customerToken}}
+
+
+# ==============================================================================
+# 11. Shipments
+# ==============================================================================
+
+### Update Shipment Status (Staff)
+PATCH {{baseUrl}}/api/v1/shipments/{{shipmentId}}/status
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "status": "shipped",
+  "description": "Departed sorting facility Jakarta Hub",
+  "location": "Jakarta Hub"
+}
+
+
+### Dispatch Shipment Waybill (Staff)
+PATCH {{baseUrl}}/api/v1/shipments/{{shipmentId}}/dispatch
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "tracking_number": "JNE9876543210"
+}
+
+
+### Update Shipment Details (Staff)
+PATCH {{baseUrl}}/api/v1/shipments/{{shipmentId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "tracking_number": "JNE9876543210",
+  "courier": "jne",
+  "service": "REG"
+}
+
+
+# ==============================================================================
+# 12. Payments & Webhooks
+# ==============================================================================
+
+### List Payment Methods
+GET {{baseUrl}}/api/v1/payments/methods?sort=name_asc
+Authorization: Bearer {{staffToken}}
+
+
+### Update Payment Method Active
+PATCH {{baseUrl}}/api/v1/payments/methods/{{methodId}}
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "is_active": true
+}
+
+
+### Save Payment Instruction
+POST {{baseUrl}}/api/v1/payments/methods/{{methodId}}/instruction
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "content": "To pay via BCA Virtual Account: 1. Open BCA Mobile. 2. Select m-Transfer > BCA Virtual Account. 3. Input company code + your VA number."
+}
+
+
+### Midtrans Payment Webhook
+POST {{baseUrl}}/api/v1/midtrans/webhook
+Content-Type: application/json
+
+{
+  "order_id": "ORD-20260930-001",
+  "transaction_status": "settlement",
+  "status_code": "200",
+  "gross_amount": "185000.00",
+  "payment_type": "bank_transfer",
+  "signature_key": "9a3f2b4c1d8e7f..."
+}

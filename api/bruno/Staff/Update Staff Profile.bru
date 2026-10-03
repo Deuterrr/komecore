@@ -1,0 +1,22 @@
+meta {
+  name: Update Staff Profile
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/v1/staff/{{staffId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "name": "Senior Operations Manager",
+    "description": "Head of logistics and fulfillment"
+  }
+}

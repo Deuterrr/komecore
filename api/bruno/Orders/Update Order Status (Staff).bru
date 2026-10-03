@@ -1,0 +1,23 @@
+meta {
+  name: Update Order Status (Staff)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/orders/{{orderId}}/status
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "status": "processing",
+    "fulfillment_method": "courier",
+    "tracking_number": "JNE9876543210"
+  }
+}

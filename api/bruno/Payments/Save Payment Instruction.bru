@@ -1,0 +1,21 @@
+meta {
+  name: Save Payment Instruction
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/payments/methods/{{methodId}}/instruction
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "content": "To pay via BCA Virtual Account: 1. Open BCA Mobile. 2. Select m-Transfer > BCA Virtual Account. 3. Input company code + your VA number."
+  }
+}

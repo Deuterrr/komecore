@@ -1,0 +1,47 @@
+# KomeCore — service-core Fly.io Config
+# Region: sin (Singapore) — closest to Indonesia
+# Docs: https://fly.io/docs/reference/configuration/
+#
+# Setup:
+#   fly launch --no-deploy
+#   fly secrets set JWT_SECRET=... SUPABASE_SUPA_KEY=...
+#   fly deploy
+
+app            = "komecore-api"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  APP_NAME         = "komecore"
+  APP_HOST         = "0.0.0.0"
+  APP_PORT         = "7129"
+  APP_ENV          = "production"
+  POSTGRES_DB_SSLMODE = "disable"
+
+[http_service]
+  internal_port        = 7129
+  force_https          = true
+  auto_stop_machines   = true
+  auto_start_machines  = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type       = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+[[vm]]
+  size   = "shared-cpu-1x"
+  memory = "256mb"
+
+[checks]
+  [checks.health]
+    grace_period = "15s"
+    interval     = "30s"
+    method       = "GET"
+    path         = "/health"
+    protocol     = "http"
+    timeout      = "5s"
+    type         = "http"

@@ -1,0 +1,40 @@
+meta {
+  name: Calculate Checkout
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/carts/checkout/calculate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "payment_method_id": "d0000000-0000-0000-0000-000000000001",
+    "address_id": "e0000000-0000-0000-0000-000000000001",
+    "shops": [
+      {
+        "shop_id": "c0000000-0000-0000-0000-000000000001",
+        "items": [
+          {
+            "product_id": "b0000000-0000-0000-0000-000000000001",
+            "quantity": 2,
+            "item_options": {
+              "variant": "5kg"
+            }
+          }
+        ],
+        "courier": {
+          "code": "jne",
+          "service": "REG"
+        }
+      }
+    ]
+  }
+}

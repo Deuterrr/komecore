@@ -1,0 +1,29 @@
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+*.test
+
+*.out
+coverage
+coverage.*
+*.coverprofile
+profile.cov
+
+vendor/
+
+go.work
+go.work.sum
+
+bin/
+tmp/
+.env
+
+# Editor/IDE
+# .idea/
+# .vscode/

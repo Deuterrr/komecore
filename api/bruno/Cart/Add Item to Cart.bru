@@ -1,0 +1,27 @@
+meta {
+  name: Add Item to Cart
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/carts/items
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "shop_id": "c0000000-0000-0000-0000-000000000001",
+    "product_id": "b0000000-0000-0000-0000-000000000001",
+    "quantity": 2,
+    "item_options": {
+      "variant": "5kg",
+      "packaging": "vacuum"
+    }
+  }
+}

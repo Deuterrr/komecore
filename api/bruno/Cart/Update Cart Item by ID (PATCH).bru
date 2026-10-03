@@ -1,0 +1,21 @@
+meta {
+  name: Update Cart Item by ID (PATCH)
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/carts/items/{{cartItemId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "quantity": 5
+  }
+}

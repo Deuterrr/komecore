@@ -1,0 +1,11 @@
+meta {
+  name: Get Product by Slug
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productSlug}}
+  body: none
+  auth: none
+}

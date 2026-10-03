@@ -1,0 +1,38 @@
+meta {
+  name: Process Checkout
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/carts/checkout
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "shops": [
+      {
+        "shop_id": "c0000000-0000-0000-0000-000000000001",
+        "items": [
+          {
+            "product_id": "b0000000-0000-0000-0000-000000000001",
+            "quantity": 2,
+            "item_options": {
+              "variant": "5kg"
+            }
+          }
+        ],
+        "courier": {
+          "code": "jne",
+          "service": "REG"
+        }
+      }
+    ]
+  }
+}

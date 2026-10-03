@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS couriers CASCADE;
+DROP TABLE IF EXISTS customer_addresses CASCADE;

@@ -1,0 +1,15 @@
+meta {
+  name: Get Customer Me
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}

@@ -1,0 +1,24 @@
+meta {
+  name: Update Shop Profile
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/shops/{{shopId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "name": "Kome West Jakarta Hub - Updated",
+    "description": "Expanded distribution hub with cold chain storage",
+    "is_active": "true",
+    "approval_status": "approved"
+  }
+}

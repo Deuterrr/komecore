@@ -1,0 +1,15 @@
+meta {
+  name: Remove Product Inventory
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/shops/{{shopId}}/products/{{productId}}/inventories
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
