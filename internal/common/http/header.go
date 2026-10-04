@@ -5,6 +5,9 @@ import "net/http"
 const (
 	// HeaderAccountType is the header key used to specify the client application identity (customer vs staff).
 	HeaderAccountType = "X-Account-Type"
+
+	// HeaderIdempotencyKey is the header key used for distributed request idempotency.
+	HeaderIdempotencyKey = "Idempotency-Key"
 )
 
 // GetHeader returns the value of the specified header key from the request.
@@ -18,4 +21,9 @@ func GetHeader(r *http.Request, key string) string {
 // GetAccountTypeHeader returns the X-Account-Type header value from the HTTP request.
 func GetAccountTypeHeader(r *http.Request) string {
 	return GetHeader(r, HeaderAccountType)
+}
+
+// GetIdempotencyKeyHeader returns the Idempotency-Key header value from the HTTP request.
+func GetIdempotencyKeyHeader(r *http.Request) string {
+	return GetHeader(r, HeaderIdempotencyKey)
 }

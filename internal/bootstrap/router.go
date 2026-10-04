@@ -6,6 +6,7 @@ import (
 	apphttp "komecore/internal/common/http"
 	appcookie "komecore/internal/common/http/cookie"
 	appmiddleware "komecore/internal/common/middleware"
+	"komecore/internal/infra/cache"
 
 	authendomain "komecore/internal/modules/auth/domain"
 	authenRepo "komecore/internal/modules/auth/repository"
@@ -29,16 +30,22 @@ import (
 // RouteChains encapsulates all pre-built middleware chains for
 // different routing policies.
 type RouteChains struct {
-	Core           func(apphttp.AppHandler) http.HandlerFunc
-	CoreAuth       func(apphttp.AppHandler) http.HandlerFunc
-	StaffOnly      func(apphttp.AppHandler) http.HandlerFunc
-	StaffAdminOnly func(apphttp.AppHandler) http.HandlerFunc
-	CustomerOnly   func(apphttp.AppHandler) http.HandlerFunc
+	Core                    func(apphttp.AppHandler) http.HandlerFunc
+	CoreAuth                func(apphttp.AppHandler) http.HandlerFunc
+	StaffOnly               func(apphttp.AppHandler) http.HandlerFunc
+	StaffAdminOnly          func(apphttp.AppHandler) http.HandlerFunc
+	CustomerOnly            func(apphttp.AppHandler) http.HandlerFunc
+	CustomerWithIdempotency func(apphttp.AppHandler) http.HandlerFunc
 }
 
 // NewRouteChains builds and returns the route chains using
 // the provided Container.
 func NewRouteChains(c *Container) *RouteChains {
+	idempotencyMw := c.Idempotency
+	if idempotencyMw == nil {
+		idempotencyMw = appmiddleware.NewIdempotencyMiddleware(cache.NewNoopCache())
+	}
+
 	buildChain := func(extra ...appmiddleware.Middleware) func(apphttp.AppHandler) http.HandlerFunc {
 		base := []appmiddleware.Middleware{
 			appmiddleware.CORS(c.CORSAllowedOrigins),
@@ -107,6 +114,16 @@ func NewRouteChains(c *Container) *RouteChains {
 			),
 			c.Authorizer.RequireAccountType(authendomain.AccountTypeCustomer),
 			c.Authorizer.LoadActor(c.DBExecutor),
+		),
+		CustomerWithIdempotency: buildChain(
+			c.Authenticator.RequireAuth(
+				c.DBExecutor,
+				c.DBTransactor,
+				appcookie.CookieCustomer,
+			),
+			c.Authorizer.RequireAccountType(authendomain.AccountTypeCustomer),
+			c.Authorizer.LoadActor(c.DBExecutor),
+			idempotencyMw.RequireIdempotency(),
 		),
 	}
 }
@@ -400,7 +417,7 @@ func bindCommerceRoutes(r chi.Router, h *handlers, chains *RouteChains) {
 	})
 
 	r.Route("/order", func(r chi.Router) {
-		r.Post("/", chains.CustomerOnly(h.order.CreateOrder))
+		r.Post("/", chains.CustomerWithIdempotency(h.order.CreateOrder))
 	})
 
 	r.Route("/orders", func(r chi.Router) {
