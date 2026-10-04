@@ -1,4 +1,9 @@
 .git
+.air.toml
 *.log
 coverage
 coverage.*
+vendor
+bin
+tmp
+.env
