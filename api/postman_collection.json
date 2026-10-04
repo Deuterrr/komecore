@@ -1970,6 +1970,10 @@
                 "value": "Bearer {{customerToken}}"
               },
               {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }

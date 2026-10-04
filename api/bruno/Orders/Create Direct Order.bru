@@ -14,6 +14,10 @@ auth:bearer {
   token: {{customerToken}}
 }
 
+headers {
+  Idempotency-Key: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+}
+
 body:json {
   {
     "address_id": "e0000000-0000-0000-0000-000000000001",

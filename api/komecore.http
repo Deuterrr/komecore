@@ -314,7 +314,7 @@ Authorization: Bearer {{staffToken}}
 # 06. Catalog & Products
 # ==============================================================================
 
-### Find Products Catalog
+### Find Products Catalog (Redis Cache-Aside: 5m TTL)
 GET {{baseUrl}}/api/v1/products?page=1&limit=10&status=active&sort=price_asc
 
 
@@ -341,7 +341,7 @@ GET {{baseUrl}}/api/v1/products/stats?page=1&limit=10
 Authorization: Bearer {{staffToken}}
 
 
-### Get Product by Slug
+### Get Product by Slug (Redis Cache-Aside: 15m TTL)
 GET {{baseUrl}}/api/v1/products/{{productSlug}}
 
 
@@ -642,9 +642,10 @@ Content-Type: application/json
 # 10. Orders & Tracking
 # ==============================================================================
 
-### Create Direct Order
+### Create Direct Order (Idempotency protected: requires Idempotency-Key header)
 POST {{baseUrl}}/api/v1/order
 Authorization: Bearer {{customerToken}}
+Idempotency-Key: {{$guid}}
 Content-Type: application/json
 
 {

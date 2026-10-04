@@ -768,6 +768,10 @@ paths:
   /api/v1/products:
     get:
       summary: Find & Filter Products Catalog
+      description: >
+        Search and retrieve products from the catalog.
+        Responses are cached in Redis using the Cache-Aside pattern (TTL 5 minutes).
+        Cache is automatically invalidated when products are created, updated, or removed.
       tags:
         - Catalog
       parameters:
@@ -877,6 +881,10 @@ paths:
   /api/v1/products/{slug}:
     get:
       summary: Get Product Detail by Slug
+      description: >
+        Retrieve detailed product information by its URL slug.
+        Responses are cached in Redis using the Cache-Aside pattern (TTL 15 minutes).
+        Cache is automatically invalidated when products are created, updated, or removed.
       tags:
         - Catalog
       parameters:
@@ -1543,12 +1551,23 @@ paths:
   /api/v1/order:
     post:
       summary: Create Direct Order (Customer)
-      description: Directly places an order without requiring previous cart items.
+      description: >
+        Directly places an order without requiring previous cart items.
+        Requires an Idempotency-Key header to prevent duplicate execution during network retries or transient issues.
       tags:
         - Orders
       security:
         - BearerAuth: []
         - CookieCustomerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Unique idempotency key (e.g. UUID v4, max 128 characters) to guarantee safe retries.
+          schema:
+            type: string
+            maxLength: 128
+            example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
       requestBody:
         required: true
         content:
@@ -1558,10 +1577,26 @@ paths:
       responses:
         '201':
           description: Order created successfully
+          headers:
+            X-Cache:
+              schema:
+                type: string
+                example: "HIT-IDEMPOTENCY"
+              description: Returned with value HIT-IDEMPOTENCY when an idempotent request is replayed from cache.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateOrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Concurrent request conflict (request with same idempotency key is currently processing)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/orders:
     get:

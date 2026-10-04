@@ -80,6 +80,24 @@ Komecore uses a dual-layer authentication model:
 
 ---
 
+## ⚡ Distributed Caching & Idempotency Mechanics (Phase 2)
+
+### 1. Redis Catalog Cache-Aside Pattern
+Catalog read endpoints employ high-performance Redis 7 caching to minimize PostgreSQL query latency:
+- **`GET /api/v1/products`**: Caches filtered and paginated search queries (TTL: 5 minutes, key: `cache:products:list:<query_hash>`).
+- **`GET /api/v1/products/{slug}`**: Caches individual product detail representations (TTL: 15 minutes, key: `cache:product:slug:<slug>`).
+- **Proactive Invalidation**: Mutating operations (`POST /api/v1/products`, `PUT /api/v1/products/...`, `DELETE /api/v1/products/...`) automatically trigger pattern-based eviction (`cache:product*`) across all active nodes.
+
+### 2. Request Idempotency & Concurrency Guards
+Mutating operations vulnerable to double-submission or transient network retries enforce distributed idempotency:
+- **`POST /api/v1/order`**: Requires the `Idempotency-Key` header (UUID or string up to 128 characters).
+- **Behavior & Status Codes**:
+  - **Missing / Invalid Header**: Returns `400 Bad Request` (`"Idempotency-Key header is required"`).
+  - **In-Flight Lock**: If a concurrent request with the same key is currently running, returns `409 Conflict` (`"a request with this idempotency key is currently processing"`).
+  - **Replay Execution**: Once completed, subsequent requests with the same key within 24 hours replay the saved response with the `X-Cache: HIT-IDEMPOTENCY` header without re-executing database operations.
+
+---
+
 ## 🧪 Automated Contract Verification
 
 To ensure API documentation and sample payloads never drift from the Go backend DTOs, a contract test is included in the test suite:
