@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"komecore/internal/infra/cache"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
@@ -14,6 +15,7 @@ import (
 	shopDomain "komecore/internal/modules/shop/domain"
 	shopRepo "komecore/internal/modules/shop/repository"
 	query "komecore/internal/shared/query"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,6 +27,7 @@ type FindProductsUsecase struct {
 	shopRepo       shopRepo.ShopRepository
 	fileStore      storage.Provider
 	executor       transaction.Executor
+	cache          cache.Cache
 }
 
 func NewFindProductsUsecase(
@@ -43,6 +46,16 @@ func NewFindProductsUsecase(
 		fileStore:      fileStore,
 		executor:       executor,
 	}
+}
+
+func (u *FindProductsUsecase) WithCache(c cache.Cache) *FindProductsUsecase {
+	u.cache = c
+	return u
+}
+
+type findProductsCacheEntry struct {
+	Results []ProductCatalogResult `json:"results"`
+	Total   int                    `json:"total"`
 }
 
 type ShopAvailabilityResult struct {
@@ -81,6 +94,23 @@ func (u *FindProductsUsecase) Execute(
 	ctx context.Context,
 	input FindProductsInput,
 ) ([]ProductCatalogResult, int, error) {
+	var cacheKey string
+	if u.cache != nil {
+		nameStr := ""
+		if input.Name != nil {
+			nameStr = *input.Name
+		}
+		statusStr := ""
+		if input.Status != nil {
+			statusStr = *input.Status
+		}
+		cacheKey = fmt.Sprintf("cache:products:list:%s:%s:%s:%d:%d", nameStr, statusStr, input.Sort, input.Page, input.Limit)
+		var cached findProductsCacheEntry
+		if err := u.cache.Get(ctx, cacheKey, &cached); err == nil {
+			return cached.Results, cached.Total, nil
+		}
+	}
+
 	var productSortKeys = map[string]query.SortKey{
 		"latest":   repository.ProductSortLatest,
 		"date":     repository.ProductSortLatest,
@@ -245,6 +275,10 @@ func (u *FindProductsUsecase) Execute(
 		}
 
 		results = append(results, result)
+	}
+
+	if u.cache != nil && cacheKey != "" {
+		_ = u.cache.Set(ctx, cacheKey, findProductsCacheEntry{Results: results, Total: total}, 5*time.Minute)
 	}
 
 	return results, total, nil

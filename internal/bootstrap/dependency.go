@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"komecore/internal/config"
+	"komecore/internal/infra/cache"
 	database "komecore/internal/infra/db"
 	paymentgateway "komecore/internal/infra/payment-gateway"
 	midtransGateway "komecore/internal/infra/payment-gateway/midtrans"
@@ -25,6 +26,7 @@ type Dependency struct {
 	PaymentGateway      paymentgateway.Provider
 	ShippingProvider    shipping.ShippingProvider
 	LogisticsProvider   shipping.LogisticsProvider
+	Cache               cache.Cache
 }
 
 func NewDependency(cfg Config) (*Dependency, error) {
@@ -50,6 +52,8 @@ func NewDependency(cfg Config) (*Dependency, error) {
 
 	logistics := manualShipProvider.NewManualShippingProvider()
 
+	cacheStore := ResolveCache(cfg.Redis)
+
 	return &Dependency{
 		DB:                  db,
 		StorageProvider:     storageProvider,
@@ -58,15 +62,36 @@ func NewDependency(cfg Config) (*Dependency, error) {
 		PaymentGateway:      gateway,
 		ShippingProvider:    shippingEstimator,
 		LogisticsProvider:   logistics,
+		Cache:               cacheStore,
 	}, nil
 }
 
 func (i *Dependency) Close() {
-	if i == nil || i.DB == nil {
+	if i == nil {
 		return
 	}
 
-	i.DB.Close()
+	if i.Cache != nil {
+		_ = i.Cache.Close()
+	}
+
+	if i.DB != nil {
+		i.DB.Close()
+	}
+}
+
+// ResolveCache initializes Redis cache or falls back to MemoryCache / Noop.
+func ResolveCache(cfg config.RedisConfig) cache.Cache {
+	if !cfg.Enabled || strings.TrimSpace(cfg.Host) == "" {
+		return cache.NewNoopCache()
+	}
+
+	redisCache, err := cache.NewRedisCache(cfg)
+	if err != nil {
+		// Fallback to thread-safe in-memory cache for offline/test environments
+		return cache.NewMemoryCache()
+	}
+	return redisCache
 }
 
 // ResolveStorageProvider selects and initializes the storage provider based on configuration.

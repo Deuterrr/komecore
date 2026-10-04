@@ -30,7 +30,21 @@ services:
       timeout: 5s
       retries: 5
 
-  service-core:
+  redis:
+    image: redis:7-alpine
+    container_name: komecore-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  komecore:
     build:
       context: .
       dockerfile: Dockerfile
@@ -42,6 +56,8 @@ services:
     environment:
       POSTGRES_DB_HOST: postgres
       POSTGRES_DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       APP_NAME: komecore
       APP_HOST: 0.0.0.0
       APP_PORT: 7129
@@ -50,6 +66,8 @@ services:
       - "7129:7129"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:7129/health || exit 1"]
@@ -61,3 +79,5 @@ services:
 volumes:
   postgres_data:
     name: komecore-postgres-data
+  redis_data:
+    name: komecore-redis-data

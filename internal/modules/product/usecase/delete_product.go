@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/product/repository"
 
@@ -14,6 +15,7 @@ import (
 type DeleteProductUsecase struct {
 	productRepo repository.ProductRepository
 	executor    transaction.Executor
+	cache       cache.Cache
 }
 
 func NewDeleteProductUsecase(
@@ -24,6 +26,11 @@ func NewDeleteProductUsecase(
 		productRepo: productRepo,
 		executor:    executor,
 	}
+}
+
+func (u *DeleteProductUsecase) WithCache(c cache.Cache) *DeleteProductUsecase {
+	u.cache = c
+	return u
 }
 
 func (u *DeleteProductUsecase) Execute(
@@ -40,6 +47,10 @@ func (u *DeleteProductUsecase) Execute(
 
 	if err := u.productRepo.Delete(ctx, u.executor, product.ID); err != nil {
 		return fmt.Errorf("failed to delete product: %w", err)
+	}
+
+	if u.cache != nil {
+		_ = u.cache.DeletePattern(ctx, "cache:product*")
 	}
 
 	return nil

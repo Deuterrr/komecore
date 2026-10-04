@@ -16,6 +16,7 @@ type Config struct {
 	GoogleOAuth    config.GoogleOAuthConfig
 	PaymentSync    config.PaymentSyncConfig
 	PaymentExpiry  config.PaymentExpiryConfig
+	Redis          config.RedisConfig
 }
 
 func LoadConfig() Config {
@@ -36,5 +37,6 @@ func LoadConfig() Config {
 		GoogleOAuth:    config.LoadGoogleOAuthConfig(),
 		PaymentSync:    config.LoadPaymentSyncConfig(),
 		PaymentExpiry:  config.LoadPaymentExpiryConfig(),
+		Redis:          config.LoadRedisConfig(),
 	}
 }

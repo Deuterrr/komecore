@@ -55,6 +55,8 @@ import (
 	staffUsecase "komecore/internal/modules/staff/usecase"
 	userUsecase "komecore/internal/modules/user/usecase"
 
+	appmiddleware "komecore/internal/common/middleware"
+	"komecore/internal/infra/cache"
 	paymentgateway "komecore/internal/infra/payment-gateway"
 )
 
@@ -67,6 +69,8 @@ type Container struct {
 	DBExecutor         transaction.Executor
 	DBTransactor       transaction.Transactor
 	GoogleOAuth        appconfig.GoogleOAuthConfig
+	Cache              cache.Cache
+	Idempotency        *appmiddleware.IdempotencyMiddleware
 	paymentMethodRepo  paymentRepo.PaymentMethodRepository
 	paymentGateway     paymentgateway.Provider
 
@@ -392,6 +396,8 @@ func buildContainer(
 		DBExecutor:         infra.TransactionExecutor,
 		DBTransactor:       infra.TransactionProvider,
 		GoogleOAuth:        cfg.GoogleOAuth,
+		Cache:              infra.Cache,
+		Idempotency:        appmiddleware.NewIdempotencyMiddleware(infra.Cache),
 		paymentMethodRepo:  paymentMethodRepo,
 		paymentGateway:     infra.PaymentGateway,
 
@@ -402,7 +408,7 @@ func buildContainer(
 			shopRepo,
 			infra.StorageProvider,
 			infra.TransactionExecutor,
-		),
+		).WithCache(infra.Cache),
 		GetProduct: *productUsecase.NewGetProductUsecase(
 			infra.TransactionExecutor,
 			infra.StorageProvider,
@@ -411,13 +417,13 @@ func buildContainer(
 			productImageRepo,
 			shopRepo,
 			productPerformanceRepo,
-		),
+		).WithCache(infra.Cache),
 		SaveProduct: *productUsecase.NewSaveProductUsecase(
 			infra.TransactionProvider,
 			productRepo,
 			slugGen,
 			productPerformanceRepo,
-		),
+		).WithCache(infra.Cache),
 		GetProductStats: *productUsecase.NewGetProductStatsUsecase(
 			productPerformanceRepo,
 			productImageRepo,
@@ -427,7 +433,7 @@ func buildContainer(
 		DeleteProduct: *productUsecase.NewDeleteProductUsecase(
 			productRepo,
 			infra.TransactionExecutor,
-		),
+		).WithCache(infra.Cache),
 		AddProductImages: *productUsecase.NewAddProductImagesUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,

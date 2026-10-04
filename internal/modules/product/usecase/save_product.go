@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/product/domain"
 	"komecore/internal/modules/product/repository"
@@ -20,6 +21,7 @@ type SaveProductUsecase struct {
 	productRepo repository.ProductRepository
 	slugGen     slug.Generator
 	perfRepo    repository.ProductPerformanceRepository
+	cache       cache.Cache
 }
 
 func NewSaveProductUsecase(
@@ -34,6 +36,11 @@ func NewSaveProductUsecase(
 		slugGen:     slugGen,
 		perfRepo:    perfRepo,
 	}
+}
+
+func (u *SaveProductUsecase) WithCache(c cache.Cache) *SaveProductUsecase {
+	u.cache = c
+	return u
 }
 
 type SaveProductInput struct {
@@ -109,6 +116,10 @@ func (u *SaveProductUsecase) Execute(
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	if u.cache != nil {
+		_ = u.cache.DeletePattern(ctx, "cache:product*")
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"komecore/internal/infra/cache"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
@@ -12,6 +13,7 @@ import (
 	"komecore/internal/modules/product/repository"
 	shopDomain "komecore/internal/modules/shop/domain"
 	shopRepo "komecore/internal/modules/shop/repository"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -24,6 +26,7 @@ type GetProductUsecase struct {
 	productImgRepo repository.ProductImageRepository
 	shopRepo       shopRepo.ShopRepository
 	perfRepo       repository.ProductPerformanceRepository
+	cache          cache.Cache
 }
 
 func NewGetProductUsecase(
@@ -44,6 +47,11 @@ func NewGetProductUsecase(
 		shopRepo:       shopRepo,
 		perfRepo:       perfRepo,
 	}
+}
+
+func (u *GetProductUsecase) WithCache(c cache.Cache) *GetProductUsecase {
+	u.cache = c
+	return u
 }
 
 type ImageProductDetail struct {
@@ -67,6 +75,15 @@ func (u *GetProductUsecase) Execute(
 	ctx context.Context,
 	slug string,
 ) (*ProductDetailResult, error) {
+	var cacheKey string
+	if u.cache != nil {
+		cacheKey = fmt.Sprintf("cache:product:slug:%s", slug)
+		var cached ProductDetailResult
+		if err := u.cache.Get(ctx, cacheKey, &cached); err == nil {
+			return &cached, nil
+		}
+	}
+
 	product, err := u.productRepo.GetBySlug(ctx, u.executor, slug)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load products with inventory: %w", err)
@@ -75,18 +92,28 @@ func (u *GetProductUsecase) Execute(
 		return nil, nil
 	}
 
-	go func() {
-		_ = u.perfRepo.IncrementViewCount(context.Background(), u.executor, product.ID)
-	}()
-
-	inventories, err := u.inventoryRepo.ListByProductID(ctx, u.executor, product.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load inventory by product: %w", err)
+	if u.perfRepo != nil {
+		go func() {
+			_ = u.perfRepo.IncrementViewCount(context.Background(), u.executor, product.ID)
+		}()
 	}
 
-	images, err := u.productImgRepo.ListByProductID(ctx, u.executor, product.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load images by product: %w", err)
+	var inventories []inventoryDomain.Inventory
+	if u.inventoryRepo != nil {
+		var err error
+		inventories, err = u.inventoryRepo.ListByProductID(ctx, u.executor, product.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load inventory by product: %w", err)
+		}
+	}
+
+	var images []domain.ProductImage
+	if u.productImgRepo != nil {
+		var err error
+		images, err = u.productImgRepo.ListByProductID(ctx, u.executor, product.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load images by product: %w", err)
+		}
 	}
 
 	result := ProductDetailResult{
@@ -126,6 +153,9 @@ func (u *GetProductUsecase) Execute(
 	}
 
 	if len(inventories) == 0 {
+		if u.cache != nil && cacheKey != "" {
+			_ = u.cache.Set(ctx, cacheKey, result, 15*time.Minute)
+		}
 		return &result, nil
 	}
 
@@ -173,6 +203,10 @@ func (u *GetProductUsecase) Execute(
 	result.Inventory.TotalStock = totalStock
 	result.Inventory.ReservedStock = reservedStock
 	result.Availability = availability
+
+	if u.cache != nil && cacheKey != "" {
+		_ = u.cache.Set(ctx, cacheKey, result, 15*time.Minute)
+	}
 
 	return &result, nil
 }
