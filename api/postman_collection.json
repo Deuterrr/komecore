@@ -75,6 +75,11 @@
       "key": "methodId",
       "value": "d0000000-0000-0000-0000-000000000001",
       "type": "string"
+    },
+    {
+      "key": "reviewId",
+      "value": "30000000-0000-0000-0000-000000000001",
+      "type": "string"
     }
   ],
   "item": [
@@ -2528,6 +2533,98 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"order_id\": \"ORD-20260930-001\",\n  \"transaction_status\": \"settlement\",\n  \"status_code\": \"200\",\n  \"gross_amount\": \"185000.00\",\n  \"payment_type\": \"bank_transfer\",\n  \"signature_key\": \"9a3f2b4c1d8e7f...\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "13. Product Reviews",
+      "item": [
+        {
+          "name": "List Product Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/reviews?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Product Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{productId}}",
+                "reviews"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"title\": \"Excellent quality\",\n  \"comment\": \"The rice is fragrant and fresh. Highly recommended!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{customerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reviews",
+                "{{reviewId}}"
+              ]
             }
           }
         }

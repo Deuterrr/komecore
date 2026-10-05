@@ -1,0 +1,16 @@
+meta {
+  name: List Product Reviews
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products/{{productId}}/reviews?page=1&limit=10
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  limit: 10
+}

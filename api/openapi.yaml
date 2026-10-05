@@ -32,6 +32,8 @@ tags:
     description: Shipment tracking, waybills, and dispatching
   - name: Payments
     description: Payment methods, instructions, and Midtrans webhook
+  - name: Reviews
+    description: Customer product reviews, ratings, and social proof
 
 paths:
   /health:
@@ -954,6 +956,110 @@ paths:
                 $ref: '#/components/schemas/MessageResponse'
               example:
                 message: "images uploaded"
+
+  /api/v1/products/{productId}/reviews:
+    get:
+      summary: List Product Reviews
+      description: Returns a paginated list of reviews for a product with rating breakdown.
+      tags:
+        - Reviews
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Product reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListReviewsResponse'
+    post:
+      summary: Create Product Review
+      description: Submits a review and rating (1–5) for a purchased product. Requires eligible delivered/completed order.
+      tags:
+        - Reviews
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponse'
+        '400':
+          description: Invalid rating or review parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Customer has not purchased product in an eligible delivered order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Review already submitted for this purchase
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/reviews/{id}:
+    delete:
+      summary: Delete Product Review
+      description: Deletes a review. Authorized for the review owner or staff administrators.
+      tags:
+        - Reviews
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Review deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          description: Forbidden - Not review owner or staff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Review not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ==============================================================================
   # SHOPS & INVENTORIES
@@ -2440,6 +2546,8 @@ components:
         is_available: { type: boolean }
         price: { type: integer, format: int64, example: 75000 }
         stock: { type: integer, example: 100 }
+        average_rating: { type: number, format: float, example: 4.8 }
+        review_count: { type: integer, example: 42 }
         banner:
           $ref: '#/components/schemas/ProductImageResponse'
         availability:
@@ -2459,6 +2567,8 @@ components:
         is_available: { type: boolean }
         price: { type: integer, format: int64 }
         stock: { type: integer }
+        average_rating: { type: number, format: float, example: 4.8 }
+        review_count: { type: integer, example: 42 }
         banner:
           $ref: '#/components/schemas/ProductImageResponse'
         description: { type: string, nullable: true }
@@ -3218,3 +3328,64 @@ components:
       properties:
         status: { type: string, example: "settlement" }
         synced: { type: boolean, example: true }
+
+    # Review Schemas
+    CreateReviewRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5, example: 5 }
+        title: { type: string, maxLength: 120, example: "Excellent quality" }
+        comment: { type: string, example: "The rice is fragrant and fresh. Highly recommended!" }
+
+    ReviewResponse:
+      type: object
+      required: [id, product_id, customer_id, rating, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        order_id: { type: string, format: uuid }
+        rating: { type: integer, example: 5 }
+        title: { type: string, nullable: true, example: "Excellent quality" }
+        comment: { type: string, nullable: true, example: "The rice is fragrant and fresh. Highly recommended!" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    ReviewWithCustomerResponse:
+      type: object
+      required: [id, product_id, customer_id, customer_name, rating, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        product_id: { type: string, format: uuid }
+        customer_id: { type: string, format: uuid }
+        customer_name: { type: string, example: "John Doe" }
+        order_id: { type: string, format: uuid }
+        rating: { type: integer, example: 5 }
+        title: { type: string, nullable: true, example: "Excellent quality" }
+        comment: { type: string, nullable: true, example: "The rice is fragrant and fresh. Highly recommended!" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    ListReviewsResponse:
+      type: object
+      required: [reviews, total, page, limit, average_rating, review_count, rating_breakdown]
+      properties:
+        reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewWithCustomerResponse'
+        total: { type: integer, example: 1 }
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 10 }
+        average_rating: { type: number, format: float, example: 5.0 }
+        review_count: { type: integer, example: 1 }
+        rating_breakdown:
+          type: object
+          properties:
+            "1": { type: integer, example: 0 }
+            "2": { type: integer, example: 0 }
+            "3": { type: integer, example: 0 }
+            "4": { type: integer, example: 0 }
+            "5": { type: integer, example: 1 }
+

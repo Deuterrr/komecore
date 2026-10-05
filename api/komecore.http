@@ -19,6 +19,7 @@
 @orderId = 10000000-0000-0000-0000-000000000001
 @shipmentId = 20000000-0000-0000-0000-000000000001
 @methodId = d0000000-0000-0000-0000-000000000001
+@reviewId = 30000000-0000-0000-0000-000000000001
 
 # ==============================================================================
 # 01. Health & Infrastructure
@@ -824,3 +825,29 @@ Content-Type: application/json
   "payment_type": "bank_transfer",
   "signature_key": "9a3f2b4c1d8e7f..."
 }
+
+
+# ==============================================================================
+# 13. Product Reviews
+# ==============================================================================
+
+### List Product Reviews
+GET {{baseUrl}}/api/v1/products/{{productId}}/reviews?page=1&limit=10
+
+
+### Create Product Review
+POST {{baseUrl}}/api/v1/products/{{productId}}/reviews
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "title": "Excellent quality",
+  "comment": "The rice is fragrant and fresh. Highly recommended!"
+}
+
+
+### Delete Review
+DELETE {{baseUrl}}/api/v1/reviews/{{reviewId}}
+Authorization: Bearer {{customerToken}}
+
