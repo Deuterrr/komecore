@@ -10,13 +10,13 @@ import (
 )
 
 type Review struct {
-	ID        uuid.UUID
-	ProductID uuid.UUID
+	ID         uuid.UUID
+	ProductID  uuid.UUID
 	CustomerID uuid.UUID
-	OrderID   uuid.UUID
-	Rating    int
-	Title     *string
-	Comment   *string
+	OrderID    uuid.UUID
+	Rating     int
+	Title      *string
+	Comment    *string
 
 	CreatedAt time.Time
 	UpdatedAt *time.Time
