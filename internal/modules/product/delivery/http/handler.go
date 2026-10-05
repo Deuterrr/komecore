@@ -114,8 +114,10 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 				Status: string(p.Product.Status),
 				IsAvailable: productStatusDTO(p.Product.Status) == ProductStatusActive &&
 					p.Inventory.TotalStock > 0,
-				Price:      p.Product.Price,
-				TotalStock: p.Inventory.TotalStock,
+				Price:         p.Product.Price,
+				TotalStock:    p.Inventory.TotalStock,
+				AverageRating: p.Product.AverageRating,
+				ReviewCount:   p.Product.ReviewCount,
 				Banner: productImageResponse{
 					Thumbnail: &p.Images.Thumbnail,
 				},
@@ -207,16 +209,17 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) erro
 
 	response := productDetailResponse{
 		productBaseResponse: productBaseResponse{
-			ID:     productDetail.Product.ID,
-			SKU:    productDetail.Product.SKU,
-			Name:   productDetail.Product.Name,
-			Slug:   productDetail.Product.Slug,
-			Status: string(productDetail.Product.Status),
-			IsAvailable: productStatusDTO(productDetail.Product.Status) == ProductStatusActive &&
-				available > 0,
-			Price:      productDetail.Product.Price,
-			TotalStock: available,
-			Banner:     banner,
+			ID:            productDetail.Product.ID,
+			SKU:           productDetail.Product.SKU,
+			Name:          productDetail.Product.Name,
+			Slug:          productDetail.Product.Slug,
+			Status:        string(productDetail.Product.Status),
+			IsAvailable:   productStatusDTO(productDetail.Product.Status) == ProductStatusActive && available > 0,
+			Price:         productDetail.Product.Price,
+			TotalStock:    available,
+			AverageRating: productDetail.Product.AverageRating,
+			ReviewCount:   productDetail.Product.ReviewCount,
+			Banner:        banner,
 		},
 		Description:  productDetail.Product.Description,
 		Weight:       productDetail.Product.Weight,

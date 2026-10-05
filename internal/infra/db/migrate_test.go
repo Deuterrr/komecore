@@ -54,6 +54,7 @@ func testMigrationsIntegrity(t *testing.T, dialect string) {
 		"0006_create_orders_and_invoices_tables",
 		"0007_create_shipments_tables",
 		"0008_create_payments_tables",
+		"0009_create_reviews_tables",
 	}
 
 	// 1. Verify all expected migration pairs exist and are non-empty
@@ -125,8 +126,8 @@ func testMigrationsIntegrity(t *testing.T, dialect string) {
 		}
 	}
 
-	if sqlCount != 16 {
-		t.Errorf("[%s] expected exactly 16 .sql migration files (8 up, 8 down), found %d", dialect, sqlCount)
+	if sqlCount != 18 {
+		t.Errorf("[%s] expected exactly 18 .sql migration files (9 up, 9 down), found %d", dialect, sqlCount)
 	}
 
 	// 3. Verify golang-migrate file driver can parse the migrations directory
@@ -157,7 +158,7 @@ func testMigrationsIntegrity(t *testing.T, dialect string) {
 		currentVersion = nextVersion
 	}
 
-	if count != 8 {
-		t.Errorf("[%s] expected 8 sequential migration versions, got %d", dialect, count)
+	if count != 9 {
+		t.Errorf("[%s] expected 9 sequential migration versions, got %d", dialect, count)
 	}
 }

@@ -266,6 +266,14 @@ func TestRouter_CoreRoutesStructure(t *testing.T) {
 		r.Post("/", dummyH)
 		r.Get("/{slug}", dummyH)
 		r.Get("/stats", dummyH)
+		r.Route("/{productId}/reviews", func(r chi.Router) {
+			r.Get("/", dummyH)
+			r.Post("/", dummyH)
+		})
+	})
+
+	r.Route("/reviews", func(r chi.Router) {
+		r.Delete("/{id}", dummyH)
 	})
 
 	r.Route("/carts", func(r chi.Router) {
@@ -325,6 +333,9 @@ func TestRouter_CoreRoutesStructure(t *testing.T) {
 		"POST /payments/checkout",
 		"POST /payments/webhook",
 		"GET /shipments/{orderId}",
+		"GET /products/{productId}/reviews",
+		"POST /products/{productId}/reviews",
+		"DELETE /reviews/{id}",
 	}
 
 	for _, ep := range expectedEndpoints {

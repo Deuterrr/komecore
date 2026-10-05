@@ -370,6 +370,10 @@ func (m *uosMockProductRepo) Delete(_ context.Context, _ transaction.Executor, _
 	return nil
 }
 
+func (m *uosMockProductRepo) UpdateRating(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ float64, _ int) error {
+	return nil
+}
+
 type uosMockLogisticsProvider struct {
 	calledInput     *shipping.CreateOrderInput
 	result          *shipping.CreateOrderResult

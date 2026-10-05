@@ -40,6 +40,8 @@ func (r *productRepositoryImpl) FindProducts(
 			p.status,
 			p.base_price,
 			p.weight,
+			p.average_rating,
+			p.review_count,
 			p.created_at,
 			p.updated_at,
 			p.archived_at
@@ -206,6 +208,8 @@ func (r *productRepositoryImpl) FindProducts(
 			&item.Status,
 			&item.Price,
 			&item.Weight,
+			&item.AverageRating,
+			&item.ReviewCount,
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&item.ArchivedAt,
@@ -247,6 +251,8 @@ func (r *productRepositoryImpl) FindProductsWithInventory(
 			p.status,
 			p.base_price,
 			p.weight,
+			p.average_rating,
+			p.review_count,
 			p.created_at,
 			p.updated_at,
 			p.archived_at,
@@ -416,6 +422,8 @@ func (r *productRepositoryImpl) FindProductsWithInventory(
 			&item.Product.Status,
 			&item.Product.Price,
 			&item.Product.Weight,
+			&item.Product.AverageRating,
+			&item.Product.ReviewCount,
 			&item.Product.CreatedAt,
 			&item.Product.UpdatedAt,
 			&item.Product.ArchivedAt,
@@ -454,6 +462,8 @@ func (r *productRepositoryImpl) GetByID(
 			p.status,
 			p.base_price,
 			p.weight,
+			p.average_rating,
+			p.review_count,
 			p.created_at,
 			p.updated_at,
 			p.archived_at
@@ -472,6 +482,8 @@ func (r *productRepositoryImpl) GetByID(
 		&result.Status,
 		&result.Price,
 		&result.Weight,
+		&result.AverageRating,
+		&result.ReviewCount,
 		&result.CreatedAt,
 		&result.UpdatedAt,
 		&result.ArchivedAt,
@@ -502,6 +514,8 @@ func (r *productRepositoryImpl) GetBySlug(
 			p.status,
 			p.base_price,
 			p.weight,
+			p.average_rating,
+			p.review_count,
 			p.created_at,
 			p.updated_at,
 			p.archived_at
@@ -520,6 +534,8 @@ func (r *productRepositoryImpl) GetBySlug(
 		&result.Status,
 		&result.Price,
 		&result.Weight,
+		&result.AverageRating,
+		&result.ReviewCount,
 		&result.CreatedAt,
 		&result.UpdatedAt,
 		&result.ArchivedAt,
@@ -554,6 +570,8 @@ func (r *productRepositoryImpl) FindByIDs(
 			p.status,
 			p.base_price,
 			p.weight,
+			p.average_rating,
+			p.review_count,
 			p.created_at,
 			p.updated_at,
 			p.archived_at
@@ -585,6 +603,8 @@ func (r *productRepositoryImpl) FindByIDs(
 			&item.Status,
 			&item.Price,
 			&item.Weight,
+			&item.AverageRating,
+			&item.ReviewCount,
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&item.ArchivedAt,
@@ -670,6 +690,32 @@ func (r *productRepositoryImpl) Delete(
 	_, err := exec.Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("delete product failed: %w", err)
+	}
+
+	return nil
+}
+
+func (r *productRepositoryImpl) UpdateRating(
+	ctx context.Context,
+	exec transaction.Executor,
+	productID uuid.UUID,
+	averageRating float64,
+	reviewCount int,
+) error {
+	query := `
+		UPDATE products
+		SET
+			average_rating = $1,
+			review_count = $2,
+			updated_at = NOW()
+		WHERE
+			id = $3
+			AND deleted_at IS NULL
+	`
+
+	_, err := exec.Exec(ctx, query, averageRating, reviewCount, productID)
+	if err != nil {
+		return fmt.Errorf("update product rating failed: %w", err)
 	}
 
 	return nil

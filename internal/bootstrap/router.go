@@ -19,6 +19,7 @@ import (
 	orderH "komecore/internal/modules/order/delivery/http"
 	paymentH "komecore/internal/modules/payment/delivery/http"
 	productH "komecore/internal/modules/product/delivery/http"
+	reviewH "komecore/internal/modules/review/delivery/http"
 	shipmentH "komecore/internal/modules/shipment/delivery/http"
 	shopH "komecore/internal/modules/shop/delivery/http"
 	staffH "komecore/internal/modules/staff/delivery/http"
@@ -169,6 +170,7 @@ type handlers struct {
 	courier   *courierH.CourierHandler
 	shipment  *shipmentH.ShipmentHandler
 	order     *orderH.OrderHandler
+	review    *reviewH.ReviewHandler
 }
 
 func initHandlers(c *Container) *handlers {
@@ -265,6 +267,11 @@ func initHandlers(c *Container) *handlers {
 			&c.GetOrderTracking,
 			&c.GetShop,
 		),
+		review: reviewH.NewReviewHandler(
+			&c.CreateReview,
+			&c.ListReviews,
+			&c.DeleteReview,
+		),
 	}
 }
 
@@ -343,12 +350,21 @@ func bindCatalogRoutes(r chi.Router, h *handlers, chains *RouteChains, c *Contai
 		r.Post("/", chains.StaffOnly(h.product.SaveProduct))
 		r.Get("/stats", chains.StaffAdminOnly(h.product.GetProductStats))
 
+		r.Route("/{productId}/reviews", func(r chi.Router) {
+			r.Get("/", chains.Core(h.review.ListProductReviews))
+			r.Post("/", chains.CustomerOnly(h.review.CreateReview))
+		})
+
 		r.Get("/{slug}", chains.Core(h.product.GetProduct))
 
 		r.Route("/id/{id}", func(r chi.Router) {
 			r.Delete("/", chains.StaffAdminOnly(h.product.DeleteProduct))
 			r.Post("/images", chains.StaffOnly(h.product.AddProductImages))
 		})
+	})
+
+	r.Route("/reviews", func(r chi.Router) {
+		r.Delete("/{id}", chains.CoreAuth(h.review.DeleteReview))
 	})
 
 	r.Route("/shops", func(r chi.Router) {

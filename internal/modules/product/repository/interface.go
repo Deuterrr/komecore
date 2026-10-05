@@ -51,6 +51,14 @@ type ProductRepository interface {
 		exec transaction.Executor,
 		id uuid.UUID,
 	) error
+
+	UpdateRating(
+		ctx context.Context,
+		exec transaction.Executor,
+		productID uuid.UUID,
+		averageRating float64,
+		reviewCount int,
+	) error
 }
 
 type ProductImageRepository interface {

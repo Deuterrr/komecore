@@ -41,15 +41,17 @@ type productAvailabilityResponse struct {
 }
 
 type productBaseResponse struct {
-	ID          uuid.UUID            `json:"id"`
-	SKU         string               `json:"sku"`
-	Name        string               `json:"name"`
-	Slug        string               `json:"slug"`
-	Status      string               `json:"status"`
-	IsAvailable bool                 `json:"is_available"`
-	Price       int64                `json:"price"`
-	TotalStock  int                  `json:"stock"`
-	Banner      productImageResponse `json:"banner"`
+	ID            uuid.UUID            `json:"id"`
+	SKU           string               `json:"sku"`
+	Name          string               `json:"name"`
+	Slug          string               `json:"slug"`
+	Status        string               `json:"status"`
+	IsAvailable   bool                 `json:"is_available"`
+	Price         int64                `json:"price"`
+	TotalStock    int                  `json:"stock"`
+	AverageRating float64              `json:"average_rating"`
+	ReviewCount   int                  `json:"review_count"`
+	Banner        productImageResponse `json:"banner"`
 }
 
 type productCatalogResponse struct {

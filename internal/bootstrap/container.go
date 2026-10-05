@@ -21,6 +21,7 @@ import (
 	orderPersistence "komecore/internal/modules/order/infra/persistence"
 	paymentPersistence "komecore/internal/modules/payment/infra/persistence"
 	productPersistence "komecore/internal/modules/product/infra/persistence"
+	reviewPersistence "komecore/internal/modules/review/infra/persistence"
 	shipmentPersistence "komecore/internal/modules/shipment/infra/persistence"
 	shopPersistence "komecore/internal/modules/shop/infra/persistence"
 	staffPersistence "komecore/internal/modules/staff/infra/persistence"
@@ -37,6 +38,7 @@ import (
 	orderRepo "komecore/internal/modules/order/repository"
 	paymentRepo "komecore/internal/modules/payment/repository"
 	productRepo "komecore/internal/modules/product/repository"
+	reviewRepo "komecore/internal/modules/review/repository"
 	shipmentRepo "komecore/internal/modules/shipment/repository"
 	shopRepo "komecore/internal/modules/shop/repository"
 	staffRepo "komecore/internal/modules/staff/repository"
@@ -50,6 +52,7 @@ import (
 	orderUsecase "komecore/internal/modules/order/usecase"
 	paymentUsecase "komecore/internal/modules/payment/usecase"
 	productUsecase "komecore/internal/modules/product/usecase"
+	reviewUsecase "komecore/internal/modules/review/usecase"
 	shipmentUsecase "komecore/internal/modules/shipment/usecase"
 	shopUsecase "komecore/internal/modules/shop/usecase"
 	staffUsecase "komecore/internal/modules/staff/usecase"
@@ -158,6 +161,10 @@ type Container struct {
 	GetOrderTracking        orderUsecase.GetOrderTrackingUsecase
 	ExpireUnfulfilledOrders orderUsecase.ExpireUnfulfilledOrdersUsecase
 
+	CreateReview reviewUsecase.CreateReviewUsecase
+	ListReviews  reviewUsecase.ListReviewsUsecase
+	DeleteReview reviewUsecase.DeleteReviewUsecase
+
 	Limiter applimiter.Limiter
 }
 
@@ -203,6 +210,7 @@ type repositories struct {
 	invoice             orderRepo.InvoiceRepository
 	invoiceItem         orderRepo.InvoiceItemRepository
 	shipment            shipmentRepo.ShipmentRepository
+	review              reviewRepo.ReviewRepository
 }
 
 func initRepositories() *repositories {
@@ -238,6 +246,7 @@ func initRepositories() *repositories {
 		invoice:             orderPersistence.NewInvoiceRepositoryImpl(),
 		invoiceItem:         orderPersistence.NewInvoiceItemRepositoryImpl(),
 		shipment:            shipmentPersistence.NewShipmentRepositoryImpl(),
+		review:              reviewPersistence.NewReviewRepositoryImpl(),
 	}
 }
 
@@ -358,6 +367,7 @@ func buildContainer(
 		invoiceRepo             = repos.invoice
 		invoiceItemRepo         = repos.invoiceItem
 		shipmentRepo            = repos.shipment
+		reviewRepo              = repos.review
 	)
 
 	var (
@@ -919,6 +929,28 @@ func buildContainer(
 			auditLogger,
 			100,
 			5,
+		),
+
+		CreateReview: *reviewUsecase.NewCreateReviewUsecase(
+			reviewRepo,
+			productRepo,
+			orderRepo,
+			orderItemRepo,
+			infra.Cache,
+			infra.TransactionExecutor,
+			infra.TransactionProvider,
+		),
+		ListReviews: *reviewUsecase.NewListReviewsUsecase(
+			reviewRepo,
+			productRepo,
+			infra.TransactionExecutor,
+		),
+		DeleteReview: *reviewUsecase.NewDeleteReviewUsecase(
+			reviewRepo,
+			productRepo,
+			infra.Cache,
+			infra.TransactionExecutor,
+			infra.TransactionProvider,
 		),
 
 		Limiter: applimiter.NewInMemorySlidingWindowLimiter(10*time.Second, 30),

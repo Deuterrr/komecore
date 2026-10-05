@@ -25,6 +25,9 @@ type Product struct {
 	Price  int64
 	Weight *float64
 
+	AverageRating float64
+	ReviewCount   int
+
 	CreatedAt  time.Time
 	UpdatedAt  *time.Time
 	ArchivedAt *time.Time
