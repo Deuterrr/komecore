@@ -24,6 +24,7 @@ import (
 	shopH "komecore/internal/modules/shop/delivery/http"
 	staffH "komecore/internal/modules/staff/delivery/http"
 	userH "komecore/internal/modules/user/delivery/http"
+	wishlistH "komecore/internal/modules/wishlist/delivery/http"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -170,6 +171,7 @@ type handlers struct {
 	courier   *courierH.CourierHandler
 	shipment  *shipmentH.ShipmentHandler
 	order     *orderH.OrderHandler
+	wishlist  *wishlistH.WishlistHandler
 	review    *reviewH.ReviewHandler
 }
 
@@ -267,6 +269,11 @@ func initHandlers(c *Container) *handlers {
 			&c.GetOrderTracking,
 			&c.GetShop,
 		),
+		wishlist: wishlistH.NewWishlistHandler(
+			&c.GetWishlist,
+			&c.AddToWishlist,
+			&c.RemoveFromWishlist,
+		),
 		review: reviewH.NewReviewHandler(
 			&c.CreateReview,
 			&c.ListReviews,
@@ -325,6 +332,12 @@ func bindIdentityRoutes(r chi.Router, h *handlers, chains *RouteChains) {
 			r.Get("/{orderID}/tracking", chains.CustomerOnly(h.order.GetMyOrderTracking))
 			r.Get("/{orderID}/payment", chains.CustomerOnly(h.payment.GetMyOrderPayment))
 			r.Post("/{orderID}/payment/check", chains.CustomerOnly(h.payment.CheckMyOrderPaymentStatus))
+		})
+
+		r.Route("/wishlist", func(r chi.Router) {
+			r.Get("/", chains.CustomerOnly(h.wishlist.GetWishlist))
+			r.Post("/{productId}", chains.CustomerOnly(h.wishlist.AddToWishlist))
+			r.Delete("/{productId}", chains.CustomerOnly(h.wishlist.RemoveFromWishlist))
 		})
 	})
 

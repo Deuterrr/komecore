@@ -49,6 +49,7 @@ var expectedTables = []string{
 	"staff_memberships",
 	"users",
 	"verification_challenges",
+	"wishlists",
 }
 
 func getPublicTables(ctx context.Context, t *testing.T, tdb *testdb.TestDB) []string {
@@ -91,8 +92,8 @@ func TestPostgresReversibleMigrations(t *testing.T) {
 	initialTables := getPublicTables(ctx, t, tdb)
 	assert.Empty(t, initialTables, "fresh database must contain 0 tables")
 
-	// Step UP: Apply all 9 consolidated migrations (0001 -> 0009)
-	t.Log("Applying migrations UP (0001 -> 0009)...")
+	// Step UP: Apply all 10 consolidated migrations (0001 -> 0010)
+	t.Log("Applying migrations UP (0001 -> 0010)...")
 	err = tdb.ApplyMigrations()
 	require.NoError(t, err, "initial migration UP must succeed cleanly")
 
@@ -108,16 +109,16 @@ func TestPostgresReversibleMigrations(t *testing.T) {
 	}
 	assert.GreaterOrEqual(t, len(appliedTables), len(expectedSorted), "all domain tables must exist")
 
-	// Verify migration version is 9 and not dirty
+	// Verify migration version is 10 and not dirty
 	var version int64
 	var dirty bool
 	err = tdb.Pool.QueryRow(ctx, "SELECT version, dirty FROM schema_migrations LIMIT 1;").Scan(&version, &dirty)
 	require.NoError(t, err)
-	assert.Equal(t, int64(9), version, "schema_migrations version must be 9")
+	assert.Equal(t, int64(10), version, "schema_migrations version must be 10")
 	assert.False(t, dirty, "migration must not be marked dirty")
 
-	// Step DOWN: Roll back all migrations to version 0 (0009 -> 0001)
-	t.Log("Rolling back all migrations DOWN (0009 -> 0001)...")
+	// Step DOWN: Roll back all migrations to version 0 (0010 -> 0001)
+	t.Log("Rolling back all migrations DOWN (0010 -> 0001)...")
 	err = tdb.RollbackAll()
 	require.NoError(t, err, "migration DOWN must succeed cleanly without FK or cascade errors")
 
@@ -125,8 +126,8 @@ func TestPostgresReversibleMigrations(t *testing.T) {
 	rolledBackTables := getPublicTables(ctx, t, tdb)
 	assert.Empty(t, rolledBackTables, "all tables must be dropped after full rollback")
 
-	// Step RE-UP: Re-apply all migrations (0001 -> 0009)
-	t.Log("Re-applying migrations UP (0001 -> 0009)...")
+	// Step RE-UP: Re-apply all migrations (0001 -> 0010)
+	t.Log("Re-applying migrations UP (0001 -> 0010)...")
 	err = tdb.ApplyMigrations()
 	require.NoError(t, err, "re-applying migration UP after rollback must succeed")
 
@@ -136,5 +137,5 @@ func TestPostgresReversibleMigrations(t *testing.T) {
 		assert.Contains(t, reAppliedTables, expected, "table %s must exist after re-applying UP", expected)
 	}
 
-	t.Log("Reversible migration test passed successfully across all 9 migration files!")
+	t.Log("Reversible migration test passed successfully across all 10 migration files!")
 }

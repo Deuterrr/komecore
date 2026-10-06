@@ -26,6 +26,7 @@ import (
 	shopPersistence "komecore/internal/modules/shop/infra/persistence"
 	staffPersistence "komecore/internal/modules/staff/infra/persistence"
 	userPersistence "komecore/internal/modules/user/infra/persistence"
+	wishlistPersistence "komecore/internal/modules/wishlist/infra/persistence"
 
 	authenSvc "komecore/internal/modules/auth/infra/service"
 	authenRepo "komecore/internal/modules/auth/repository"
@@ -43,6 +44,7 @@ import (
 	shopRepo "komecore/internal/modules/shop/repository"
 	staffRepo "komecore/internal/modules/staff/repository"
 	userRepo "komecore/internal/modules/user/repository"
+	wishlistRepo "komecore/internal/modules/wishlist/repository"
 
 	addressUsecase "komecore/internal/modules/address/usecase"
 	authenUsecase "komecore/internal/modules/auth/usecase"
@@ -57,6 +59,7 @@ import (
 	shopUsecase "komecore/internal/modules/shop/usecase"
 	staffUsecase "komecore/internal/modules/staff/usecase"
 	userUsecase "komecore/internal/modules/user/usecase"
+	wishlistUsecase "komecore/internal/modules/wishlist/usecase"
 
 	appmiddleware "komecore/internal/common/middleware"
 	"komecore/internal/infra/cache"
@@ -161,6 +164,10 @@ type Container struct {
 	GetOrderTracking        orderUsecase.GetOrderTrackingUsecase
 	ExpireUnfulfilledOrders orderUsecase.ExpireUnfulfilledOrdersUsecase
 
+	GetWishlist        wishlistUsecase.GetWishlistUsecase
+	AddToWishlist      wishlistUsecase.AddToWishlistUsecase
+	RemoveFromWishlist wishlistUsecase.RemoveFromWishlistUsecase
+
 	CreateReview reviewUsecase.CreateReviewUsecase
 	ListReviews  reviewUsecase.ListReviewsUsecase
 	DeleteReview reviewUsecase.DeleteReviewUsecase
@@ -210,6 +217,7 @@ type repositories struct {
 	invoice             orderRepo.InvoiceRepository
 	invoiceItem         orderRepo.InvoiceItemRepository
 	shipment            shipmentRepo.ShipmentRepository
+	wishlist            wishlistRepo.WishlistRepository
 	review              reviewRepo.ReviewRepository
 }
 
@@ -246,6 +254,7 @@ func initRepositories() *repositories {
 		invoice:             orderPersistence.NewInvoiceRepositoryImpl(),
 		invoiceItem:         orderPersistence.NewInvoiceItemRepositoryImpl(),
 		shipment:            shipmentPersistence.NewShipmentRepositoryImpl(),
+		wishlist:            wishlistPersistence.NewWishlistRepositoryImpl(),
 		review:              reviewPersistence.NewReviewRepositoryImpl(),
 	}
 }
@@ -367,6 +376,7 @@ func buildContainer(
 		invoiceRepo             = repos.invoice
 		invoiceItemRepo         = repos.invoiceItem
 		shipmentRepo            = repos.shipment
+		wishlistRepo            = repos.wishlist
 		reviewRepo              = repos.review
 	)
 
@@ -929,6 +939,24 @@ func buildContainer(
 			auditLogger,
 			100,
 			5,
+		),
+
+		GetWishlist: *wishlistUsecase.NewGetWishlistUsecase(
+			wishlistRepo,
+			productRepo,
+			inventoryRepo,
+			productImageRepo,
+			infra.StorageProvider,
+			infra.TransactionExecutor,
+		),
+		AddToWishlist: *wishlistUsecase.NewAddToWishlistUsecase(
+			wishlistRepo,
+			productRepo,
+			infra.TransactionExecutor,
+		),
+		RemoveFromWishlist: *wishlistUsecase.NewRemoveFromWishlistUsecase(
+			wishlistRepo,
+			infra.TransactionExecutor,
 		),
 
 		CreateReview: *reviewUsecase.NewCreateReviewUsecase(

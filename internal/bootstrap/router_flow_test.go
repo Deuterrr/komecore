@@ -276,6 +276,14 @@ func TestRouter_CoreRoutesStructure(t *testing.T) {
 		r.Delete("/{id}", dummyH)
 	})
 
+	r.Route("/users/me", func(r chi.Router) {
+		r.Route("/wishlist", func(r chi.Router) {
+			r.Get("/", dummyH)
+			r.Post("/{productId}", dummyH)
+			r.Delete("/{productId}", dummyH)
+		})
+	})
+
 	r.Route("/carts", func(r chi.Router) {
 		r.Get("/", dummyH)
 		r.Post("/items", dummyH)
@@ -333,6 +341,9 @@ func TestRouter_CoreRoutesStructure(t *testing.T) {
 		"POST /payments/checkout",
 		"POST /payments/webhook",
 		"GET /shipments/{orderId}",
+		"GET /users/me/wishlist",
+		"POST /users/me/wishlist/{productId}",
+		"DELETE /users/me/wishlist/{productId}",
 		"GET /products/{productId}/reviews",
 		"POST /products/{productId}/reviews",
 		"DELETE /reviews/{id}",
