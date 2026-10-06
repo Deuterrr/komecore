@@ -102,6 +102,7 @@ func TestAPIContract_OpenAPISpecValidation(t *testing.T) {
 		"/api/v1/orders",
 		"/api/v1/shipping/cost",
 		"/api/v1/payments/methods",
+		"/api/v1/users/me/wishlist",
 	}
 
 	for _, ep := range expectedPaths {
@@ -124,6 +125,7 @@ func TestAPIContract_OpenAPISpecValidation(t *testing.T) {
 		"EstimateShippingOptionsRequest",
 		"OrderResponse",
 		"CartResponse",
+		"WishlistResponse",
 	}
 
 	for _, s := range expectedSchemas {

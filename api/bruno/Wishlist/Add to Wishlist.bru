@@ -1,0 +1,15 @@
+meta {
+  name: Add to Wishlist
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users/me/wishlist/{{productId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}

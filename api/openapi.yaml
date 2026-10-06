@@ -34,6 +34,8 @@ tags:
     description: Payment methods, instructions, and Midtrans webhook
   - name: Reviews
     description: Customer product reviews, ratings, and social proof
+  - name: Wishlist
+    description: Customer product wishlists and saved items
 
 paths:
   /health:
@@ -590,6 +592,131 @@ paths:
                 $ref: '#/components/schemas/MessageResponse'
               example:
                 message: "address deleted"
+
+  /api/v1/users/me/wishlist:
+    get:
+      summary: Get Customer Wishlist
+      description: Returns all saved products in the authenticated customer's wishlist with real-time stock and pricing.
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      responses:
+        '200':
+          description: Wishlist retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WishlistResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Customer account required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/me/wishlist/{productId}:
+    post:
+      summary: Add Product to Wishlist
+      description: Adds a product to the customer's wishlist. Duplicate additions are rejected.
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Product added to wishlist successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddToWishlistResponse'
+        '400':
+          description: Invalid product ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Customer account required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Product is already in wishlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Remove Product from Wishlist
+      description: Removes a saved product from the customer's wishlist.
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Product removed from wishlist successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          description: Invalid product ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Customer account required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Product not found in wishlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ==============================================================================
   # STAFF ADMINISTRATION
@@ -3388,4 +3515,36 @@ components:
             "3": { type: integer, example: 0 }
             "4": { type: integer, example: 0 }
             "5": { type: integer, example: 1 }
+
+    # Wishlist Schemas
+    WishlistItemResponse:
+      type: object
+      required: [product_id, sku, name, slug, price, in_stock, total_stock, created_at]
+      properties:
+        product_id: { type: string, format: uuid, example: "b0000000-0000-0000-0000-000000000001" }
+        sku: { type: string, example: "SKU-ROSE-001" }
+        name: { type: string, example: "Red Rose Bouquet" }
+        slug: { type: string, example: "red-rose-bouquet" }
+        price: { type: integer, format: int64, example: 150000 }
+        primary_image: { type: string, nullable: true, example: "https://storage.googleapis.com/komecore/products/rose.jpg" }
+        in_stock: { type: boolean, example: true }
+        total_stock: { type: integer, example: 25 }
+        created_at: { type: string, format: date-time }
+
+    WishlistResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WishlistItemResponse'
+        total: { type: integer, example: 1 }
+
+    AddToWishlistResponse:
+      type: object
+      required: [message, product_id]
+      properties:
+        message: { type: string, example: "product added to wishlist successfully" }
+        product_id: { type: string, format: uuid, example: "b0000000-0000-0000-0000-000000000001" }
 

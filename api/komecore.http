@@ -851,3 +851,22 @@ Content-Type: application/json
 DELETE {{baseUrl}}/api/v1/reviews/{{reviewId}}
 Authorization: Bearer {{customerToken}}
 
+
+# ==============================================================================
+# 14. Wishlist
+# ==============================================================================
+
+### Get My Wishlist
+GET {{baseUrl}}/api/v1/users/me/wishlist
+Authorization: Bearer {{customerToken}}
+
+
+### Add Product to Wishlist
+POST {{baseUrl}}/api/v1/users/me/wishlist/{{productId}}
+Authorization: Bearer {{customerToken}}
+
+
+### Remove Product from Wishlist
+DELETE {{baseUrl}}/api/v1/users/me/wishlist/{{productId}}
+Authorization: Bearer {{customerToken}}
+

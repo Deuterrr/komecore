@@ -11,9 +11,9 @@ All collections and specifications are **100% verified against Go delivery DTO s
 | File / Folder | Purpose | Best Used With |
 | :--- | :--- | :--- |
 | **[`openapi.yaml`](openapi.yaml)** | Complete OpenAPI 3.0.3 YAML Specification with full `components.schemas` | **Swagger UI / Redoc / Insomnia** |
-| **[`postman_collection.json`](postman_collection.json)** | Complete Postman v2.1 API Collection (61 endpoints across 13 domains) | **Postman Desktop / Web** |
+| **[`postman_collection.json`](postman_collection.json)** | Complete Postman v2.1 API Collection (64 endpoints across 14 domains) | **Postman Desktop / Web** |
 | **[`komecore.http`](komecore.http)** | Plain-text HTTP Client request file matching Go DTOs | **VS Code (REST Client Extension)** |
-| **[`bruno/`](bruno/)** | Bruno API Client Collection & Environment (61 `.bru` requests) | **Bruno Desktop App** |
+| **[`bruno/`](bruno/)** | Bruno API Client Collection & Environment (64 `.bru` requests) | **Bruno Desktop App** |
 
 ---
 
@@ -22,7 +22,7 @@ All collections and specifications are **100% verified against Go delivery DTO s
 ### 1. Testing with Postman
 1. Open **Postman**.
 2. Click **Import** (top left) → Select file → Choose [`api/postman_collection.json`](postman_collection.json).
-3. Postman will import **`Komecore API v1`** organized into 13 domain folders:
+3. Postman will import **`Komecore API v1`** organized into 14 domain folders:
    - `01. Health & Infrastructure`
    - `02. Authentication & Identity`
    - `03. User & Profile`
@@ -36,6 +36,7 @@ All collections and specifications are **100% verified against Go delivery DTO s
    - `11. Shipments`
    - `12. Payments & Webhooks`
    - `13. Product Reviews`
+   - `14. Wishlist`
 4. Set up collection variables (Click `Komecore API v1` → **Variables** tab):
    - `baseUrl`: `http://localhost:7129` (Default)
    - `customerToken`: Paste customer JWT token (or rely on HTTP-only cookies)
@@ -56,7 +57,7 @@ All collections and specifications are **100% verified against Go delivery DTO s
 1. Open **[Bruno](https://www.usebruno.com/)**.
 2. Click **Open Collection** → Select the [`api/bruno`](bruno/) directory.
 3. In the top right environment dropdown, select **Local**.
-4. All 58 endpoints are available in the sidebar with matching JSON payloads and headers.
+4. All 64 endpoints are available in the sidebar with matching JSON payloads and headers.
 
 ---
 
