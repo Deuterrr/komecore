@@ -10,6 +10,7 @@ func TestNumericGenerator(t *testing.T) {
 	lengths := []int{4, 6, 8}
 
 	for _, l := range lengths {
+		// Test Generator interface implementation
 		gen := otp.NewNumericGenerator(l)
 		code, err := gen.Generate()
 		if err != nil {
@@ -22,6 +23,15 @@ func TestNumericGenerator(t *testing.T) {
 			if ch < '0' || ch > '9' {
 				t.Errorf("expected numeric character, got %c", ch)
 			}
+		}
+
+		// Test pure function
+		pureCode, err := otp.Numeric(l)
+		if err != nil {
+			t.Fatalf("unexpected error from otp.Numeric(%d): %v", l, err)
+		}
+		if len(pureCode) != l {
+			t.Errorf("expected length %d, got %d", l, len(pureCode))
 		}
 	}
 }

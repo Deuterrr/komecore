@@ -20,9 +20,16 @@ func TestSlugGenerator(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		// Test interface implementation
 		got := gen.Generate(tt.input)
 		if got != tt.expected {
-			t.Errorf("Generate(%q) = %q, expected %q", tt.input, got, tt.expected)
+			t.Errorf("gen.Generate(%q) = %q, expected %q", tt.input, got, tt.expected)
+		}
+
+		// Test pure function
+		pureGot := slug.Make(tt.input)
+		if pureGot != tt.expected {
+			t.Errorf("slug.Make(%q) = %q, expected %q", tt.input, pureGot, tt.expected)
 		}
 	}
 }
