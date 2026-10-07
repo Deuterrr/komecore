@@ -76,9 +76,9 @@ func NewAuthHandler(
 }
 
 func (h *authHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
 	acc, err := h.getAccount.Execute(r.Context(), authCtx.UserID)
@@ -100,9 +100,9 @@ func (h *authHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *authHandler) Me(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
 	me, err := h.me.Execute(r.Context(), *authCtx)
@@ -365,12 +365,12 @@ func (h *authHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) e
 }
 
 func (h *authHandler) Logout(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
-	err := h.logout.Execute(r.Context(), *authCtx)
+	err = h.logout.Execute(r.Context(), *authCtx)
 	if err != nil {
 		return err
 	}
@@ -387,12 +387,12 @@ func (h *authHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *authHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
-	err := h.logout.Execute(r.Context(), *authCtx)
+	err = h.logout.Execute(r.Context(), *authCtx)
 	if err != nil {
 		return err
 	}
@@ -726,12 +726,12 @@ func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *authHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
-	err := h.deleteAccount.Execute(r.Context(), *authCtx)
+	err = h.deleteAccount.Execute(r.Context(), *authCtx)
 	if err != nil {
 		return err
 	}

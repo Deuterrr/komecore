@@ -5,7 +5,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authdomain "komecore/internal/modules/auth/domain"
 	domain "komecore/internal/modules/cart/domain"
 	"komecore/internal/modules/cart/usecase"
 
@@ -37,15 +36,12 @@ func NewCartHandler(
 }
 
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
-	result, err := h.getCart.Execute(r.Context(), *authCtx.CustomerID)
+	result, err := h.getCart.Execute(r.Context(), customerID)
 	if err != nil {
 		return err
 	}
@@ -118,12 +114,9 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 		return apperrors.NewBadRequest("invalid request body")
 	}
 
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	shopID, err := uuid.Parse(req.ShopID)
@@ -148,7 +141,7 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	input := usecase.AddItemInput{
-		CustomerID:  *authCtx.CustomerID,
+		CustomerID:  customerID,
 		ProductID:   productID,
 		ShopID:      shopID,
 		Quantity:    req.Quantity,
@@ -173,12 +166,9 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 		return apperrors.NewBadRequest("invalid request body")
 	}
 
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	productID, err := apphttp.ParamUUID(r, "productID")
@@ -202,7 +192,7 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	input := usecase.UpdateItemInput{
-		CustomerID:  *authCtx.CustomerID,
+		CustomerID:  customerID,
 		ProductID:   productID,
 		ShopID:      shopID,
 		Quantity:    req.Quantity,
@@ -228,12 +218,9 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 		return apperrors.NewBadRequest("invalid request body")
 	}
 
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	cartItemID, err := apphttp.ParamUUID(r, "cartItemID")
@@ -252,7 +239,7 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 	}
 
 	input := usecase.UpdateItemByIDInput{
-		CustomerID:  *authCtx.CustomerID,
+		CustomerID:  customerID,
 		CartItemID:  cartItemID,
 		Quantity:    req.Quantity,
 		ItemOptions: opt,
@@ -271,12 +258,9 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 }
 
 func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	productID, err := apphttp.ParamUUID(r, "productID")
@@ -290,7 +274,7 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	input := usecase.RemoveItemInput{
-		CustomerID: *authCtx.CustomerID,
+		CustomerID: customerID,
 		ProductID:  productID,
 		ShopID:     shopID,
 	}
@@ -308,12 +292,9 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	cartItemID, err := apphttp.ParamUUID(r, "cartItemID")
@@ -322,7 +303,7 @@ func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) err
 	}
 
 	input := usecase.RemoveItemByIDInput{
-		CustomerID: *authCtx.CustomerID,
+		CustomerID: customerID,
 		CartItemID: cartItemID,
 	}
 
@@ -339,12 +320,9 @@ func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) err
 }
 
 func (h *CartHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	authCtx, _, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	var req checkoutRequest
@@ -443,12 +421,9 @@ func (h *CartHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *CartHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	authCtx, _, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	var req checkoutCalculateRequest

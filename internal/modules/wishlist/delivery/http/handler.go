@@ -5,7 +5,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authendomain "komecore/internal/modules/auth/domain"
 	"komecore/internal/modules/wishlist/usecase"
 )
 
@@ -28,15 +27,12 @@ func NewWishlistHandler(
 }
 
 func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
-	views, err := h.getWishlist.Execute(r.Context(), *authCtx.CustomerID)
+	views, err := h.getWishlist.Execute(r.Context(), customerID)
 	if err != nil {
 		return err
 	}
@@ -64,12 +60,9 @@ func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) er
 }
 
 func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	productID, err := apphttp.ParamUUID(r, "productId")
@@ -78,7 +71,7 @@ func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) 
 	}
 
 	err = h.addToWishlist.Execute(r.Context(), usecase.AddToWishlistInput{
-		CustomerID: *authCtx.CustomerID,
+		CustomerID: customerID,
 		ProductID:  productID,
 	})
 	if err != nil {
@@ -93,12 +86,9 @@ func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *WishlistHandler) RemoveFromWishlist(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	productID, err := apphttp.ParamUUID(r, "productId")
@@ -107,7 +97,7 @@ func (h *WishlistHandler) RemoveFromWishlist(w http.ResponseWriter, r *http.Requ
 	}
 
 	err = h.removeFromWishlist.Execute(r.Context(), usecase.RemoveFromWishlistInput{
-		CustomerID: *authCtx.CustomerID,
+		CustomerID: customerID,
 		ProductID:  productID,
 	})
 	if err != nil {

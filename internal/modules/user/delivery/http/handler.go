@@ -6,7 +6,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authendomain "komecore/internal/modules/auth/domain"
 	"komecore/internal/modules/user/usecase"
 )
 
@@ -56,9 +55,9 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
 	result, err := h.getUser.ByID(r.Context(), authCtx.UserID)
@@ -85,9 +84,9 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) err
 }
 
 func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
 	result, err := h.getProfile.Execute(
@@ -140,9 +139,9 @@ func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	authCtx, err := apphttp.RequireAuth(r)
+	if err != nil {
+		return err
 	}
 
 	var req updateProfileRequest

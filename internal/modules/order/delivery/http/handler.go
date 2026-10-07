@@ -279,15 +279,10 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 
 // ListMyOrders handles GET /users/me/orders — customer-only, returns the caller's orders with detail.
 func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authenDomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
-	}
-
-	customerID := *authCtx.CustomerID
 
 	page := apphttp.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
@@ -383,15 +378,10 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 
 // GetMyOrder handles GET /users/me/orders/{orderID} — customer-only, returns their own order with full detail.
 func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authenDomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
-	}
-
-	customerID := *authCtx.CustomerID
 
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
@@ -424,16 +414,12 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 
 // CreateOrder handles POST /order — customer-only.
 func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authenDomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	authCtx, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	userID := authCtx.UserID
-	customerID := *authCtx.CustomerID
 
 	var req createOrderRequest
 	if err := apphttp.DecodeJSON(r, &req); err != nil {
@@ -708,15 +694,10 @@ func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authenDomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
-	}
-
-	customerID := *authCtx.CustomerID
 
 	orderID, err := apphttp.ParamUUID(r, "orderID")
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authendomain "komecore/internal/modules/auth/domain"
 	authService "komecore/internal/modules/auth/infra/service"
 	"komecore/internal/modules/review/usecase"
 )
@@ -29,12 +28,9 @@ func NewReviewHandler(
 }
 
 func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	productID, err := apphttp.ParamUUID(r, "productId")
@@ -48,7 +44,7 @@ func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) err
 	}
 
 	review, err := h.createReview.Execute(r.Context(), usecase.CreateReviewInput{
-		CustomerID: *authCtx.CustomerID,
+		CustomerID: customerID,
 		ProductID:  productID,
 		OrderID:    req.OrderID,
 		Rating:     req.Rating,
@@ -126,9 +122,9 @@ func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Reques
 func (h *ReviewHandler) DeleteReview(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authService.GetActor(r.Context())
 	if !ok || actor == nil {
-		authCtx, authOk := authendomain.GetAuthContext(r.Context())
-		if !authOk || !authCtx.IsAuthenticated {
-			return apperrors.NewUnauthorized("authentication required")
+		authCtx, err := apphttp.RequireAuth(r)
+		if err != nil {
+			return err
 		}
 		actor = authService.ActorFromAuthContext(authCtx)
 	}

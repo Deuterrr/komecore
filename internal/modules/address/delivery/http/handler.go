@@ -7,7 +7,6 @@ import (
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
 	"komecore/internal/modules/address/usecase"
-	authendomain "komecore/internal/modules/auth/domain"
 
 	"github.com/google/uuid"
 )
@@ -43,15 +42,12 @@ func NewAddressHandler(
 }
 
 func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
-	addresses, err := h.listCustomerAddresses.ListByCustomerID(r.Context(), *authCtx.CustomerID)
+	addresses, err := h.listCustomerAddresses.ListByCustomerID(r.Context(), customerID)
 	if err != nil {
 		return err
 	}
@@ -112,12 +108,9 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 		return apperrors.NewBadRequest("invalid postal code")
 	}
 
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	var addressID *uuid.UUID
@@ -140,7 +133,7 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 
 	input := usecase.SaveCustomerAddressInput{
 		ID:           addressID,
-		CustomerID:   *authCtx.CustomerID,
+		CustomerID:   customerID,
 		ReceiverName: req.ReceiverName,
 		Phone:        req.Phone,
 		IsDefault:    &parsedIsDefault,
@@ -153,7 +146,7 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 		Longitude:    req.Longitude,
 	}
 
-	err := h.saveCustomerAddress.Execute(r.Context(), input)
+	err = h.saveCustomerAddress.Execute(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -167,12 +160,9 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *AddressHandler) DeleteUserAddress(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authendomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, _, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	addressID, err := apphttp.ParamUUID(r, "addressID")

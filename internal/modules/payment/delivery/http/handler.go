@@ -5,7 +5,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authenDomain "komecore/internal/modules/auth/domain"
 	paymentDomain "komecore/internal/modules/payment/domain"
 	"komecore/internal/modules/payment/usecase"
 
@@ -173,15 +172,10 @@ func (h *PaymentHandler) SavePaymentInstruction(w http.ResponseWriter, r *http.R
 }
 
 func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authenDomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
-	}
-
-	customerID := *authCtx.CustomerID
 
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
@@ -244,12 +238,9 @@ func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Reques
 // calling this endpoint immediately queries Midtrans for the current status
 // and resolves the payment — without waiting for the background reconciler.
 func (h *PaymentHandler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *http.Request) error {
-	authCtx, ok := authenDomain.GetAuthContext(r.Context())
-	if !ok || !authCtx.IsAuthenticated {
-		return apperrors.NewUnauthorized("authentication required")
-	}
-	if authCtx.CustomerID == nil {
-		return apperrors.NewForbidden("customer account required")
+	_, customerID, err := apphttp.RequireCustomer(r)
+	if err != nil {
+		return err
 	}
 
 	orderIDStr := chi.URLParam(r, "orderID")
@@ -260,7 +251,7 @@ func (h *PaymentHandler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *htt
 
 	input := usecase.CheckPaymentStatusInput{
 		OrderID:    orderID,
-		CustomerID: *authCtx.CustomerID,
+		CustomerID: customerID,
 	}
 
 	result, err := h.checkPaymentStatus.Execute(r.Context(), input)
