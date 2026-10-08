@@ -9,22 +9,22 @@ import (
 	"komecore/internal/infra/cache"
 
 	"komecore/internal/common/authctx"
-	authenRepo "komecore/internal/modules/auth/repository"
+	"komecore/internal/modules/auth/authrepo"
 
-	addressH "komecore/internal/modules/address/delivery/http"
-	authH "komecore/internal/modules/auth/delivery/http"
-	cartH "komecore/internal/modules/cart/delivery/http"
-	courierH "komecore/internal/modules/courier/delivery/http"
-	inventoryH "komecore/internal/modules/inventory/delivery/http"
-	orderH "komecore/internal/modules/order/delivery/http"
-	paymentH "komecore/internal/modules/payment/delivery/http"
-	productH "komecore/internal/modules/product/delivery/http"
-	reviewH "komecore/internal/modules/review/delivery/http"
-	shipmentH "komecore/internal/modules/shipment/delivery/http"
-	shopH "komecore/internal/modules/shop/delivery/http"
-	staffH "komecore/internal/modules/staff/delivery/http"
-	userH "komecore/internal/modules/user/delivery/http"
-	wishlistH "komecore/internal/modules/wishlist/delivery/http"
+	"komecore/internal/modules/address/addresshttp"
+	"komecore/internal/modules/auth/authhttp"
+	"komecore/internal/modules/cart/carthttp"
+	"komecore/internal/modules/courier/courierhttp"
+	"komecore/internal/modules/inventory/inventoryhttp"
+	"komecore/internal/modules/order/orderhttp"
+	"komecore/internal/modules/payment/paymenthttp"
+	"komecore/internal/modules/product/producthttp"
+	"komecore/internal/modules/review/reviewhttp"
+	"komecore/internal/modules/shipment/shipmenthttp"
+	"komecore/internal/modules/shop/shophttp"
+	"komecore/internal/modules/staff/staffhttp"
+	"komecore/internal/modules/user/userhttp"
+	"komecore/internal/modules/wishlist/wishlisthttp"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -130,7 +130,7 @@ func NewRouteChains(c *Container) *RouteChains {
 	}
 }
 
-func (rc *RouteChains) StaffWithPerm(authorizer authenRepo.Authorizer, permission string, h apphttp.AppHandler) http.HandlerFunc {
+func (rc *RouteChains) StaffWithPerm(authorizer authrepo.Authorizer, permission string, h apphttp.AppHandler) http.HandlerFunc {
 	return rc.StaffOnly(authorizer.RequirePermission(permission)(h))
 }
 
@@ -159,25 +159,25 @@ func NewRouter(c *Container) *chi.Mux {
 }
 
 type handlers struct {
-	product   *productH.ProductHandler
-	inventory *inventoryH.InventoryHandler
-	auth      *authH.AuthHandler
-	staff     *staffH.StaffHandler
-	cart      *cartH.CartHandler
-	user      *userH.UserHandler
-	address   *addressH.AddressHandler
-	payment   *paymentH.PaymentHandler
-	shop      *shopH.ShopHandler
-	courier   *courierH.CourierHandler
-	shipment  *shipmentH.ShipmentHandler
-	order     *orderH.OrderHandler
-	wishlist  *wishlistH.WishlistHandler
-	review    *reviewH.ReviewHandler
+	product   *producthttp.ProductHandler
+	inventory *inventoryhttp.InventoryHandler
+	auth      *authhttp.AuthHandler
+	staff     *staffhttp.StaffHandler
+	cart      *carthttp.CartHandler
+	user      *userhttp.UserHandler
+	address   *addresshttp.AddressHandler
+	payment   *paymenthttp.PaymentHandler
+	shop      *shophttp.ShopHandler
+	courier   *courierhttp.CourierHandler
+	shipment  *shipmenthttp.ShipmentHandler
+	order     *orderhttp.OrderHandler
+	wishlist  *wishlisthttp.WishlistHandler
+	review    *reviewhttp.ReviewHandler
 }
 
 func initHandlers(c *Container) *handlers {
 	return &handlers{
-		product: productH.NewProductHandler(
+		product: producthttp.NewProductHandler(
 			&c.FindProducts,
 			&c.GetProduct,
 			&c.SaveProduct,
@@ -185,10 +185,10 @@ func initHandlers(c *Container) *handlers {
 			&c.AddProductImages,
 			&c.GetProductStats,
 		),
-		inventory: inventoryH.NewInventoryHandler(
+		inventory: inventoryhttp.NewInventoryHandler(
 			&c.Inventory,
 		),
-		auth: authH.NewAuthHandler(
+		auth: authhttp.NewAuthHandler(
 			&c.Me,
 			&c.Logout,
 			&c.LoginCustomer,
@@ -204,19 +204,19 @@ func initHandlers(c *Container) *handlers {
 			&c.DeleteAccount,
 			c.GoogleOAuth,
 		),
-		staff: staffH.NewStaffHandler(
+		staff: staffhttp.NewStaffHandler(
 			&c.Staff,
 		),
-		cart: cartH.NewCartHandler(
+		cart: carthttp.NewCartHandler(
 			&c.Cart,
 		),
-		user: userH.NewUserHandler(
+		user: userhttp.NewUserHandler(
 			&c.User,
 		),
-		address: addressH.NewAddressHandler(
+		address: addresshttp.NewAddressHandler(
 			&c.Address,
 		),
-		payment: paymentH.NewPaymentHandler(
+		payment: paymenthttp.NewPaymentHandler(
 			&c.SavePaymentMethod,
 			&c.ListPaymentMethod,
 			&c.ProcessPaymentWebhook,
@@ -224,18 +224,18 @@ func initHandlers(c *Container) *handlers {
 			&c.GetPaymentDetail,
 			&c.CheckPaymentStatus,
 		),
-		shop: shopH.NewShopHandler(
+		shop: shophttp.NewShopHandler(
 			&c.Shop,
 		),
-		courier: courierH.NewCourierHandler(
+		courier: courierhttp.NewCourierHandler(
 			&c.Courier,
 		),
-		shipment: shipmentH.NewShipmentHandler(
+		shipment: shipmenthttp.NewShipmentHandler(
 			&c.EstimateShippingOptions,
 			&c.UpdateShipmentStatus,
 			&c.UpdateShipment,
 		),
-		order: orderH.NewOrderHandler(
+		order: orderhttp.NewOrderHandler(
 			&c.FindOrders,
 			&c.GetOrder,
 			&c.CreateOrder,
@@ -245,10 +245,10 @@ func initHandlers(c *Container) *handlers {
 			&c.Shop,
 			&c.Checkout,
 		),
-		wishlist: wishlistH.NewWishlistHandler(
+		wishlist: wishlisthttp.NewWishlistHandler(
 			&c.Wishlist,
 		),
-		review: reviewH.NewReviewHandler(
+		review: reviewhttp.NewReviewHandler(
 			&c.Review,
 		),
 	}

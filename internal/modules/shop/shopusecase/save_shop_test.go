@@ -1,0 +1,180 @@
+package shopusecase
+
+import (
+	"context"
+	"testing"
+
+	"komecore/internal/common/authctx"
+	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/modules/shop/shopdomain"
+	"komecore/internal/modules/shop/shoprepo"
+	slug "komecore/pkg/slug"
+
+	"github.com/google/uuid"
+)
+
+type mockSaveShopRepository struct {
+	shoprepo.ShopRepository
+	savedShop *shopdomain.Shop
+	shopByID  *shopdomain.Shop
+	getErr    error
+	saveErr   error
+}
+
+func (m *mockSaveShopRepository) GetByID(
+	ctx context.Context,
+	exec transaction.Executor,
+	id uuid.UUID,
+) (*shopdomain.Shop, error) {
+	if m.getErr != nil {
+		return nil, m.getErr
+	}
+	return m.shopByID, nil
+}
+
+func (m *mockSaveShopRepository) Save(
+	ctx context.Context,
+	exec transaction.Executor,
+	shop shopdomain.Shop,
+) error {
+	if m.saveErr != nil {
+		return m.saveErr
+	}
+	m.savedShop = &shop
+	return nil
+}
+
+func TestSaveShop_AdminCreate(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockSaveShopRepository{}
+	exec := &mockExecutor{}
+	slugGen := slug.NewGenerator()
+
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
+		},
+	}
+
+	uc := NewShopService(repo, nil, nil, slugGen, exec)
+
+	isActive := true
+	approvalStatus := string(shopdomain.ShopApprovalStatusApproved)
+	desc := "Admin Shop"
+
+	err := uc.SaveShop(ctx, actor, SaveShopInput{
+		Name:           "Jakarta Central",
+		Description:    &desc,
+		IsActive:       &isActive,
+		ApprovalStatus: &approvalStatus,
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if repo.savedShop == nil {
+		t.Fatal("expected shop to be saved")
+	}
+
+	if !repo.savedShop.IsActive {
+		t.Errorf("expected IsActive to be true, got %v", repo.savedShop.IsActive)
+	}
+
+	if repo.savedShop.ApprovalStatus != shopdomain.ShopApprovalStatusApproved {
+		t.Errorf("expected ApprovalStatus to be approved, got %v", repo.savedShop.ApprovalStatus)
+	}
+}
+
+func TestSaveShop_RegularStaffCreate(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockSaveShopRepository{}
+	exec := &mockExecutor{}
+	slugGen := slug.NewGenerator()
+
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaff},
+		},
+	}
+
+	uc := NewShopService(repo, nil, nil, slugGen, exec)
+
+	isActive := true
+	approvalStatus := string(shopdomain.ShopApprovalStatusApproved)
+	desc := "Staff Shop"
+
+	// Regular staff attempts to pass active=true and approved
+	err := uc.SaveShop(ctx, actor, SaveShopInput{
+		Name:           "Bandung Branch",
+		Description:    &desc,
+		IsActive:       &isActive,
+		ApprovalStatus: &approvalStatus,
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if repo.savedShop == nil {
+		t.Fatal("expected shop to be saved")
+	}
+
+	// Should be forced to inactive and pending
+	if repo.savedShop.IsActive {
+		t.Errorf("expected IsActive to be false for regular staff, got %v", repo.savedShop.IsActive)
+	}
+
+	if repo.savedShop.ApprovalStatus != shopdomain.ShopApprovalStatusPending {
+		t.Errorf("expected ApprovalStatus to be pending for regular staff, got %v", repo.savedShop.ApprovalStatus)
+	}
+}
+
+func TestSaveShop_RegularStaffUpdatePreservesStatus(t *testing.T) {
+	ctx := context.Background()
+	shopID := uuid.New()
+	existingShop := &shopdomain.Shop{
+		ID:             shopID,
+		Name:           "Old Name",
+		Slug:           "old-name",
+		IsActive:       true,
+		ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+	}
+
+	repo := &mockSaveShopRepository{
+		shopByID: existingShop,
+	}
+	exec := &mockExecutor{}
+	slugGen := slug.NewGenerator()
+
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaff},
+		},
+	}
+
+	uc := NewShopService(repo, nil, nil, slugGen, exec)
+
+	newDesc := "Updated Description"
+	err := uc.SaveShop(ctx, actor, SaveShopInput{
+		ID:          &shopID,
+		Name:        "New Name",
+		Description: &newDesc,
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if repo.savedShop.Name != "New Name" {
+		t.Errorf("expected name to be updated, got %s", repo.savedShop.Name)
+	}
+
+	if !repo.savedShop.IsActive {
+		t.Errorf("expected existing IsActive (true) to be preserved, got %v", repo.savedShop.IsActive)
+	}
+
+	if repo.savedShop.ApprovalStatus != shopdomain.ShopApprovalStatusApproved {
+		t.Errorf("expected existing ApprovalStatus (approved) to be preserved, got %v", repo.savedShop.ApprovalStatus)
+	}
+}

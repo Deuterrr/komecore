@@ -13,53 +13,53 @@ import (
 	otpSvc "komecore/pkg/otp"
 	sGen "komecore/pkg/slug"
 
-	addressPersistence "komecore/internal/modules/address/infra/persistence"
-	authenPersistence "komecore/internal/modules/auth/infra/persistence"
-	cartPersistence "komecore/internal/modules/cart/infra/persistence"
-	courierPersistence "komecore/internal/modules/courier/infra/persistence"
-	inventoryPersistence "komecore/internal/modules/inventory/infra/persistence"
-	orderPersistence "komecore/internal/modules/order/infra/persistence"
-	paymentPersistence "komecore/internal/modules/payment/infra/persistence"
-	productPersistence "komecore/internal/modules/product/infra/persistence"
-	reviewPersistence "komecore/internal/modules/review/infra/persistence"
-	shipmentPersistence "komecore/internal/modules/shipment/infra/persistence"
-	shopPersistence "komecore/internal/modules/shop/infra/persistence"
-	staffPersistence "komecore/internal/modules/staff/infra/persistence"
-	userPersistence "komecore/internal/modules/user/infra/persistence"
-	wishlistPersistence "komecore/internal/modules/wishlist/infra/persistence"
+	"komecore/internal/modules/address/addresspersistence"
+	"komecore/internal/modules/auth/authpersistence"
+	"komecore/internal/modules/cart/cartpersistence"
+	"komecore/internal/modules/courier/courierpersistence"
+	"komecore/internal/modules/inventory/inventorypersistence"
+	"komecore/internal/modules/order/orderpersistence"
+	"komecore/internal/modules/payment/paymentpersistence"
+	"komecore/internal/modules/product/productpersistence"
+	"komecore/internal/modules/review/reviewpersistence"
+	"komecore/internal/modules/shipment/shipmentpersistence"
+	"komecore/internal/modules/shop/shoppersistence"
+	"komecore/internal/modules/staff/staffpersistence"
+	"komecore/internal/modules/user/userpersistence"
+	"komecore/internal/modules/wishlist/wishlistpersistence"
 
-	authenSvc "komecore/internal/modules/auth/infra/service"
-	authenRepo "komecore/internal/modules/auth/repository"
-	orderSvc "komecore/internal/modules/order/service"
+	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
+	"komecore/internal/modules/order/ordersvc"
 
-	addressRepo "komecore/internal/modules/address/repository"
-	cartRepo "komecore/internal/modules/cart/repository"
-	courierRepo "komecore/internal/modules/courier/repository"
-	inventoryRepo "komecore/internal/modules/inventory/repository"
-	orderRepo "komecore/internal/modules/order/repository"
-	paymentRepo "komecore/internal/modules/payment/repository"
-	productRepo "komecore/internal/modules/product/repository"
-	reviewRepo "komecore/internal/modules/review/repository"
-	shipmentRepo "komecore/internal/modules/shipment/repository"
-	shopRepo "komecore/internal/modules/shop/repository"
-	staffRepo "komecore/internal/modules/staff/repository"
-	userRepo "komecore/internal/modules/user/repository"
-	wishlistRepo "komecore/internal/modules/wishlist/repository"
+	"komecore/internal/modules/address/addressrepo"
+	"komecore/internal/modules/cart/cartrepo"
+	"komecore/internal/modules/courier/courierrepo"
+	"komecore/internal/modules/inventory/inventoryrepo"
+	"komecore/internal/modules/order/orderrepo"
+	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/review/reviewrepo"
+	"komecore/internal/modules/shipment/shipmentrepo"
+	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/staff/staffrepo"
+	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/wishlist/wishlistrepo"
 
-	addressUsecase "komecore/internal/modules/address/usecase"
-	authenUsecase "komecore/internal/modules/auth/usecase"
-	cartUsecase "komecore/internal/modules/cart/usecase"
-	courierUsecase "komecore/internal/modules/courier/usecase"
-	inventoryUsecase "komecore/internal/modules/inventory/usecase"
-	orderUsecase "komecore/internal/modules/order/usecase"
-	paymentUsecase "komecore/internal/modules/payment/usecase"
-	productUsecase "komecore/internal/modules/product/usecase"
-	reviewUsecase "komecore/internal/modules/review/usecase"
-	shipmentUsecase "komecore/internal/modules/shipment/usecase"
-	shopUsecase "komecore/internal/modules/shop/usecase"
-	staffUsecase "komecore/internal/modules/staff/usecase"
-	userUsecase "komecore/internal/modules/user/usecase"
-	wishlistUsecase "komecore/internal/modules/wishlist/usecase"
+	"komecore/internal/modules/address/addressusecase"
+	"komecore/internal/modules/auth/authusecase"
+	"komecore/internal/modules/cart/cartusecase"
+	"komecore/internal/modules/courier/courierusecase"
+	"komecore/internal/modules/inventory/inventoryusecase"
+	"komecore/internal/modules/order/orderusecase"
+	"komecore/internal/modules/payment/paymentusecase"
+	"komecore/internal/modules/product/productusecase"
+	"komecore/internal/modules/review/reviewusecase"
+	"komecore/internal/modules/shipment/shipmentusecase"
+	"komecore/internal/modules/shop/shopusecase"
+	"komecore/internal/modules/staff/staffusecase"
+	"komecore/internal/modules/user/userusecase"
+	"komecore/internal/modules/wishlist/wishlistusecase"
 
 	appmiddleware "komecore/internal/common/middleware"
 	"komecore/internal/infra/cache"
@@ -70,76 +70,76 @@ type Container struct {
 	Logger             applogger.Logger
 	AuditLogger        applogger.AuditLogger
 	CORSAllowedOrigins []string
-	Authenticator      authenRepo.Authenticator
-	Authorizer         authenRepo.Authorizer
+	Authenticator      authrepo.Authenticator
+	Authorizer         authrepo.Authorizer
 	DBExecutor         transaction.Executor
 	DBTransactor       transaction.Transactor
 	GoogleOAuth        appconfig.GoogleOAuthConfig
 	Cache              cache.Cache
 	Idempotency        *appmiddleware.IdempotencyMiddleware
-	paymentMethodRepo  paymentRepo.PaymentMethodRepository
+	paymentMethodRepo  paymentrepo.PaymentMethodRepository
 	paymentGateway     paymentgateway.Provider
 
-	FindProducts     productUsecase.FindProductsUsecase
-	GetProduct       productUsecase.GetProductUsecase
-	SaveProduct      productUsecase.SaveProductUsecase
-	DeleteProduct    productUsecase.DeleteProductUsecase
-	AddProductImages productUsecase.AddProductImagesUsecase
-	GetProductStats  productUsecase.GetProductStatsUsecase
-	Inventory inventoryUsecase.InventoryService
+	FindProducts     productusecase.FindProductsUsecase
+	GetProduct       productusecase.GetProductUsecase
+	SaveProduct      productusecase.SaveProductUsecase
+	DeleteProduct    productusecase.DeleteProductUsecase
+	AddProductImages productusecase.AddProductImagesUsecase
+	GetProductStats  productusecase.GetProductStatsUsecase
+	Inventory inventoryusecase.InventoryService
 
-	Me                   authenUsecase.MeUsecase
-	LoginCustomer        authenUsecase.LoginCustomerUsecase
-	LoginStaff           authenUsecase.LoginStaffUsecase
-	RegisterCustomer     authenUsecase.RegisterCustomerUsecase
-	VerifyAccount        authenUsecase.VerifyAccountUsecase
-	GetAccount           authenUsecase.GetAccountUsecase
-	Logout               authenUsecase.LogoutUsecase
-	AuthenticateOAuth    authenUsecase.AuthenticateOAuthUsecase
-	RequestPasswordReset authenUsecase.RequestPasswordResetUsecase
-	VerifyPasswordReset  authenUsecase.VerifyPasswordResetUsecase
-	ResetPassword        authenUsecase.ResetPasswordUsecase
-	RefreshToken         authenUsecase.RefreshTokenUsecase
-	DeleteAccount        authenUsecase.DeleteAccountUsecase
+	Me                   authusecase.MeUsecase
+	LoginCustomer        authusecase.LoginCustomerUsecase
+	LoginStaff           authusecase.LoginStaffUsecase
+	RegisterCustomer     authusecase.RegisterCustomerUsecase
+	VerifyAccount        authusecase.VerifyAccountUsecase
+	GetAccount           authusecase.GetAccountUsecase
+	Logout               authusecase.LogoutUsecase
+	AuthenticateOAuth    authusecase.AuthenticateOAuthUsecase
+	RequestPasswordReset authusecase.RequestPasswordResetUsecase
+	VerifyPasswordReset  authusecase.VerifyPasswordResetUsecase
+	ResetPassword        authusecase.ResetPasswordUsecase
+	RefreshToken         authusecase.RefreshTokenUsecase
+	DeleteAccount        authusecase.DeleteAccountUsecase
 
-	Staff staffUsecase.StaffService
+	Staff staffusecase.StaffService
 
-	Cart     cartUsecase.CartService
-	Checkout orderUsecase.CheckoutUsecase
+	Cart     cartusecase.CartService
+	Checkout orderusecase.CheckoutUsecase
 
-	User userUsecase.UserService
+	User userusecase.UserService
 
-	Address addressUsecase.AddressService
+	Address addressusecase.AddressService
 
-	Shop shopUsecase.ShopService
+	Shop shopusecase.ShopService
 
-	SavePaymentMethod      paymentUsecase.SavePaymentMethodUsecase
-	ListPaymentMethod      paymentUsecase.ListPaymentMethodUsecase
-	ProcessPaymentWebhook  paymentUsecase.ProcessPaymentWebhookUsecase
-	SavePaymentInstruction paymentUsecase.SavePaymentInstructionUsecase
-	GetPaymentDetail       paymentUsecase.GetPaymentDetailUsecase
-	CheckPaymentStatus     paymentUsecase.CheckPaymentStatusUsecase
-	SyncPendingPayments    paymentUsecase.SyncPendingPaymentsUsecase
-	ExpirePastDuePayments  paymentUsecase.ExpirePastDuePaymentsUsecase
-	SyncPaymentMethods     paymentUsecase.SyncPaymentMethodsUsecase
-	ProcessOrderRefund     paymentUsecase.ProcessOrderRefundUsecase
+	SavePaymentMethod      paymentusecase.SavePaymentMethodUsecase
+	ListPaymentMethod      paymentusecase.ListPaymentMethodUsecase
+	ProcessPaymentWebhook  paymentusecase.ProcessPaymentWebhookUsecase
+	SavePaymentInstruction paymentusecase.SavePaymentInstructionUsecase
+	GetPaymentDetail       paymentusecase.GetPaymentDetailUsecase
+	CheckPaymentStatus     paymentusecase.CheckPaymentStatusUsecase
+	SyncPendingPayments    paymentusecase.SyncPendingPaymentsUsecase
+	ExpirePastDuePayments  paymentusecase.ExpirePastDuePaymentsUsecase
+	SyncPaymentMethods     paymentusecase.SyncPaymentMethodsUsecase
+	ProcessOrderRefund     paymentusecase.ProcessOrderRefundUsecase
 
-	Courier courierUsecase.CourierService
+	Courier courierusecase.CourierService
 
-	EstimateShippingOptions shipmentUsecase.EstimateShippingOptionsUsecase
-	UpdateShipmentStatus    shipmentUsecase.UpdateShipmentStatusUsecase
-	UpdateShipment          shipmentUsecase.UpdateShipmentUsecase
+	EstimateShippingOptions shipmentusecase.EstimateShippingOptionsUsecase
+	UpdateShipmentStatus    shipmentusecase.UpdateShipmentStatusUsecase
+	UpdateShipment          shipmentusecase.UpdateShipmentUsecase
 
-	CreateOrder             orderUsecase.CreateOrderUsecase
-	FindOrders              orderUsecase.FindOrdersUsecase
-	GetOrder                orderUsecase.GetOrderUsecase
-	UpdateOrderStatus       orderUsecase.UpdateOrderStatusUsecase
-	DispatchShopShipment    orderUsecase.DispatchShopShipmentUsecase
-	GetOrderTracking        orderUsecase.GetOrderTrackingUsecase
-	ExpireUnfulfilledOrders orderUsecase.ExpireUnfulfilledOrdersUsecase
+	CreateOrder             orderusecase.CreateOrderUsecase
+	FindOrders              orderusecase.FindOrdersUsecase
+	GetOrder                orderusecase.GetOrderUsecase
+	UpdateOrderStatus       orderusecase.UpdateOrderStatusUsecase
+	DispatchShopShipment    orderusecase.DispatchShopShipmentUsecase
+	GetOrderTracking        orderusecase.GetOrderTrackingUsecase
+	ExpireUnfulfilledOrders orderusecase.ExpireUnfulfilledOrdersUsecase
 
-	Wishlist wishlistUsecase.WishlistService
-	Review   reviewUsecase.ReviewService
+	Wishlist wishlistusecase.WishlistService
+	Review   reviewusecase.ReviewService
 
 	Limiter applimiter.Limiter
 }
@@ -155,112 +155,112 @@ func NewContainer(cfg Config, infra *Dependency) *Container {
 }
 
 type repositories struct {
-	product             productRepo.ProductRepository
-	productImage        productRepo.ProductImageRepository
-	productPerformance  productRepo.ProductPerformanceRepository
-	productStockHistory productRepo.ProductStockHistoryRepository
-	inventory           inventoryRepo.InventoryRepository
-	account             authenRepo.AccountRepository
-	challenge           authenRepo.VerificationChallengeRepository
-	oauth               authenRepo.OAuthConnectionRepository
-	session             authenRepo.SessionRepository
-	refreshToken        authenRepo.RefreshTokenRepository
-	cart                cartRepo.CartRepository
-	user                userRepo.UserRepository
-	address             addressRepo.CustomerAddressRepository
-	addressShop         addressRepo.ShopAddressRepository
-	payment             paymentRepo.PaymentRepository
-	paymentMethod       paymentRepo.PaymentMethodRepository
-	paymentEvent        paymentRepo.PaymentEventRepository
-	paymentInstruction  paymentRepo.PaymentInstructionRepository
-	paymentChannelData  paymentRepo.PaymentChannelDataRepository
-	paymentWebhookEvent paymentRepo.PaymentWebhookEventRepository
-	shop                shopRepo.ShopRepository
-	courier             courierRepo.CourierRepository
-	staff               staffRepo.StaffRepository
-	customer            authenRepo.CustomerRepository
-	membership          staffRepo.StaffMembershipRepository
-	role                staffRepo.RoleRepository
-	order               orderRepo.OrderRepository
-	orderItem           orderRepo.OrderItemRepository
-	invoice             orderRepo.InvoiceRepository
-	invoiceItem         orderRepo.InvoiceItemRepository
-	shipment            shipmentRepo.ShipmentRepository
-	wishlist            wishlistRepo.WishlistRepository
-	review              reviewRepo.ReviewRepository
+	product             productrepo.ProductRepository
+	productImage        productrepo.ProductImageRepository
+	productPerformance  productrepo.ProductPerformanceRepository
+	productStockHistory productrepo.ProductStockHistoryRepository
+	inventory           inventoryrepo.InventoryRepository
+	account             authrepo.AccountRepository
+	challenge           authrepo.VerificationChallengeRepository
+	oauth               authrepo.OAuthConnectionRepository
+	session             authrepo.SessionRepository
+	refreshToken        authrepo.RefreshTokenRepository
+	cart                cartrepo.CartRepository
+	user                userrepo.UserRepository
+	address             addressrepo.CustomerAddressRepository
+	addressShop         addressrepo.ShopAddressRepository
+	payment             paymentrepo.PaymentRepository
+	paymentMethod       paymentrepo.PaymentMethodRepository
+	paymentEvent        paymentrepo.PaymentEventRepository
+	paymentInstruction  paymentrepo.PaymentInstructionRepository
+	paymentChannelData  paymentrepo.PaymentChannelDataRepository
+	paymentWebhookEvent paymentrepo.PaymentWebhookEventRepository
+	shop                shoprepo.ShopRepository
+	courier             courierrepo.CourierRepository
+	staff               staffrepo.StaffRepository
+	customer            authrepo.CustomerRepository
+	membership          staffrepo.StaffMembershipRepository
+	role                staffrepo.RoleRepository
+	order               orderrepo.OrderRepository
+	orderItem           orderrepo.OrderItemRepository
+	invoice             orderrepo.InvoiceRepository
+	invoiceItem         orderrepo.InvoiceItemRepository
+	shipment            shipmentrepo.ShipmentRepository
+	wishlist            wishlistrepo.WishlistRepository
+	review              reviewrepo.ReviewRepository
 }
 
 func initRepositories() *repositories {
 	return &repositories{
-		product:             productPersistence.NewProductRepository(),
-		productImage:        productPersistence.NewProductImageRepository(),
-		productPerformance:  productPersistence.NewProductPerformanceRepository(),
-		productStockHistory: productPersistence.NewProductStockHistoryRepository(),
-		inventory:           inventoryPersistence.NewInventoryRepository(),
-		account:             authenPersistence.NewAccountRepository(),
-		challenge:           authenPersistence.NewChallengeRepository(),
-		oauth:               authenPersistence.NewOAuthConnectionRepository(),
-		session:             authenPersistence.NewSessionRepository(),
-		refreshToken:        authenPersistence.NewRefreshTokenRepository(),
-		cart:                cartPersistence.NewCartRepository(),
-		user:                userPersistence.NewUserRepository(),
-		address:             addressPersistence.NewCustomerAddressRepository(),
-		addressShop:         addressPersistence.NewShopAddressRepository(),
-		payment:             paymentPersistence.NewPaymentRepository(),
-		paymentMethod:       paymentPersistence.NewPaymentMethodRepository(),
-		paymentEvent:        paymentPersistence.NewPaymentEventRepository(),
-		paymentInstruction:  paymentPersistence.NewPaymentInstructionRepository(),
-		paymentChannelData:  paymentPersistence.NewPaymentChannelDataRepository(),
-		paymentWebhookEvent: paymentPersistence.NewPaymentWebhookEventRepository(),
-		shop:                shopPersistence.NewShopRepository(),
-		courier:             courierPersistence.NewCourierRepository(),
-		staff:               staffPersistence.NewStaffRepository(),
-		customer:            authenPersistence.NewCustomerRepository(),
-		membership:          staffPersistence.NewStaffMembershipRepository(),
-		role:                staffPersistence.NewRoleRepository(),
-		order:               orderPersistence.NewOrderRepository(),
-		orderItem:           orderPersistence.NewOrderItemRepository(),
-		invoice:             orderPersistence.NewInvoiceRepository(),
-		invoiceItem:         orderPersistence.NewInvoiceItemRepository(),
-		shipment:            shipmentPersistence.NewShipmentRepository(),
-		wishlist:            wishlistPersistence.NewWishlistRepository(),
-		review:              reviewPersistence.NewReviewRepository(),
+		product:             productpersistence.NewProductRepository(),
+		productImage:        productpersistence.NewProductImageRepository(),
+		productPerformance:  productpersistence.NewProductPerformanceRepository(),
+		productStockHistory: productpersistence.NewProductStockHistoryRepository(),
+		inventory:           inventorypersistence.NewInventoryRepository(),
+		account:             authpersistence.NewAccountRepository(),
+		challenge:           authpersistence.NewChallengeRepository(),
+		oauth:               authpersistence.NewOAuthConnectionRepository(),
+		session:             authpersistence.NewSessionRepository(),
+		refreshToken:        authpersistence.NewRefreshTokenRepository(),
+		cart:                cartpersistence.NewCartRepository(),
+		user:                userpersistence.NewUserRepository(),
+		address:             addresspersistence.NewCustomerAddressRepository(),
+		addressShop:         addresspersistence.NewShopAddressRepository(),
+		payment:             paymentpersistence.NewPaymentRepository(),
+		paymentMethod:       paymentpersistence.NewPaymentMethodRepository(),
+		paymentEvent:        paymentpersistence.NewPaymentEventRepository(),
+		paymentInstruction:  paymentpersistence.NewPaymentInstructionRepository(),
+		paymentChannelData:  paymentpersistence.NewPaymentChannelDataRepository(),
+		paymentWebhookEvent: paymentpersistence.NewPaymentWebhookEventRepository(),
+		shop:                shoppersistence.NewShopRepository(),
+		courier:             courierpersistence.NewCourierRepository(),
+		staff:               staffpersistence.NewStaffRepository(),
+		customer:            authpersistence.NewCustomerRepository(),
+		membership:          staffpersistence.NewStaffMembershipRepository(),
+		role:                staffpersistence.NewRoleRepository(),
+		order:               orderpersistence.NewOrderRepository(),
+		orderItem:           orderpersistence.NewOrderItemRepository(),
+		invoice:             orderpersistence.NewInvoiceRepository(),
+		invoiceItem:         orderpersistence.NewInvoiceItemRepository(),
+		shipment:            shipmentpersistence.NewShipmentRepository(),
+		wishlist:            wishlistpersistence.NewWishlistRepository(),
+		review:              reviewpersistence.NewReviewRepository(),
 	}
 }
 
 type sharedServices struct {
-	tokenSvc             authenRepo.TokenService
-	pwHasher             authenRepo.PasswordHasher
-	tokenHasher          authenRepo.TokenHasher
-	authMidd             authenRepo.Authenticator
-	userDeletionSvc      authenRepo.UserDeletionService
-	authorMdwr           authenRepo.Authorizer
+	tokenSvc             authrepo.TokenService
+	pwHasher             authrepo.PasswordHasher
+	tokenHasher          authrepo.TokenHasher
+	authMidd             authrepo.Authenticator
+	userDeletionSvc      authrepo.UserDeletionService
+	authorMdwr           authrepo.Authorizer
 	slugGen              sGen.Generator
 	mailSender           mailerSvc.Sender
 	otpGen               otpSvc.Generator
 	imageTransformer     imgSvc.ImageTransformer
 	imageVariantProvider imgSvc.VariantCreator
-	pricingService       orderRepo.PricingService
+	pricingService       orderrepo.PricingService
 }
 
 func initSharedServices(cfg Config, infra *Dependency, repos *repositories) *sharedServices {
-	tokenSvc := authenSvc.NewJWTService(cfg.JWT.Secret)
-	pwHasher := authenSvc.NewBcryptHasher()
-	tokenHasher := authenSvc.NewSHATokenHasher()
-	authMidd := authenSvc.NewJWTAuthenticator(
+	tokenSvc := authsvc.NewJWTService(cfg.JWT.Secret)
+	pwHasher := authsvc.NewBcryptHasher()
+	tokenHasher := authsvc.NewSHATokenHasher()
+	authMidd := authsvc.NewJWTAuthenticator(
 		tokenSvc,
 		repos.session,
 		tokenHasher,
 		repos.refreshToken,
 	)
 
-	userDeletionSvc := authenSvc.NewUserDeletionService(
+	userDeletionSvc := authsvc.NewUserDeletionService(
 		repos.account,
 		repos.oauth,
 		repos.session,
 		repos.user,
 	)
-	authorMdwr := authenSvc.NewAuthorizer()
+	authorMdwr := authsvc.NewAuthorizer()
 
 	slugGen := sGen.NewGenerator()
 
@@ -277,7 +277,7 @@ func initSharedServices(cfg Config, infra *Dependency, repos *repositories) *sha
 	imageTransformer := imgSvc.NewImageTransformer()
 	imageVariantProvider := imgSvc.NewResolutionGenerator(imageTransformer)
 
-	pricingService := orderSvc.NewPricingService(
+	pricingService := ordersvc.NewPricingService(
 		repos.address,
 		repos.cart,
 		repos.courier,
@@ -374,7 +374,7 @@ func buildContainer(
 	userSessionAdapter := newUserSessionAdapter(sessionRepo)
 	userStaffProfileAdapter := newUserStaffProfileAdapter(staffRepo)
 
-	processPaymentWebhook := *paymentUsecase.NewProcessPaymentWebhookUsecase(
+	processPaymentWebhook := *paymentusecase.NewProcessPaymentWebhookUsecase(
 		paymentRepo,
 		paymentEventRepo,
 		paymentWebhookEventRepo,
@@ -400,7 +400,7 @@ func buildContainer(
 		paymentMethodRepo:  paymentMethodRepo,
 		paymentGateway:     infra.PaymentGateway,
 
-		FindProducts: *productUsecase.NewFindProductsUsecase(
+		FindProducts: *productusecase.NewFindProductsUsecase(
 			productRepo,
 			inventoryRepo,
 			productImageRepo,
@@ -408,7 +408,7 @@ func buildContainer(
 			infra.StorageProvider,
 			infra.TransactionExecutor,
 		).WithCache(infra.Cache),
-		GetProduct: *productUsecase.NewGetProductUsecase(
+		GetProduct: *productusecase.NewGetProductUsecase(
 			infra.TransactionExecutor,
 			infra.StorageProvider,
 			productRepo,
@@ -417,23 +417,23 @@ func buildContainer(
 			shopRepo,
 			productPerformanceRepo,
 		).WithCache(infra.Cache),
-		SaveProduct: *productUsecase.NewSaveProductUsecase(
+		SaveProduct: *productusecase.NewSaveProductUsecase(
 			infra.TransactionProvider,
 			productRepo,
 			slugGen,
 			productPerformanceRepo,
 		).WithCache(infra.Cache),
-		GetProductStats: *productUsecase.NewGetProductStatsUsecase(
+		GetProductStats: *productusecase.NewGetProductStatsUsecase(
 			productPerformanceRepo,
 			productImageRepo,
 			infra.StorageProvider,
 			infra.TransactionExecutor,
 		),
-		DeleteProduct: *productUsecase.NewDeleteProductUsecase(
+		DeleteProduct: *productusecase.NewDeleteProductUsecase(
 			productRepo,
 			infra.TransactionExecutor,
 		).WithCache(infra.Cache),
-		AddProductImages: *productUsecase.NewAddProductImagesUsecase(
+		AddProductImages: *productusecase.NewAddProductImagesUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			productRepo,
@@ -442,7 +442,7 @@ func buildContainer(
 			imageVariantProvider,
 			infra.StorageProvider,
 		),
-		Inventory: *inventoryUsecase.NewInventoryService(
+		Inventory: *inventoryusecase.NewInventoryService(
 			inventoryRepo,
 			inventoryProductChecker,
 			inventoryShopChecker,
@@ -450,19 +450,19 @@ func buildContainer(
 			inventoryStockHistory,
 		),
 
-		Me: *authenUsecase.NewMeUsecase(
+		Me: *authusecase.NewMeUsecase(
 			infra.TransactionExecutor,
 			accountRepo,
 			userRepo,
 			oauthRepo,
 		),
-		Logout: *authenUsecase.NewLogoutUsecase(
+		Logout: *authusecase.NewLogoutUsecase(
 			infra.TransactionProvider,
 			refreshTokenRepo,
 			sessionRepo,
 			auditLogger,
 		),
-		LoginCustomer: *authenUsecase.NewLoginCustomerUsecase(
+		LoginCustomer: *authusecase.NewLoginCustomerUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -474,7 +474,7 @@ func buildContainer(
 			customerRepo,
 			auditLogger,
 		),
-		LoginStaff: *authenUsecase.NewLoginStaffUsecase(
+		LoginStaff: *authusecase.NewLoginStaffUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -488,7 +488,7 @@ func buildContainer(
 			auditLogger,
 		),
 
-		Staff: *staffUsecase.NewStaffService(
+		Staff: *staffusecase.NewStaffService(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			staffRepo,
@@ -501,7 +501,7 @@ func buildContainer(
 			auditLogger,
 		),
 
-		RegisterCustomer: *authenUsecase.NewRegisterCustomerUsecase(
+		RegisterCustomer: *authusecase.NewRegisterCustomerUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -513,7 +513,7 @@ func buildContainer(
 			mailSender,
 			auditLogger,
 		),
-		VerifyAccount: *authenUsecase.NewVerifyAccountUsecase(
+		VerifyAccount: *authusecase.NewVerifyAccountUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -528,11 +528,11 @@ func buildContainer(
 			refreshTokenRepo,
 			auditLogger,
 		),
-		GetAccount: *authenUsecase.NewGetAccountUsecase(
+		GetAccount: *authusecase.NewGetAccountUsecase(
 			accountRepo,
 			infra.TransactionExecutor,
 		),
-		AuthenticateOAuth: *authenUsecase.NewAuthenticateOAuthUsecase(
+		AuthenticateOAuth: *authusecase.NewAuthenticateOAuthUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -545,7 +545,7 @@ func buildContainer(
 			refreshTokenRepo,
 			auditLogger,
 		),
-		RequestPasswordReset: *authenUsecase.NewRequestPasswordResetUsecase(
+		RequestPasswordReset: *authusecase.NewRequestPasswordResetUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -555,13 +555,13 @@ func buildContainer(
 			mailSender,
 			auditLogger,
 		),
-		VerifyPasswordReset: *authenUsecase.NewVerifyPasswordResetUsecase(
+		VerifyPasswordReset: *authusecase.NewVerifyPasswordResetUsecase(
 			infra.TransactionExecutor,
 			challengeRepo,
 			pwHasher,
 			auditLogger,
 		),
-		ResetPassword: *authenUsecase.NewResetPasswordUsecase(
+		ResetPassword: *authusecase.NewResetPasswordUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -570,7 +570,7 @@ func buildContainer(
 			pwHasher,
 			auditLogger,
 		),
-		RefreshToken: *authenUsecase.NewRefreshTokenUsecase(
+		RefreshToken: *authusecase.NewRefreshTokenUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			tokenSvc,
@@ -578,14 +578,14 @@ func buildContainer(
 			sessionRepo,
 			refreshTokenRepo,
 		),
-		DeleteAccount: *authenUsecase.NewDeleteAccountUsecase(
+		DeleteAccount: *authusecase.NewDeleteAccountUsecase(
 			infra.TransactionProvider,
 			userDeletionSvc,
 			customerRepo,
 			auditLogger,
 		),
 
-		Cart: *cartUsecase.NewCartService(
+		Cart: *cartusecase.NewCartService(
 			cartRepo,
 			inventoryRepo,
 			productRepo,
@@ -595,12 +595,12 @@ func buildContainer(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 		),
-		Checkout: *orderUsecase.NewCheckoutUsecase(
+		Checkout: *orderusecase.NewCheckoutUsecase(
 			infra.TransactionExecutor,
 			pricingService,
 		),
 
-		User: *userUsecase.NewUserService(
+		User: *userusecase.NewUserService(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			userAccountAdapter,
@@ -609,14 +609,14 @@ func buildContainer(
 			userRepo,
 		),
 
-		Address: *addressUsecase.NewAddressService(
+		Address: *addressusecase.NewAddressService(
 			addressRepo,
 			addressShopRepo,
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 		),
 
-		Shop: *shopUsecase.NewShopService(
+		Shop: *shopusecase.NewShopService(
 			shopRepo,
 			addressShopRepo,
 			shopProductAdapter,
@@ -624,21 +624,21 @@ func buildContainer(
 			infra.TransactionExecutor,
 		),
 
-		SavePaymentMethod: *paymentUsecase.NewSavePaymentMethodUsecase(
+		SavePaymentMethod: *paymentusecase.NewSavePaymentMethodUsecase(
 			paymentMethodRepo,
 			infra.TransactionExecutor,
 		),
-		ListPaymentMethod: *paymentUsecase.NewListPaymentMethodUsecase(
+		ListPaymentMethod: *paymentusecase.NewListPaymentMethodUsecase(
 			paymentMethodRepo,
 			infra.TransactionExecutor,
 		),
 		ProcessPaymentWebhook: processPaymentWebhook,
-		SavePaymentInstruction: *paymentUsecase.NewSavePaymentInstructionUsecase(
+		SavePaymentInstruction: *paymentusecase.NewSavePaymentInstructionUsecase(
 			paymentMethodRepo,
 			paymentInstructionRepo,
 			infra.TransactionExecutor,
 		),
-		GetPaymentDetail: *paymentUsecase.NewGetPaymentDetailUsecase(
+		GetPaymentDetail: *paymentusecase.NewGetPaymentDetailUsecase(
 			infra.TransactionExecutor,
 			orderPaymentAdapter,
 			paymentRepo,
@@ -646,14 +646,14 @@ func buildContainer(
 			paymentInstructionRepo,
 			paymentChannelDataRepo,
 		),
-		CheckPaymentStatus: *paymentUsecase.NewCheckPaymentStatusUsecase(
+		CheckPaymentStatus: *paymentusecase.NewCheckPaymentStatusUsecase(
 			orderPaymentAdapter,
 			paymentRepo,
 			infra.PaymentGateway,
 			&processPaymentWebhook,
 			infra.TransactionExecutor,
 		),
-		SyncPendingPayments: *paymentUsecase.NewSyncPendingPaymentsUsecase(
+		SyncPendingPayments: *paymentusecase.NewSyncPendingPaymentsUsecase(
 			paymentRepo,
 			infra.PaymentGateway,
 			&processPaymentWebhook,
@@ -664,7 +664,7 @@ func buildContainer(
 			orderPaymentAdapter,
 			inventoryRepo,
 		),
-		ExpirePastDuePayments: *paymentUsecase.NewExpirePastDuePaymentsUsecase(
+		ExpirePastDuePayments: *paymentusecase.NewExpirePastDuePaymentsUsecase(
 			paymentRepo,
 			infra.PaymentGateway,
 			infra.TransactionExecutor,
@@ -675,12 +675,12 @@ func buildContainer(
 			cfg.PaymentExpiry.BatchSize,
 			cfg.PaymentExpiry.Concurrency,
 		),
-		SyncPaymentMethods: *paymentUsecase.NewSyncPaymentMethodsUsecase(
+		SyncPaymentMethods: *paymentusecase.NewSyncPaymentMethodsUsecase(
 			paymentMethodRepo,
 			infra.TransactionExecutor,
 			infra.PaymentGateway,
 		),
-		ProcessOrderRefund: *paymentUsecase.NewProcessOrderRefundUsecase(
+		ProcessOrderRefund: *paymentusecase.NewProcessOrderRefundUsecase(
 			paymentRepo,
 			infra.PaymentGateway,
 			infra.TransactionExecutor,
@@ -688,29 +688,29 @@ func buildContainer(
 			log,
 		),
 
-		Courier: *courierUsecase.NewCourierService(
+		Courier: *courierusecase.NewCourierService(
 			infra.TransactionExecutor,
 			courierRepo,
 		),
 
-		EstimateShippingOptions: *shipmentUsecase.NewEstimateShippingOptionsUsecase(
+		EstimateShippingOptions: *shipmentusecase.NewEstimateShippingOptionsUsecase(
 			infra.ShippingProvider,
 			infra.TransactionExecutor,
 			courierRepo,
 		),
-		UpdateShipmentStatus: *shipmentUsecase.NewUpdateShipmentStatusUsecase(
+		UpdateShipmentStatus: *shipmentusecase.NewUpdateShipmentStatusUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			shipmentRepo,
 			orderDeliveryAdapter,
 		),
-		UpdateShipment: *shipmentUsecase.NewUpdateShipmentUsecase(
+		UpdateShipment: *shipmentusecase.NewUpdateShipmentUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			shipmentRepo,
 		),
 
-		CreateOrder: *orderUsecase.NewCreateOrderUsecase(
+		CreateOrder: *orderusecase.NewCreateOrderUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			accountRepo,
@@ -729,7 +729,7 @@ func buildContainer(
 			infra.PaymentGateway,
 			pricingService,
 		),
-		FindOrders: *orderUsecase.NewFindOrdersUsecase(
+		FindOrders: *orderusecase.NewFindOrdersUsecase(
 			infra.TransactionExecutor,
 			orderRepo,
 			orderItemRepo,
@@ -738,7 +738,7 @@ func buildContainer(
 			shipmentRepo,
 			addressRepo,
 		),
-		GetOrder: *orderUsecase.NewGetOrderUsecase(
+		GetOrder: *orderusecase.NewGetOrderUsecase(
 			infra.TransactionExecutor,
 			orderRepo,
 			orderItemRepo,
@@ -746,7 +746,7 @@ func buildContainer(
 			paymentChannelDataRepo,
 			shipmentRepo,
 		),
-		UpdateOrderStatus: *orderUsecase.NewUpdateOrderStatusUsecase(
+		UpdateOrderStatus: *orderusecase.NewUpdateOrderStatusUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			orderRepo,
@@ -760,7 +760,7 @@ func buildContainer(
 			infra.LogisticsProvider,
 			auditLogger,
 		),
-		DispatchShopShipment: *orderUsecase.NewDispatchShopShipmentUsecase(
+		DispatchShopShipment: *orderusecase.NewDispatchShopShipmentUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			orderRepo,
@@ -772,16 +772,16 @@ func buildContainer(
 			infra.LogisticsProvider,
 			auditLogger,
 		),
-		GetOrderTracking: *orderUsecase.NewGetOrderTrackingUsecase(
+		GetOrderTracking: *orderusecase.NewGetOrderTrackingUsecase(
 			infra.TransactionExecutor,
 			orderRepo,
 			shipmentRepo,
 		),
-		ExpireUnfulfilledOrders: *orderUsecase.NewExpireUnfulfilledOrdersUsecase(
+		ExpireUnfulfilledOrders: *orderusecase.NewExpireUnfulfilledOrdersUsecase(
 			orderRepo,
 			orderItemRepo,
 			inventoryRepo,
-			paymentUsecase.NewProcessOrderRefundUsecase(
+			paymentusecase.NewProcessOrderRefundUsecase(
 				paymentRepo,
 				infra.PaymentGateway,
 				infra.TransactionExecutor,
@@ -796,7 +796,7 @@ func buildContainer(
 			5,
 		),
 
-		Wishlist: *wishlistUsecase.NewWishlistService(
+		Wishlist: *wishlistusecase.NewWishlistService(
 			wishlistRepo,
 			productRepo,
 			inventoryRepo,
@@ -805,7 +805,7 @@ func buildContainer(
 			infra.TransactionExecutor,
 		),
 
-		Review: *reviewUsecase.NewReviewService(
+		Review: *reviewusecase.NewReviewService(
 			reviewRepo,
 			productRepo,
 			orderRepo,

@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	orderJob "komecore/internal/modules/order/infra/job"
-	paymentJob "komecore/internal/modules/payment/infra/job"
+	"komecore/internal/modules/order/orderjob"
+	"komecore/internal/modules/payment/paymentjob"
 	applogger "komecore/pkg/logger"
 )
 
@@ -33,7 +33,7 @@ func NewScheduler(cfg Config, container *Container, logger applogger.Logger) *Sc
 	}
 
 	syncInterval := time.Duration(cfg.PaymentSync.IntervalMinutes) * time.Minute
-	paymentSyncJob := paymentJob.NewPaymentSyncJob(
+	paymentSyncJob := paymentjob.NewPaymentSyncJob(
 		&container.SyncPendingPayments,
 		syncInterval,
 		logger,
@@ -41,14 +41,14 @@ func NewScheduler(cfg Config, container *Container, logger applogger.Logger) *Sc
 	s.Register(paymentSyncJob)
 
 	expiryInterval := time.Duration(cfg.PaymentExpiry.IntervalMinutes) * time.Minute
-	paymentExpiryJob := paymentJob.NewPaymentExpiryJob(
+	paymentExpiryJob := paymentjob.NewPaymentExpiryJob(
 		&container.ExpirePastDuePayments,
 		expiryInterval,
 		logger,
 	)
 	s.Register(paymentExpiryJob)
 
-	orderStaffExpiryJob := orderJob.NewOrderStaffExpiryJob(
+	orderStaffExpiryJob := orderjob.NewOrderStaffExpiryJob(
 		&container.ExpireUnfulfilledOrders,
 		defaultOrderStaffExpiryInterval,
 		logger,

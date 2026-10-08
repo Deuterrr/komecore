@@ -145,9 +145,12 @@ func TestDomainPurity(t *testing.T) {
 		if !entry.IsDir() {
 			continue
 		}
-		domainDir := filepath.Join(modulesDir, entry.Name(), "domain")
+		domainDir := filepath.Join(modulesDir, entry.Name(), entry.Name()+"domain")
 		if _, err := os.Stat(domainDir); os.IsNotExist(err) {
-			continue
+			domainDir = filepath.Join(modulesDir, entry.Name(), "domain")
+			if _, err := os.Stat(domainDir); os.IsNotExist(err) {
+				continue
+			}
 		}
 
 		err := filepath.WalkDir(domainDir, func(path string, d os.DirEntry, err error) error {
