@@ -8,19 +8,19 @@ import (
 )
 
 type CourierHandler struct {
-	listCouriers *usecase.ListCouriersUsecase
+	service *usecase.CourierService
 }
 
 func NewCourierHandler(
-	listCouriers *usecase.ListCouriersUsecase,
+	service *usecase.CourierService,
 ) *CourierHandler {
 	return &CourierHandler{
-		listCouriers: listCouriers,
+		service: service,
 	}
 }
 
 func (h *CourierHandler) ListAllCouriers(w http.ResponseWriter, r *http.Request) error {
-	codes, err := h.listCouriers.Execute(r.Context())
+	codes, err := h.service.ListAllCouriers(r.Context())
 	if err != nil {
 		return err
 	}

@@ -34,8 +34,8 @@ func TestListCouriers_Execute(t *testing.T) {
 			couriers: []string{"jne", "jnt"},
 		}
 
-		uc := usecase.NewListCouriersUsecase(nil, repo)
-		result, err := uc.Execute(context.Background())
+		svc := usecase.NewCourierService(nil, repo)
+		result, err := svc.ListAllCouriers(context.Background())
 
 		assert.NoError(t, err)
 		assert.Equal(t, []string{"jne", "jnt"}, result)
@@ -47,8 +47,8 @@ func TestListCouriers_Execute(t *testing.T) {
 			couriers: []string{},
 		}
 
-		uc := usecase.NewListCouriersUsecase(nil, repo)
-		result, err := uc.Execute(context.Background())
+		svc := usecase.NewCourierService(nil, repo)
+		result, err := svc.ListAllCouriers(context.Background())
 
 		assert.Nil(t, result)
 		assert.True(t, apperrors.IsNotFound(err))
@@ -59,8 +59,8 @@ func TestListCouriers_Execute(t *testing.T) {
 			err: errors.New("db connection failure"),
 		}
 
-		uc := usecase.NewListCouriersUsecase(nil, repo)
-		result, err := uc.Execute(context.Background())
+		svc := usecase.NewCourierService(nil, repo)
+		result, err := svc.ListAllCouriers(context.Background())
 
 		assert.Error(t, err)
 		assert.Nil(t, result)

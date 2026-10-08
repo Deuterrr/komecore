@@ -26,8 +26,8 @@ func TestRemoveFromWishlist_Success(t *testing.T) {
 		CreatedAt:  time.Now(),
 	})
 
-	uc := usecase.NewRemoveFromWishlistUsecase(wishlistRepo, nil)
-	err := uc.Execute(ctx, usecase.RemoveFromWishlistInput{CustomerID: custID, ProductID: prodID})
+	svc := usecase.NewWishlistService(wishlistRepo, nil, nil, nil, nil, nil)
+	err := svc.RemoveFromWishlist(ctx, usecase.RemoveFromWishlistInput{CustomerID: custID, ProductID: prodID})
 	require.NoError(t, err)
 
 	exists, _ := wishlistRepo.Exists(ctx, nil, custID, prodID)
@@ -37,9 +37,9 @@ func TestRemoveFromWishlist_Success(t *testing.T) {
 func TestRemoveFromWishlist_NotFound(t *testing.T) {
 	ctx := context.Background()
 	wishlistRepo := newMockWishlistRepo()
-	uc := usecase.NewRemoveFromWishlistUsecase(wishlistRepo, nil)
+	svc := usecase.NewWishlistService(wishlistRepo, nil, nil, nil, nil, nil)
 
-	err := uc.Execute(ctx, usecase.RemoveFromWishlistInput{CustomerID: uuid.New(), ProductID: uuid.New()})
+	err := svc.RemoveFromWishlist(ctx, usecase.RemoveFromWishlistInput{CustomerID: uuid.New(), ProductID: uuid.New()})
 	require.Error(t, err)
 	assert.True(t, apperrors.IsNotFound(err))
 }

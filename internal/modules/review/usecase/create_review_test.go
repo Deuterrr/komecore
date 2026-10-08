@@ -35,10 +35,10 @@ func TestCreateReview_SuccessWithDeliveredOrder(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewCreateReviewUsecase(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
+	svc := usecase.NewReviewService(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
 	comment := "Great read!"
 	title := "Loved it"
-	review, err := uc.Execute(ctx, usecase.CreateReviewInput{
+	review, err := svc.CreateReview(ctx, usecase.CreateReviewInput{
 		CustomerID: custID,
 		ProductID:  prodID,
 		Rating:     5,
@@ -56,16 +56,16 @@ func TestCreateReview_SuccessWithDeliveredOrder(t *testing.T) {
 
 func TestCreateReview_InvalidRating(t *testing.T) {
 	ctx := context.Background()
-	uc := usecase.NewCreateReviewUsecase(nil, nil, nil, nil, nil, nil, nil)
+	svc := usecase.NewReviewService(nil, nil, nil, nil, nil, nil, nil)
 
-	_, err := uc.Execute(ctx, usecase.CreateReviewInput{
+	_, err := svc.CreateReview(ctx, usecase.CreateReviewInput{
 		CustomerID: uuid.New(),
 		ProductID:  uuid.New(),
 		Rating:     0,
 	})
 	assert.True(t, apperrors.IsBadRequest(err))
 
-	_, err = uc.Execute(ctx, usecase.CreateReviewInput{
+	_, err = svc.CreateReview(ctx, usecase.CreateReviewInput{
 		CustomerID: uuid.New(),
 		ProductID:  uuid.New(),
 		Rating:     6,
@@ -83,8 +83,8 @@ func TestCreateReview_UnverifiedPurchase_NoOrders(t *testing.T) {
 	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{}}
 	oiRepo := &mockOrderItemRepo{items: map[uuid.UUID][]orderDomain.OrderItem{}}
 
-	uc := usecase.NewCreateReviewUsecase(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
-	_, err := uc.Execute(ctx, usecase.CreateReviewInput{
+	svc := usecase.NewReviewService(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
+	_, err := svc.CreateReview(ctx, usecase.CreateReviewInput{
 		CustomerID: uuid.New(),
 		ProductID:  prodID,
 		Rating:     5,
@@ -116,8 +116,8 @@ func TestCreateReview_UnverifiedPurchase_OrderNotDelivered(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewCreateReviewUsecase(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
-	_, err := uc.Execute(ctx, usecase.CreateReviewInput{
+	svc := usecase.NewReviewService(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
+	_, err := svc.CreateReview(ctx, usecase.CreateReviewInput{
 		CustomerID: custID,
 		ProductID:  prodID,
 		OrderID:    &orderID,
@@ -149,10 +149,10 @@ func TestCreateReview_DuplicateReviewPrevented(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewCreateReviewUsecase(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
+	svc := usecase.NewReviewService(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
 
 	// 1st review succeeds
-	_, err := uc.Execute(ctx, usecase.CreateReviewInput{
+	_, err := svc.CreateReview(ctx, usecase.CreateReviewInput{
 		CustomerID: custID,
 		ProductID:  prodID,
 		Rating:     5,
@@ -160,7 +160,7 @@ func TestCreateReview_DuplicateReviewPrevented(t *testing.T) {
 	require.NoError(t, err)
 
 	// 2nd review for same purchase fails with Conflict
-	_, err = uc.Execute(ctx, usecase.CreateReviewInput{
+	_, err = svc.CreateReview(ctx, usecase.CreateReviewInput{
 		CustomerID: custID,
 		ProductID:  prodID,
 		Rating:     4,

@@ -3,27 +3,21 @@ package http
 import (
 	"net/http"
 
+	"komecore/internal/common/authctx"
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	"komecore/internal/common/authctx"
 	"komecore/internal/modules/review/usecase"
 )
 
 type ReviewHandler struct {
-	createReview *usecase.CreateReviewUsecase
-	listReviews  *usecase.ListReviewsUsecase
-	deleteReview *usecase.DeleteReviewUsecase
+	service *usecase.ReviewService
 }
 
 func NewReviewHandler(
-	createReview *usecase.CreateReviewUsecase,
-	listReviews *usecase.ListReviewsUsecase,
-	deleteReview *usecase.DeleteReviewUsecase,
+	service *usecase.ReviewService,
 ) *ReviewHandler {
 	return &ReviewHandler{
-		createReview: createReview,
-		listReviews:  listReviews,
-		deleteReview: deleteReview,
+		service: service,
 	}
 }
 
@@ -43,7 +37,7 @@ func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) err
 		return apperrors.NewBadRequest("invalid request body")
 	}
 
-	review, err := h.createReview.Execute(r.Context(), usecase.CreateReviewInput{
+	review, err := h.service.CreateReview(r.Context(), usecase.CreateReviewInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		OrderID:    req.OrderID,
@@ -80,7 +74,7 @@ func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Reques
 	page := apphttp.QueryIntDefault(r, "page", 1)
 	limit := apphttp.QueryIntDefault(r, "limit", 10)
 
-	result, err := h.listReviews.Execute(r.Context(), usecase.ListReviewsInput{
+	result, err := h.service.ListReviews(r.Context(), usecase.ListReviewsInput{
 		ProductID: productID,
 		Page:      page,
 		Limit:     limit,
@@ -134,7 +128,7 @@ func (h *ReviewHandler) DeleteReview(w http.ResponseWriter, r *http.Request) err
 		return apperrors.NewBadRequest("invalid review id")
 	}
 
-	err = h.deleteReview.Execute(r.Context(), usecase.DeleteReviewInput{
+	err = h.service.DeleteReview(r.Context(), usecase.DeleteReviewInput{
 		ReviewID: reviewID,
 		Actor:    actor,
 	})

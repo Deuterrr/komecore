@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
 	"komecore/internal/common/authctx"
+	apperrors "komecore/internal/common/errors"
 	productDomain "komecore/internal/modules/product/domain"
 	"komecore/internal/modules/review/domain"
 	"komecore/internal/modules/review/usecase"
@@ -31,13 +31,13 @@ func TestDeleteReview_CustomerOwner_Success(t *testing.T) {
 		Rating:     5,
 	}
 
-	uc := usecase.NewDeleteReviewUsecase(revRepo, pRepo, nil, nil, &mockTransactor{})
+	svc := usecase.NewReviewService(revRepo, pRepo, nil, nil, nil, nil, &mockTransactor{})
 	actor := &authctx.Actor{
 		CustomerID: &custID,
 		Type:       authctx.AccountTypeCustomer,
 	}
 
-	err := uc.Execute(ctx, usecase.DeleteReviewInput{
+	err := svc.DeleteReview(ctx, usecase.DeleteReviewInput{
 		ReviewID: reviewID,
 		Actor:    actor,
 	})
@@ -64,13 +64,13 @@ func TestDeleteReview_CustomerNotOwner_Forbidden(t *testing.T) {
 		Rating:     5,
 	}
 
-	uc := usecase.NewDeleteReviewUsecase(revRepo, pRepo, nil, nil, &mockTransactor{})
+	svc := usecase.NewReviewService(revRepo, pRepo, nil, nil, nil, nil, &mockTransactor{})
 	actor := &authctx.Actor{
 		CustomerID: &attackerCustID,
 		Type:       authctx.AccountTypeCustomer,
 	}
 
-	err := uc.Execute(ctx, usecase.DeleteReviewInput{
+	err := svc.DeleteReview(ctx, usecase.DeleteReviewInput{
 		ReviewID: reviewID,
 		Actor:    actor,
 	})
@@ -94,7 +94,7 @@ func TestDeleteReview_StaffAdmin_Success(t *testing.T) {
 		Rating:     5,
 	}
 
-	uc := usecase.NewDeleteReviewUsecase(revRepo, pRepo, nil, nil, &mockTransactor{})
+	svc := usecase.NewReviewService(revRepo, pRepo, nil, nil, nil, nil, &mockTransactor{})
 	staffID := uuid.New()
 	actor := &authctx.Actor{
 		StaffID: &staffID,
@@ -102,7 +102,7 @@ func TestDeleteReview_StaffAdmin_Success(t *testing.T) {
 		Roles:   []authctx.Role{{Code: authctx.RoleStaffAdmin}},
 	}
 
-	err := uc.Execute(ctx, usecase.DeleteReviewInput{
+	err := svc.DeleteReview(ctx, usecase.DeleteReviewInput{
 		ReviewID: reviewID,
 		Actor:    actor,
 	})

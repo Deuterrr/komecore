@@ -10,20 +10,14 @@ import (
 )
 
 type UserHandler struct {
-	getUser       *usecase.GetUserUsecase
-	getProfile    *usecase.GetCurrentProfileUsecase
-	updateProfile *usecase.UpdateCurrentProfileUsecase
+	service *usecase.UserService
 }
 
 func NewUserHandler(
-	getUser *usecase.GetUserUsecase,
-	getProfile *usecase.GetCurrentProfileUsecase,
-	updateProfile *usecase.UpdateCurrentProfileUsecase,
+	service *usecase.UserService,
 ) *UserHandler {
 	return &UserHandler{
-		getUser:       getUser,
-		getProfile:    getProfile,
-		updateProfile: updateProfile,
+		service: service,
 	}
 }
 
@@ -33,7 +27,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error 
 		return apperrors.NewBadRequest("invalid user id")
 	}
 
-	result, err := h.getUser.ByID(r.Context(), id)
+	result, err := h.service.GetUserByID(r.Context(), id)
 	if err != nil {
 		return err
 	}
@@ -60,7 +54,7 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	result, err := h.getUser.ByID(r.Context(), authCtx.UserID)
+	result, err := h.service.GetUserByID(r.Context(), authCtx.UserID)
 	if err != nil {
 		return err
 	}
@@ -89,7 +83,7 @@ func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	result, err := h.getProfile.Execute(
+	result, err := h.service.GetCurrentProfile(
 		r.Context(),
 		*authCtx,
 	)
@@ -149,7 +143,7 @@ func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Reques
 		return apperrors.NewBadRequest("invalid request body")
 	}
 
-	result, err := h.updateProfile.Execute(
+	result, err := h.service.UpdateCurrentProfile(
 		r.Context(),
 		*authCtx,
 		usecase.UpdateProfileInput{

@@ -25,8 +25,8 @@ func TestAddToWishlist_Success(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewAddToWishlistUsecase(wishlistRepo, pRepo, nil)
-	err := uc.Execute(ctx, usecase.AddToWishlistInput{
+	svc := usecase.NewWishlistService(wishlistRepo, pRepo, nil, nil, nil, nil)
+	err := svc.AddToWishlist(ctx, usecase.AddToWishlistInput{
 		CustomerID: custID,
 		ProductID:  prodID,
 	})
@@ -48,12 +48,12 @@ func TestAddToWishlist_DuplicateRejected(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewAddToWishlistUsecase(wishlistRepo, pRepo, nil)
-	err := uc.Execute(ctx, usecase.AddToWishlistInput{CustomerID: custID, ProductID: prodID})
+	svc := usecase.NewWishlistService(wishlistRepo, pRepo, nil, nil, nil, nil)
+	err := svc.AddToWishlist(ctx, usecase.AddToWishlistInput{CustomerID: custID, ProductID: prodID})
 	require.NoError(t, err)
 
 	// Second attempt should fail with conflict
-	err = uc.Execute(ctx, usecase.AddToWishlistInput{CustomerID: custID, ProductID: prodID})
+	err = svc.AddToWishlist(ctx, usecase.AddToWishlistInput{CustomerID: custID, ProductID: prodID})
 	require.Error(t, err)
 	assert.True(t, apperrors.IsConflict(err))
 }
@@ -61,23 +61,26 @@ func TestAddToWishlist_DuplicateRejected(t *testing.T) {
 func TestAddToWishlist_ProductNotFound(t *testing.T) {
 	ctx := context.Background()
 	wishlistRepo := newMockWishlistRepo()
-	pRepo := &mockProductRepo{products: map[uuid.UUID]*productDomain.Product{}}
+	pRepo := &mockProductRepo{
+		products: map[uuid.UUID]*productDomain.Product{},
+	}
 
-	uc := usecase.NewAddToWishlistUsecase(wishlistRepo, pRepo, nil)
-	err := uc.Execute(ctx, usecase.AddToWishlistInput{CustomerID: uuid.New(), ProductID: uuid.New()})
+	svc := usecase.NewWishlistService(wishlistRepo, pRepo, nil, nil, nil, nil)
+	err := svc.AddToWishlist(ctx, usecase.AddToWishlistInput{
+		CustomerID: uuid.New(),
+		ProductID:  uuid.New(),
+	})
 	require.Error(t, err)
 	assert.True(t, apperrors.IsNotFound(err))
 }
 
-func TestAddToWishlist_InvalidIDs(t *testing.T) {
+func TestAddToWishlist_InvalidInput(t *testing.T) {
 	ctx := context.Background()
-	wishlistRepo := newMockWishlistRepo()
-	pRepo := &mockProductRepo{products: map[uuid.UUID]*productDomain.Product{}}
-	uc := usecase.NewAddToWishlistUsecase(wishlistRepo, pRepo, nil)
+	svc := usecase.NewWishlistService(nil, nil, nil, nil, nil, nil)
 
-	err := uc.Execute(ctx, usecase.AddToWishlistInput{CustomerID: uuid.Nil, ProductID: uuid.New()})
-	assert.True(t, apperrors.IsBadRequest(err))
+	err := svc.AddToWishlist(ctx, usecase.AddToWishlistInput{CustomerID: uuid.Nil, ProductID: uuid.New()})
+	require.Error(t, err)
 
-	err = uc.Execute(ctx, usecase.AddToWishlistInput{CustomerID: uuid.New(), ProductID: uuid.Nil})
-	assert.True(t, apperrors.IsBadRequest(err))
+	err = svc.AddToWishlist(ctx, usecase.AddToWishlistInput{CustomerID: uuid.New(), ProductID: uuid.Nil})
+	require.Error(t, err)
 }

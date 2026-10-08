@@ -37,8 +37,8 @@ func TestGetUserUsecase_ByID(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetUserUsecase(repo, exec)
-		result, err := uc.ByID(ctx, userID)
+		svc := usecase.NewUserService(exec, nil, nil, nil, nil, repo)
+		result, err := svc.GetUserByID(ctx, userID)
 
 		require.NoError(t, err)
 		assert.Equal(t, expectedUser, result)
@@ -51,8 +51,8 @@ func TestGetUserUsecase_ByID(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetUserUsecase(repo, exec)
-		result, err := uc.ByID(ctx, userID)
+		svc := usecase.NewUserService(exec, nil, nil, nil, nil, repo)
+		result, err := svc.GetUserByID(ctx, userID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve user")

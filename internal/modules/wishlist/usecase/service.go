@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apperrors "komecore/internal/common/errors"
 	"komecore/internal/infra/storage"
@@ -17,7 +18,17 @@ import (
 	"github.com/google/uuid"
 )
 
-type GetWishlistUsecase struct {
+type AddToWishlistInput struct {
+	CustomerID uuid.UUID
+	ProductID  uuid.UUID
+}
+
+type RemoveFromWishlistInput struct {
+	CustomerID uuid.UUID
+	ProductID  uuid.UUID
+}
+
+type WishlistService struct {
 	wishlistRepo   repository.WishlistRepository
 	productRepo    productRepo.ProductRepository
 	inventoryRepo  inventoryRepo.InventoryRepository
@@ -26,15 +37,15 @@ type GetWishlistUsecase struct {
 	executor       transaction.Executor
 }
 
-func NewGetWishlistUsecase(
+func NewWishlistService(
 	wishlistRepo repository.WishlistRepository,
 	productRepo productRepo.ProductRepository,
 	inventoryRepo inventoryRepo.InventoryRepository,
 	productImgRepo productRepo.ProductImageRepository,
 	fileStore storage.Provider,
 	executor transaction.Executor,
-) *GetWishlistUsecase {
-	return &GetWishlistUsecase{
+) *WishlistService {
+	return &WishlistService{
 		wishlistRepo:   wishlistRepo,
 		productRepo:    productRepo,
 		inventoryRepo:  inventoryRepo,
@@ -44,12 +55,12 @@ func NewGetWishlistUsecase(
 	}
 }
 
-func (u *GetWishlistUsecase) Execute(ctx context.Context, customerID uuid.UUID) ([]domain.WishlistProductView, error) {
+func (s *WishlistService) GetWishlist(ctx context.Context, customerID uuid.UUID) ([]domain.WishlistProductView, error) {
 	if customerID == uuid.Nil {
 		return nil, apperrors.NewBadRequest(domain.ErrInvalidCustomerID.Error())
 	}
 
-	items, err := u.wishlistRepo.ListByCustomerID(ctx, u.executor, customerID)
+	items, err := s.wishlistRepo.ListByCustomerID(ctx, s.executor, customerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list wishlist items: %w", err)
 	}
@@ -61,7 +72,7 @@ func (u *GetWishlistUsecase) Execute(ctx context.Context, customerID uuid.UUID) 
 	for _, item := range items {
 		productIDs = append(productIDs, item.ProductID)
 	}
-	products, err := u.productRepo.FindByIDs(ctx, u.executor, productIDs)
+	products, err := s.productRepo.FindByIDs(ctx, s.executor, productIDs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve products for wishlist: %w", err)
 	}
@@ -71,16 +82,16 @@ func (u *GetWishlistUsecase) Execute(ctx context.Context, customerID uuid.UUID) 
 	}
 
 	var inventoryMap map[uuid.UUID][]inventoryDomain.Inventory
-	if u.inventoryRepo != nil {
-		invMap, err := u.inventoryRepo.ListByProductIDs(ctx, u.executor, productIDs)
+	if s.inventoryRepo != nil {
+		invMap, err := s.inventoryRepo.ListByProductIDs(ctx, s.executor, productIDs)
 		if err == nil {
 			inventoryMap = invMap
 		}
 	}
 
 	var imagesMap map[uuid.UUID][]productDomain.ProductImage
-	if u.productImgRepo != nil {
-		imgs, err := u.productImgRepo.ListByProductIDs(ctx, u.executor, productIDs)
+	if s.productImgRepo != nil {
+		imgs, err := s.productImgRepo.ListByProductIDs(ctx, s.executor, productIDs)
 		if err == nil {
 			imagesMap = imgs
 		}
@@ -105,8 +116,8 @@ func (u *GetWishlistUsecase) Execute(ctx context.Context, customerID uuid.UUID) 
 		var primaryImage *string
 		if imagesMap != nil {
 			if imgs, ok := imagesMap[item.ProductID]; ok && len(imgs) > 0 {
-				if varThumbnail, ok := imgs[0].Variants[productDomain.ResolutionThumbnail]; ok && varThumbnail.Key != "" && u.fileStore != nil {
-					url := u.fileStore.PublicURL(varThumbnail.Key, "public-assets")
+				if varThumbnail, ok := imgs[0].Variants[productDomain.ResolutionThumbnail]; ok && varThumbnail.Key != "" && s.fileStore != nil {
+					url := s.fileStore.PublicURL(varThumbnail.Key, "public-assets")
 					primaryImage = &url
 				}
 			}
@@ -126,4 +137,64 @@ func (u *GetWishlistUsecase) Execute(ctx context.Context, customerID uuid.UUID) 
 	}
 
 	return views, nil
+}
+
+func (s *WishlistService) AddToWishlist(ctx context.Context, input AddToWishlistInput) error {
+	if input.CustomerID == uuid.Nil {
+		return apperrors.NewBadRequest(domain.ErrInvalidCustomerID.Error())
+	}
+	if input.ProductID == uuid.Nil {
+		return apperrors.NewBadRequest(domain.ErrInvalidProductID.Error())
+	}
+
+	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
+	if err != nil {
+		return fmt.Errorf("failed to check product existence: %w", err)
+	}
+	if product == nil {
+		return apperrors.NewNotFound(domain.ErrProductNotFound.Error())
+	}
+
+	exists, err := s.wishlistRepo.Exists(ctx, s.executor, input.CustomerID, input.ProductID)
+	if err != nil {
+		return fmt.Errorf("failed to check existing wishlist item: %w", err)
+	}
+	if exists {
+		return apperrors.NewConflict(domain.ErrWishlistItemAlreadyExists.Error())
+	}
+
+	item := domain.WishlistItem{
+		CustomerID: input.CustomerID,
+		ProductID:  input.ProductID,
+		CreatedAt:  time.Now(),
+	}
+
+	if err := s.wishlistRepo.Add(ctx, s.executor, item); err != nil {
+		return fmt.Errorf("failed to add item to wishlist: %w", err)
+	}
+
+	return nil
+}
+
+func (s *WishlistService) RemoveFromWishlist(ctx context.Context, input RemoveFromWishlistInput) error {
+	if input.CustomerID == uuid.Nil {
+		return apperrors.NewBadRequest(domain.ErrInvalidCustomerID.Error())
+	}
+	if input.ProductID == uuid.Nil {
+		return apperrors.NewBadRequest(domain.ErrInvalidProductID.Error())
+	}
+
+	exists, err := s.wishlistRepo.Exists(ctx, s.executor, input.CustomerID, input.ProductID)
+	if err != nil {
+		return fmt.Errorf("failed to check existing wishlist item: %w", err)
+	}
+	if !exists {
+		return apperrors.NewNotFound(domain.ErrWishlistItemNotFound.Error())
+	}
+
+	if err := s.wishlistRepo.Remove(ctx, s.executor, input.CustomerID, input.ProductID); err != nil {
+		return fmt.Errorf("failed to remove item from wishlist: %w", err)
+	}
+
+	return nil
 }

@@ -48,8 +48,8 @@ func TestGetWishlist_Success(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewGetWishlistUsecase(wishlistRepo, pRepo, invRepo, nil, nil, nil)
-	items, err := uc.Execute(ctx, custID)
+	svc := usecase.NewWishlistService(wishlistRepo, pRepo, invRepo, nil, nil, nil)
+	items, err := svc.GetWishlist(ctx, custID)
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 
@@ -65,8 +65,8 @@ func TestGetWishlist_Empty(t *testing.T) {
 	wishlistRepo := newMockWishlistRepo()
 	custID := uuid.New()
 
-	uc := usecase.NewGetWishlistUsecase(wishlistRepo, nil, nil, nil, nil, nil)
-	items, err := uc.Execute(ctx, custID)
+	svc := usecase.NewWishlistService(wishlistRepo, nil, nil, nil, nil, nil)
+	items, err := svc.GetWishlist(ctx, custID)
 	require.NoError(t, err)
 	assert.Empty(t, items)
 }

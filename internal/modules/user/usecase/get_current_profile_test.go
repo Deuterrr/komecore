@@ -45,7 +45,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{
 			UserID:      userID,
 			SessionID:   sessionID,
@@ -53,7 +53,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 			AccountType: authctx.AccountTypeCustomer,
 		}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		require.NotNil(t, result.Customer)
@@ -85,7 +85,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{profile: staffProfile}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{
 			UserID:      userID,
 			SessionID:   sessionID,
@@ -93,7 +93,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 			AccountType: authctx.AccountTypeStaff,
 		}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		require.NotNil(t, result.Staff)
@@ -111,10 +111,10 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsNotFound(err))
@@ -127,10 +127,10 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve account")
@@ -144,10 +144,10 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve session")
@@ -161,10 +161,10 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsNotFound(err))
@@ -178,10 +178,10 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve user profile")
@@ -195,10 +195,10 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{getProfileErr: errors.New("staff db error")}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
+		svc := usecase.NewUserService(exec, nil, accountRepo, staffRepo, sessionRepo, userRepo)
 		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
-		result, err := uc.Execute(ctx, authCtx)
+		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve staff profile")

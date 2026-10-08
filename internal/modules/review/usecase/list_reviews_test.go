@@ -31,8 +31,8 @@ func TestListReviews_Success(t *testing.T) {
 		Rating:    4,
 	}
 
-	uc := usecase.NewListReviewsUsecase(revRepo, pRepo, nil)
-	res, err := uc.Execute(ctx, usecase.ListReviewsInput{
+	svc := usecase.NewReviewService(revRepo, pRepo, nil, nil, nil, nil, nil)
+	res, err := svc.ListReviews(ctx, usecase.ListReviewsInput{
 		ProductID: prodID,
 		Page:      1,
 		Limit:     10,

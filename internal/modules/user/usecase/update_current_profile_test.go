@@ -34,12 +34,12 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		userRepo := &mockUserRepo{}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		emptyName := "   "
 		input := usecase.UpdateProfileInput{Name: &emptyName}
 		authCtx := authctx.AuthContext{UserID: userID}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsBadRequest(err))
@@ -52,11 +52,11 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		userRepo := &mockUserRepo{}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
 		authCtx := authctx.AuthContext{UserID: userID}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsNotFound(err))
@@ -69,11 +69,11 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		userRepo := &mockUserRepo{}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
 		authCtx := authctx.AuthContext{UserID: userID}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve account")
@@ -98,7 +98,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		userRepo := &mockUserRepo{user: updatedUser}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		input := usecase.UpdateProfileInput{
 			Name:      &newName,
 			Phone:     &newPhone,
@@ -110,7 +110,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 			AccountType: authctx.AccountTypeCustomer,
 		}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		require.NotNil(t, result.Customer)
@@ -143,7 +143,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{profile: updatedStaff}
 		userRepo := &mockUserRepo{}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		input := usecase.UpdateProfileInput{
 			Name:      &newName,
 			Phone:     &newPhone,
@@ -155,7 +155,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 			AccountType: authctx.AccountTypeStaff,
 		}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		require.NotNil(t, result.Staff)
@@ -178,11 +178,11 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		userRepo := &mockUserRepo{saveProfileError: errors.New("save error")}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
 		authCtx := authctx.AuthContext{UserID: userID}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to save user profile")
@@ -199,11 +199,11 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{}
 		userRepo := &mockUserRepo{user: nil}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
 		authCtx := authctx.AuthContext{UserID: userID}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsNotFound(err))
@@ -220,11 +220,11 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		staffRepo := &mockStaffRepo{getProfileErr: errors.New("staff get error")}
 		userRepo := &mockUserRepo{}
 
-		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
+		svc := usecase.NewUserService(exec, tx, accountRepo, staffRepo, nil, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
 		authCtx := authctx.AuthContext{UserID: userID}
 
-		result, err := uc.Execute(ctx, authCtx, input)
+		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve staff profile")

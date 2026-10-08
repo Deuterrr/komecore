@@ -9,23 +9,23 @@ import (
 	"komecore/internal/modules/courier/repository"
 )
 
-type ListCouriersUsecase struct {
+type CourierService struct {
 	exec        transaction.Executor
 	courierRepo repository.CourierRepository
 }
 
-func NewListCouriersUsecase(
+func NewCourierService(
 	exec transaction.Executor,
 	courierRepo repository.CourierRepository,
-) *ListCouriersUsecase {
-	return &ListCouriersUsecase{
+) *CourierService {
+	return &CourierService{
 		exec:        exec,
 		courierRepo: courierRepo,
 	}
 }
 
-func (u *ListCouriersUsecase) Execute(ctx context.Context) ([]string, error) {
-	codes, err := u.courierRepo.ListAll(ctx, u.exec)
+func (s *CourierService) ListAllCouriers(ctx context.Context) ([]string, error) {
+	codes, err := s.courierRepo.ListAll(ctx, s.exec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load couriers: %w", err)
 	}

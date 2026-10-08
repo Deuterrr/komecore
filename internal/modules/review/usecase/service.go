@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"komecore/internal/common/authctx"
 	apperrors "komecore/internal/common/errors"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
@@ -27,7 +28,27 @@ type CreateReviewInput struct {
 	Comment    *string
 }
 
-type CreateReviewUsecase struct {
+type ListReviewsInput struct {
+	ProductID uuid.UUID
+	Page      int
+	Limit     int
+}
+
+type ListReviewsResult struct {
+	Reviews       []domain.ReviewWithCustomer
+	Total         int
+	Page          int
+	Limit         int
+	AverageRating float64
+	ReviewCount   int
+}
+
+type DeleteReviewInput struct {
+	ReviewID uuid.UUID
+	Actor    *authctx.Actor
+}
+
+type ReviewService struct {
 	reviewRepo    repository.ReviewRepository
 	productRepo   productRepo.ProductRepository
 	orderRepo     orderRepo.OrderRepository
@@ -37,7 +58,7 @@ type CreateReviewUsecase struct {
 	transactor    transaction.Transactor
 }
 
-func NewCreateReviewUsecase(
+func NewReviewService(
 	reviewRepo repository.ReviewRepository,
 	productRepo productRepo.ProductRepository,
 	orderRepo orderRepo.OrderRepository,
@@ -45,8 +66,8 @@ func NewCreateReviewUsecase(
 	cache cache.Cache,
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-) *CreateReviewUsecase {
-	return &CreateReviewUsecase{
+) *ReviewService {
+	return &ReviewService{
 		reviewRepo:    reviewRepo,
 		productRepo:   productRepo,
 		orderRepo:     orderRepo,
@@ -57,7 +78,7 @@ func NewCreateReviewUsecase(
 	}
 }
 
-func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInput) (*domain.Review, error) {
+func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInput) (*domain.Review, error) {
 	if input.Rating < 1 || input.Rating > 5 {
 		return nil, apperrors.NewBadRequest(domain.ErrInvalidRating.Error())
 	}
@@ -68,7 +89,7 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 		return nil, apperrors.NewBadRequest("invalid product id")
 	}
 
-	product, err := u.productRepo.GetByID(ctx, u.executor, input.ProductID)
+	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve product: %w", err)
 	}
@@ -79,7 +100,7 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 	var targetOrderID uuid.UUID
 
 	if input.OrderID != nil {
-		order, err := u.orderRepo.GetByID(ctx, u.executor, *input.OrderID)
+		order, err := s.orderRepo.GetByID(ctx, s.executor, *input.OrderID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve order: %w", err)
 		}
@@ -90,7 +111,7 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 			return nil, apperrors.NewForbidden(domain.ErrUnverifiedPurchase.Error())
 		}
 
-		items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, order.ID)
+		items, err := s.orderItemRepo.ListByOrderID(ctx, s.executor, order.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list order items: %w", err)
 		}
@@ -105,7 +126,7 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 			return nil, apperrors.NewForbidden(domain.ErrUnverifiedPurchase.Error())
 		}
 
-		hasReviewed, err := u.reviewRepo.HasReviewedOrder(ctx, u.executor, input.CustomerID, input.ProductID, order.ID)
+		hasReviewed, err := s.reviewRepo.HasReviewedOrder(ctx, s.executor, input.CustomerID, input.ProductID, order.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check order review status: %w", err)
 		}
@@ -115,7 +136,7 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 
 		targetOrderID = order.ID
 	} else {
-		orders, _, err := u.orderRepo.FindOrders(ctx, u.executor, orderRepo.FindOrderParams{
+		orders, _, err := s.orderRepo.FindOrders(ctx, s.executor, orderRepo.FindOrderParams{
 			CustomerID: &input.CustomerID,
 			Statuses:   []string{"delivered", "completed"},
 			Pagination: query.Pagination{Limit: 100},
@@ -132,7 +153,7 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 			orderIDs[i] = o.ID
 		}
 
-		items, err := u.orderItemRepo.ListByOrderIDs(ctx, u.executor, orderIDs)
+		items, err := s.orderItemRepo.ListByOrderIDs(ctx, s.executor, orderIDs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list order items: %w", err)
 		}
@@ -147,7 +168,7 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 			return nil, apperrors.NewForbidden(domain.ErrUnverifiedPurchase.Error())
 		}
 
-		reviewedIDs, err := u.reviewRepo.GetReviewedOrderIDs(ctx, u.executor, input.CustomerID, input.ProductID)
+		reviewedIDs, err := s.reviewRepo.GetReviewedOrderIDs(ctx, s.executor, input.CustomerID, input.ProductID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check reviewed orders: %w", err)
 		}
@@ -186,17 +207,17 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 		return nil, apperrors.NewBadRequest(err.Error())
 	}
 
-	err = u.transactor.WithinTransaction(ctx, func(tx transaction.Executor) error {
-		if err := u.reviewRepo.Create(ctx, tx, review); err != nil {
+	err = s.transactor.WithinTransaction(ctx, func(tx transaction.Executor) error {
+		if err := s.reviewRepo.Create(ctx, tx, review); err != nil {
 			return err
 		}
 
-		summary, err := u.reviewRepo.GetRatingSummary(ctx, tx, input.ProductID)
+		summary, err := s.reviewRepo.GetRatingSummary(ctx, tx, input.ProductID)
 		if err != nil {
 			return err
 		}
 
-		if err := u.productRepo.UpdateRating(ctx, tx, input.ProductID, summary.AverageRating, summary.ReviewCount); err != nil {
+		if err := s.productRepo.UpdateRating(ctx, tx, input.ProductID, summary.AverageRating, summary.ReviewCount); err != nil {
 			return err
 		}
 
@@ -206,10 +227,115 @@ func (u *CreateReviewUsecase) Execute(ctx context.Context, input CreateReviewInp
 		return nil, fmt.Errorf("failed to save review and update rating aggregate: %w", err)
 	}
 
-	if u.cache != nil {
-		_ = u.cache.Delete(ctx, fmt.Sprintf("cache:product:slug:%s", product.Slug))
-		_ = u.cache.Delete(ctx, "cache:products:list:all")
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, fmt.Sprintf("cache:product:slug:%s", product.Slug))
+		_ = s.cache.Delete(ctx, "cache:products:list:all")
 	}
 
 	return review, nil
+}
+
+func (s *ReviewService) ListReviews(ctx context.Context, input ListReviewsInput) (*ListReviewsResult, error) {
+	if input.ProductID == uuid.Nil {
+		return nil, apperrors.NewBadRequest("invalid product id")
+	}
+
+	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve product: %w", err)
+	}
+	if product == nil {
+		return nil, apperrors.NewNotFound("product not found")
+	}
+
+	page := input.Page
+	if page <= 0 {
+		page = 1
+	}
+	limit := input.Limit
+	if limit <= 0 {
+		limit = 10
+	}
+
+	reviews, total, err := s.reviewRepo.ListByProductID(ctx, s.executor, repository.ListReviewsParams{
+		ProductID: input.ProductID,
+		Page:      page,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list product reviews: %w", err)
+	}
+
+	summary, err := s.reviewRepo.GetRatingSummary(ctx, s.executor, input.ProductID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rating summary: %w", err)
+	}
+
+	return &ListReviewsResult{
+		Reviews:       reviews,
+		Total:         total,
+		Page:          page,
+		Limit:         limit,
+		AverageRating: summary.AverageRating,
+		ReviewCount:   summary.ReviewCount,
+	}, nil
+}
+
+func (s *ReviewService) DeleteReview(ctx context.Context, input DeleteReviewInput) error {
+	if input.ReviewID == uuid.Nil {
+		return apperrors.NewBadRequest("invalid review id")
+	}
+
+	review, err := s.reviewRepo.GetByID(ctx, s.executor, input.ReviewID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve review: %w", err)
+	}
+	if review == nil {
+		return apperrors.NewNotFound("review not found")
+	}
+
+	if input.Actor == nil {
+		return apperrors.NewUnauthorized("authentication required")
+	}
+
+	switch input.Actor.Type {
+	case authctx.AccountTypeCustomer:
+		if input.Actor.CustomerID == nil || *input.Actor.CustomerID != review.CustomerID {
+			return apperrors.NewForbidden("forbidden: cannot delete review belonging to another customer")
+		}
+	case authctx.AccountTypeStaff:
+		// Staff is authorized to delete/moderate reviews
+	default:
+		return apperrors.NewForbidden("forbidden: unauthorized to delete reviews")
+	}
+
+	err = s.transactor.WithinTransaction(ctx, func(tx transaction.Executor) error {
+		if err := s.reviewRepo.Delete(ctx, tx, input.ReviewID); err != nil {
+			return err
+		}
+
+		summary, err := s.reviewRepo.GetRatingSummary(ctx, tx, review.ProductID)
+		if err != nil {
+			return err
+		}
+
+		if err := s.productRepo.UpdateRating(ctx, tx, review.ProductID, summary.AverageRating, summary.ReviewCount); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete review and update rating aggregate: %w", err)
+	}
+
+	if s.cache != nil {
+		product, _ := s.productRepo.GetByID(ctx, s.executor, review.ProductID)
+		if product != nil {
+			_ = s.cache.Delete(ctx, fmt.Sprintf("cache:product:slug:%s", product.Slug))
+		}
+		_ = s.cache.Delete(ctx, "cache:products:list:all")
+	}
+
+	return nil
 }
