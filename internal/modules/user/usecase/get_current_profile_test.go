@@ -6,9 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"komecore/internal/common/authctx"
 	apperrors "komecore/internal/common/errors"
-	authenDomain "komecore/internal/modules/auth/domain"
-	staffDomain "komecore/internal/modules/staff/domain"
 	userDomain "komecore/internal/modules/user/domain"
 	"komecore/internal/modules/user/usecase"
 
@@ -27,17 +26,9 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 	phone := "+62812345678"
 	avatar := "https://example.com/avatar.png"
 
-	baseSession := &authenDomain.Session{
-		ID:             sessionID,
-		UserID:         userID,
-		LastActivityAt: &now,
-	}
-
 	t.Run("success returns customer profile", func(t *testing.T) {
-		account := &authenDomain.Account{
-			ID:     uuid.New(),
-			UserID: userID,
-			Type:   authenDomain.AccountTypeCustomer,
+		account := &usecase.UserAccount{
+			Type: authctx.AccountTypeCustomer,
 		}
 		user := &userDomain.User{
 			ID:        userID,
@@ -49,17 +40,17 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		}
 
 		accountRepo := &mockAccountRepo{account: account}
-		sessionRepo := &mockSessionRepo{session: baseSession}
+		sessionRepo := &mockSessionRepo{lastActivity: &now}
 		userRepo := &mockUserRepo{user: user}
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{
+		authCtx := authctx.AuthContext{
 			UserID:      userID,
 			SessionID:   sessionID,
 			CustomerID:  &customerID,
-			AccountType: authenDomain.AccountTypeCustomer,
+			AccountType: authctx.AccountTypeCustomer,
 		}
 
 		result, err := uc.Execute(ctx, authCtx)
@@ -75,12 +66,10 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("success returns staff profile", func(t *testing.T) {
-		account := &authenDomain.Account{
-			ID:     uuid.New(),
-			UserID: userID,
-			Type:   authenDomain.AccountTypeStaff,
+		account := &usecase.UserAccount{
+			Type: authctx.AccountTypeStaff,
 		}
-		staffProfile := &staffDomain.StaffProfile{
+		staffProfile := &userDomain.StaffProfile{
 			ID:        staffID,
 			UserID:    userID,
 			Name:      "Staff Sarah",
@@ -91,17 +80,17 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		}
 
 		accountRepo := &mockAccountRepo{account: account}
-		sessionRepo := &mockSessionRepo{session: baseSession}
+		sessionRepo := &mockSessionRepo{lastActivity: &now}
 		userRepo := &mockUserRepo{}
 		staffRepo := &mockStaffRepo{profile: staffProfile}
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{
+		authCtx := authctx.AuthContext{
 			UserID:      userID,
 			SessionID:   sessionID,
 			StaffID:     &staffID,
-			AccountType: authenDomain.AccountTypeStaff,
+			AccountType: authctx.AccountTypeStaff,
 		}
 
 		result, err := uc.Execute(ctx, authCtx)
@@ -117,13 +106,13 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 
 	t.Run("returns not found when account does not exist", func(t *testing.T) {
 		accountRepo := &mockAccountRepo{account: nil}
-		sessionRepo := &mockSessionRepo{session: baseSession}
+		sessionRepo := &mockSessionRepo{lastActivity: &now}
 		userRepo := &mockUserRepo{}
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{UserID: userID, SessionID: sessionID}
+		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
 		result, err := uc.Execute(ctx, authCtx)
 		assert.Nil(t, result)
@@ -133,13 +122,13 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 
 	t.Run("returns error when account repository fails", func(t *testing.T) {
 		accountRepo := &mockAccountRepo{getByUserIDErr: errors.New("db error")}
-		sessionRepo := &mockSessionRepo{session: baseSession}
+		sessionRepo := &mockSessionRepo{lastActivity: &now}
 		userRepo := &mockUserRepo{}
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{UserID: userID, SessionID: sessionID}
+		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
 		result, err := uc.Execute(ctx, authCtx)
 		assert.Nil(t, result)
@@ -148,7 +137,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("returns error when session repository fails", func(t *testing.T) {
-		account := &authenDomain.Account{UserID: userID, Type: authenDomain.AccountTypeCustomer}
+		account := &usecase.UserAccount{Type: authctx.AccountTypeCustomer}
 		accountRepo := &mockAccountRepo{account: account}
 		sessionRepo := &mockSessionRepo{getByIDErr: errors.New("session db error")}
 		userRepo := &mockUserRepo{}
@@ -156,7 +145,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{UserID: userID, SessionID: sessionID}
+		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
 		result, err := uc.Execute(ctx, authCtx)
 		assert.Nil(t, result)
@@ -165,15 +154,15 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("returns not found when customer user does not exist", func(t *testing.T) {
-		account := &authenDomain.Account{UserID: userID, Type: authenDomain.AccountTypeCustomer}
+		account := &usecase.UserAccount{Type: authctx.AccountTypeCustomer}
 		accountRepo := &mockAccountRepo{account: account}
-		sessionRepo := &mockSessionRepo{session: baseSession}
+		sessionRepo := &mockSessionRepo{lastActivity: &now}
 		userRepo := &mockUserRepo{user: nil}
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{UserID: userID, SessionID: sessionID}
+		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
 		result, err := uc.Execute(ctx, authCtx)
 		assert.Nil(t, result)
@@ -182,15 +171,15 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("returns error when customer user repo fails", func(t *testing.T) {
-		account := &authenDomain.Account{UserID: userID, Type: authenDomain.AccountTypeCustomer}
+		account := &usecase.UserAccount{Type: authctx.AccountTypeCustomer}
 		accountRepo := &mockAccountRepo{account: account}
-		sessionRepo := &mockSessionRepo{session: baseSession}
+		sessionRepo := &mockSessionRepo{lastActivity: &now}
 		userRepo := &mockUserRepo{getByIDError: errors.New("user db error")}
 		staffRepo := &mockStaffRepo{}
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{UserID: userID, SessionID: sessionID}
+		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
 		result, err := uc.Execute(ctx, authCtx)
 		assert.Nil(t, result)
@@ -199,15 +188,15 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("returns error when staff repo fails", func(t *testing.T) {
-		account := &authenDomain.Account{UserID: userID, Type: authenDomain.AccountTypeStaff}
+		account := &usecase.UserAccount{Type: authctx.AccountTypeStaff}
 		accountRepo := &mockAccountRepo{account: account}
-		sessionRepo := &mockSessionRepo{session: baseSession}
+		sessionRepo := &mockSessionRepo{lastActivity: &now}
 		userRepo := &mockUserRepo{}
 		staffRepo := &mockStaffRepo{getProfileErr: errors.New("staff db error")}
 		exec := &mockExecutor{}
 
 		uc := usecase.NewGetCurrentProfileUsecase(exec, accountRepo, userRepo, staffRepo, sessionRepo)
-		authCtx := authenDomain.AuthContext{UserID: userID, SessionID: sessionID}
+		authCtx := authctx.AuthContext{UserID: userID, SessionID: sessionID}
 
 		result, err := uc.Execute(ctx, authCtx)
 		assert.Nil(t, result)

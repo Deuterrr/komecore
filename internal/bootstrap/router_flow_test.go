@@ -12,7 +12,7 @@ import (
 	appcookie "komecore/internal/common/http/cookie"
 	appmiddleware "komecore/internal/common/middleware"
 	transaction "komecore/internal/infra/transactor"
-	authendomain "komecore/internal/modules/auth/domain"
+	"komecore/internal/common/authctx"
 	authenRepo "komecore/internal/modules/auth/repository"
 	applogger "komecore/pkg/logger"
 	applimiter "komecore/pkg/ratelimit"
@@ -24,7 +24,7 @@ import (
 // Mock Authenticator for router integration tests
 type mockRouterAuthenticator struct {
 	authenticated bool
-	authCtx       *authendomain.AuthContext
+	authCtx       *authctx.AuthContext
 }
 
 func (m *mockRouterAuthenticator) RequireAuth(
@@ -38,7 +38,7 @@ func (m *mockRouterAuthenticator) RequireAuth(
 				return apperrors.NewUnauthorized("unauthorized")
 			}
 			if m.authCtx != nil {
-				ctx := authendomain.WithAuthContext(r.Context(), m.authCtx)
+				ctx := authctx.WithAuthContext(r.Context(), m.authCtx)
 				r = r.WithContext(ctx)
 			}
 			return next(w, r)
@@ -70,7 +70,7 @@ func (m *mockRouterAuthenticator) OptionalAuth(
 	return func(next apphttp.AppHandler) apphttp.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			if m.authenticated && m.authCtx != nil {
-				ctx := authendomain.WithAuthContext(r.Context(), m.authCtx)
+				ctx := authctx.WithAuthContext(r.Context(), m.authCtx)
 				r = r.WithContext(ctx)
 			}
 			return next(w, r)
@@ -81,10 +81,10 @@ func (m *mockRouterAuthenticator) OptionalAuth(
 // Mock Authorizer for router integration tests
 type mockRouterAuthorizer struct{}
 
-func (m *mockRouterAuthorizer) RequireAccountType(allowedTypes ...authendomain.AccountType) appmiddleware.Middleware {
+func (m *mockRouterAuthorizer) RequireAccountType(allowedTypes ...authctx.AccountType) appmiddleware.Middleware {
 	return func(next apphttp.AppHandler) apphttp.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
-			authCtx, ok := authendomain.GetAuthContext(r.Context())
+			authCtx, ok := authctx.GetAuthContext(r.Context())
 			if !ok || authCtx == nil {
 				return apperrors.NewUnauthorized("unauthorized")
 			}
@@ -103,7 +103,7 @@ func (m *mockRouterAuthorizer) RequireAccountType(allowedTypes ...authendomain.A
 	}
 }
 
-func (m *mockRouterAuthorizer) RequireStaffRole(allowedRoles ...authendomain.RoleCode) appmiddleware.Middleware {
+func (m *mockRouterAuthorizer) RequireStaffRole(allowedRoles ...authctx.RoleCode) appmiddleware.Middleware {
 	return func(next apphttp.AppHandler) apphttp.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			return next(w, r)
@@ -138,7 +138,7 @@ func (m *mockRouterAuthorizer) OptionalLoadActor(_ transaction.Executor) appmidd
 var _ authenRepo.Authenticator = (*mockRouterAuthenticator)(nil)
 var _ authenRepo.Authorizer = (*mockRouterAuthorizer)(nil)
 
-func createTestContainer(authenticated bool, authCtx *authendomain.AuthContext) *Container {
+func createTestContainer(authenticated bool, authCtx *authctx.AuthContext) *Container {
 	log := applogger.NewSlogLogger("test")
 	lim := applimiter.NewInMemorySlidingWindowLimiter(1*time.Second, 100)
 

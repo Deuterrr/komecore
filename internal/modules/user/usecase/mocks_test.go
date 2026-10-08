@@ -2,14 +2,12 @@ package usecase_test
 
 import (
 	"context"
+	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authenRepo "komecore/internal/modules/auth/repository"
-	staffDomain "komecore/internal/modules/staff/domain"
-	staffRepo "komecore/internal/modules/staff/repository"
 	userDomain "komecore/internal/modules/user/domain"
 	userRepo "komecore/internal/modules/user/repository"
+	"komecore/internal/modules/user/usecase"
 
 	"github.com/google/uuid"
 )
@@ -58,13 +56,12 @@ func (m *mockUserRepo) SaveProfile(ctx context.Context, exec transaction.Executo
 }
 
 type mockAccountRepo struct {
-	authenRepo.AccountRepository
-	account          *authenDomain.Account
+	account          *usecase.UserAccount
 	getByUserIDErr   error
 	getByUserIDCalls int
 }
 
-func (m *mockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*authenDomain.Account, error) {
+func (m *mockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*usecase.UserAccount, error) {
 	m.getByUserIDCalls++
 	if m.getByUserIDErr != nil {
 		return nil, m.getByUserIDErr
@@ -73,13 +70,12 @@ func (m *mockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Exec
 }
 
 type mockStaffRepo struct {
-	staffRepo.StaffRepository
-	profile         *staffDomain.StaffProfile
+	profile         *userDomain.StaffProfile
 	getProfileErr   error
 	getProfileCalls int
 }
 
-func (m *mockStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*staffDomain.StaffProfile, error) {
+func (m *mockStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*userDomain.StaffProfile, error) {
 	m.getProfileCalls++
 	if m.getProfileErr != nil {
 		return nil, m.getProfileErr
@@ -88,16 +84,15 @@ func (m *mockStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction
 }
 
 type mockSessionRepo struct {
-	authenRepo.SessionRepository
-	session      *authenDomain.Session
+	lastActivity *time.Time
 	getByIDErr   error
 	getByIDCalls int
 }
 
-func (m *mockSessionRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Session, error) {
+func (m *mockSessionRepo) GetLastActivity(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*time.Time, error) {
 	m.getByIDCalls++
 	if m.getByIDErr != nil {
 		return nil, m.getByIDErr
 	}
-	return m.session, nil
+	return m.lastActivity, nil
 }

@@ -9,9 +9,6 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/domain"
 	"komecore/internal/modules/inventory/repository"
-	productDomain "komecore/internal/modules/product/domain"
-	productRepository "komecore/internal/modules/product/repository"
-	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
 )
@@ -19,13 +16,13 @@ import (
 type UpdateInventoryUsecase struct {
 	inventoryRepo    repository.InventoryRepository
 	executor         transaction.Executor
-	stockHistoryRepo productRepository.ProductStockHistoryRepository
+	stockHistoryRepo StockHistoryRecorder
 }
 
 func NewUpdateInventoryUsecase(
 	inventoryRepo repository.InventoryRepository,
 	executor transaction.Executor,
-	stockHistoryRepo productRepository.ProductStockHistoryRepository,
+	stockHistoryRepo StockHistoryRecorder,
 ) *UpdateInventoryUsecase {
 	return &UpdateInventoryUsecase{
 		inventoryRepo:    inventoryRepo,
@@ -71,15 +68,12 @@ func (u *UpdateInventoryUsecase) Execute(
 	}
 
 	go func() {
-		event := productDomain.ProductStockEvent{
-			ProductID:  existing.ProductID,
-			ShopID:     existing.ShopID,
-			Available:  existing.TotalStock - existing.ReservedStock,
-			RecordedAt: appclock.Now(),
-		}
-
-		_ = u.stockHistoryRepo.RecordStockEvent(context.Background(), u.executor,
-			event,
+		_ = u.stockHistoryRepo.RecordStockEvent(
+			context.Background(),
+			u.executor,
+			existing.ProductID,
+			existing.ShopID,
+			existing.TotalStock-existing.ReservedStock,
 		)
 	}()
 

@@ -9,8 +9,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	orderDomain "komecore/internal/modules/order/domain"
-	orderRepo "komecore/internal/modules/order/repository"
 	paymentDomain "komecore/internal/modules/payment/domain"
 	query "komecore/internal/shared/query"
 
@@ -19,53 +17,28 @@ import (
 
 // --- Mocks for GetPaymentDetail ---
 
-type mockOrderDetailOrderRepo struct {
-	order *orderDomain.Order
+type mockOrderDetailOrderPaymentManager struct {
+	order   *OrderInfo
+	invoice string
 }
 
-func (m *mockOrderDetailOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*orderDomain.Order, error) {
+func (m *mockOrderDetailOrderPaymentManager) GetOrderForPayment(_ context.Context, _ transaction.Executor, id uuid.UUID) (*OrderInfo, error) {
 	if m.order != nil && m.order.ID == id {
 		return m.order, nil
 	}
 	return nil, nil
 }
-func (m *mockOrderDetailOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*orderDomain.Order, error) {
+func (m *mockOrderDetailOrderPaymentManager) GetInvoiceNumber(_ context.Context, _ transaction.Executor, _ uuid.UUID) (string, error) {
+	return m.invoice, nil
+}
+func (m *mockOrderDetailOrderPaymentManager) ConfirmOrderPayment(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ time.Time, _ time.Duration) ([]OrderItemInfo, error) {
 	return nil, nil
 }
-func (m *mockOrderDetailOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ orderDomain.OrderStatus) error {
-	return nil
-}
-func (m *mockOrderDetailOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ orderDomain.OrderStatus, _ *time.Time, _ *time.Time) error {
-	return nil
-}
-func (m *mockOrderDetailOrderRepo) Save(_ context.Context, _ transaction.Executor, _ orderDomain.Order) error {
-	return nil
-}
-func (m *mockOrderDetailOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ orderRepo.FindOrderParams) ([]orderDomain.Order, int, error) {
-	return nil, 0, nil
-}
-func (m *mockOrderDetailOrderRepo) SetConfirmedAndExpiry(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ time.Time, _ time.Time) error {
-	return nil
-}
-func (m *mockOrderDetailOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]orderDomain.Order, error) {
+func (m *mockOrderDetailOrderPaymentManager) ExpireOrderPayment(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]OrderItemInfo, error) {
 	return nil, nil
 }
-
-type mockOrderDetailInvoiceRepo struct {
-	invoice *orderDomain.Invoice
-}
-
-func (m *mockOrderDetailInvoiceRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*orderDomain.Invoice, error) {
+func (m *mockOrderDetailOrderPaymentManager) CancelOrderPayment(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]OrderItemInfo, error) {
 	return nil, nil
-}
-func (m *mockOrderDetailInvoiceRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*orderDomain.Invoice, error) {
-	if m.invoice != nil && m.invoice.OrderID == orderID {
-		return m.invoice, nil
-	}
-	return nil, nil
-}
-func (m *mockOrderDetailInvoiceRepo) Save(_ context.Context, _ transaction.Executor, _ orderDomain.Invoice) error {
-	return nil
 }
 
 type mockOrderDetailPaymentRepo struct {
@@ -165,17 +138,11 @@ func TestGetPaymentDetail_Gateway_Success(t *testing.T) {
 	methodID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &OrderInfo{
 		ID:         orderID,
 		CustomerID: customerID,
 		Number:     "ORD-12345",
 		Total:      115000,
-	}
-
-	invoice := &orderDomain.Invoice{
-		ID:      uuid.New(),
-		OrderID: orderID,
-		Number:  "INV-12345",
 	}
 
 	payment := &paymentDomain.Payment{
@@ -212,8 +179,7 @@ func TestGetPaymentDetail_Gateway_Success(t *testing.T) {
 
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
-		&mockOrderDetailOrderRepo{order: order},
-		&mockOrderDetailInvoiceRepo{invoice: invoice},
+		&mockOrderDetailOrderPaymentManager{order: order, invoice: "INV-12345"},
 		&mockOrderDetailPaymentRepo{payment: payment},
 		&mockOrderDetailPaymentMethodRepo{method: method},
 		&mockOrderDetailPaymentInstructionRepo{instruction: instruction},
@@ -261,17 +227,11 @@ func TestGetPaymentDetail_BankTransfer_Success(t *testing.T) {
 	methodID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &OrderInfo{
 		ID:         orderID,
 		CustomerID: customerID,
 		Number:     "ORD-54321",
 		Total:      250000,
-	}
-
-	invoice := &orderDomain.Invoice{
-		ID:      uuid.New(),
-		OrderID: orderID,
-		Number:  "INV-54321",
 	}
 
 	payment := &paymentDomain.Payment{
@@ -308,8 +268,7 @@ func TestGetPaymentDetail_BankTransfer_Success(t *testing.T) {
 
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
-		&mockOrderDetailOrderRepo{order: order},
-		&mockOrderDetailInvoiceRepo{invoice: invoice},
+		&mockOrderDetailOrderPaymentManager{order: order, invoice: "INV-54321"},
 		&mockOrderDetailPaymentRepo{payment: payment},
 		&mockOrderDetailPaymentMethodRepo{method: method},
 		&mockOrderDetailPaymentInstructionRepo{instruction: instruction},
@@ -341,8 +300,7 @@ func TestGetPaymentDetail_OrderNotFound(t *testing.T) {
 
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
-		&mockOrderDetailOrderRepo{order: nil},
-		&mockOrderDetailInvoiceRepo{},
+		&mockOrderDetailOrderPaymentManager{order: nil},
 		&mockOrderDetailPaymentRepo{},
 		&mockOrderDetailPaymentMethodRepo{},
 		&mockOrderDetailPaymentInstructionRepo{},
@@ -374,15 +332,14 @@ func TestGetPaymentDetail_WrongCustomer(t *testing.T) {
 	customerID := uuid.New()
 	wrongCustomerID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &OrderInfo{
 		ID:         orderID,
 		CustomerID: customerID,
 	}
 
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
-		&mockOrderDetailOrderRepo{order: order},
-		&mockOrderDetailInvoiceRepo{},
+		&mockOrderDetailOrderPaymentManager{order: order},
 		&mockOrderDetailPaymentRepo{},
 		&mockOrderDetailPaymentMethodRepo{},
 		&mockOrderDetailPaymentInstructionRepo{},
@@ -415,17 +372,11 @@ func TestGetPaymentDetail_BankTransfer_InstructionsRenderedWithVANumberAndBiller
 	methodID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &OrderInfo{
 		ID:         orderID,
 		CustomerID: customerID,
 		Number:     "ORD-20260907-001",
 		Total:      469000,
-	}
-
-	invoice := &orderDomain.Invoice{
-		ID:      uuid.New(),
-		OrderID: orderID,
-		Number:  "INV-20260907-001",
 	}
 
 	payment := &paymentDomain.Payment{
@@ -461,8 +412,7 @@ func TestGetPaymentDetail_BankTransfer_InstructionsRenderedWithVANumberAndBiller
 
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
-		&mockOrderDetailOrderRepo{order: order},
-		&mockOrderDetailInvoiceRepo{invoice: invoice},
+		&mockOrderDetailOrderPaymentManager{order: order, invoice: "INV-20260907-001"},
 		&mockOrderDetailPaymentRepo{payment: payment},
 		&mockOrderDetailPaymentMethodRepo{method: method},
 		&mockOrderDetailPaymentInstructionRepo{instruction: instruction},

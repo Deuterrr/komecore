@@ -10,9 +10,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	authDomain "komecore/internal/modules/auth/domain"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authSvc "komecore/internal/modules/auth/infra/service"
+	"komecore/internal/common/authctx"
 	staffDomain "komecore/internal/modules/staff/domain"
 	staffRepo "komecore/internal/modules/staff/repository"
 	"komecore/internal/modules/staff/usecase"
@@ -105,32 +103,26 @@ func (r *testMembershipRepo) DeleteByStaffID(ctx context.Context, exec transacti
 }
 
 type testAccountRepo struct {
-	account       *authenDomain.Account
-	accountByUser *authenDomain.Account
+	account       *usecase.AccountInfo
+	accountByUser *usecase.AccountInfo
 }
 
-func (r *testAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*authenDomain.Account, error) {
+func (r *testAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*usecase.AccountInfo, error) {
 	return nil, nil
 }
-func (r *testAccountRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Account, error) {
+func (r *testAccountRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*usecase.AccountInfo, error) {
 	return r.account, nil
 }
-func (r *testAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Account, error) {
+func (r *testAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*usecase.AccountInfo, error) {
 	return r.accountByUser, nil
 }
-func (r *testAccountRepo) ActivateByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
-	return nil
-}
-func (r *testAccountRepo) UpdatePasswordByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID, hashedPassword string) error {
-	return nil
-}
-func (r *testAccountRepo) Create(ctx context.Context, exec transaction.Executor, account authenDomain.Account) error {
+func (r *testAccountRepo) CreateStaffAccount(ctx context.Context, exec transaction.Executor, input usecase.CreateAccountInput) error {
 	return nil
 }
 func (r *testAccountRepo) DeleteByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
 	return nil
 }
-func (r *testAccountRepo) UpdateLastLoginAt(ctx context.Context, exec transaction.Executor, id uuid.UUID, lastLoginAt time.Time) error {
+func (r *testAccountRepo) RevokeSessionsByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
 	return nil
 }
 
@@ -160,23 +152,6 @@ func (s *testUserDeletionService) DeleteUserRecord(ctx context.Context, exec tra
 	return nil
 }
 
-type testSessionRepo struct{}
-
-func (r *testSessionRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Session, error) {
-	return nil, nil
-}
-func (r *testSessionRepo) RevokeByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
-	return nil
-}
-func (r *testSessionRepo) RevokeAllByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
-	return nil
-}
-func (r *testSessionRepo) UpdateLastActivityByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
-	return nil
-}
-func (r *testSessionRepo) Save(ctx context.Context, exec transaction.Executor, session authenDomain.Session) error {
-	return nil
-}
 
 type testRoleRepo struct {
 	role *staffDomain.Role
@@ -231,7 +206,7 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRe
 		},
 	}
 	aRepo := &testAccountRepo{
-		account: &authenDomain.Account{
+		account: &usecase.AccountInfo{
 			ID:     uuid.New(),
 			UserID: uuid.New(),
 		},
@@ -241,7 +216,6 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRe
 		role: &staffDomain.Role{ID: uuid.New(), Code: staffDomain.RoleStaff, Name: "Staff"},
 	}
 	hasher := &testHasher{}
-	sessionRepo := &testSessionRepo{}
 
 	exec := &mockExec{}
 	tx := &mockTx{}
@@ -249,25 +223,25 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRe
 	userDeletionSvc := &testUserDeletionService{}
 
 	createUC := usecase.NewCreateStaffUsecase(sRepo, uRepo, exec, tx, audit)
-	addUC := usecase.NewAddStaffAccountUsecase(exec, tx, aRepo, hasher, uRepo, sRepo, mRepo, rRepo, audit)
+	addUC := usecase.NewAddStaffAccountUsecase(exec, tx, aRepo, hasher, sRepo, mRepo, rRepo, audit)
 	listUC := usecase.NewListStaffAccountsUsecase(exec, sRepo, mRepo, audit)
 	updateUC := usecase.NewUpdateStaffUsecase(exec, tx, sRepo, mRepo, audit)
 	deleteUC := usecase.NewDeleteStaffUsecase(exec, tx, sRepo, mRepo, userDeletionSvc, audit)
-	removeUC := usecase.NewRemoveStaffAccountUsecase(exec, tx, sRepo, mRepo, aRepo, sessionRepo, audit)
+	removeUC := usecase.NewRemoveStaffAccountUsecase(exec, tx, sRepo, mRepo, aRepo, audit)
 
 	handler := NewStaffHandler(addUC, createUC, nil, listUC, updateUC, deleteUC, removeUC)
 	return handler, sRepo, mRepo
 }
 
 func withActorContext(r *http.Request, accountID, staffID uuid.UUID) *http.Request {
-	actor := &authDomain.Actor{
+	actor := &authctx.Actor{
 		AccountID: accountID,
 		StaffID:   &staffID,
-		Roles: []authDomain.Role{
-			{Code: authDomain.RoleStaffAdmin},
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
 		},
 	}
-	return r.WithContext(authSvc.WithActor(r.Context(), actor))
+	return r.WithContext(authctx.WithActor(r.Context(), actor))
 }
 
 func TestHandler_ListStaffAccounts(t *testing.T) {

@@ -6,8 +6,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	orderDomain "komecore/internal/modules/order/domain"
-	orderRepo "komecore/internal/modules/order/repository"
 	"komecore/internal/modules/shipment/domain"
 	"komecore/internal/modules/shipment/repository"
 
@@ -15,23 +13,23 @@ import (
 )
 
 type UpdateShipmentStatusUsecase struct {
-	executor     transaction.Executor
-	transactor   transaction.Transactor
-	shipmentRepo repository.ShipmentRepository
-	orderRepo    orderRepo.OrderRepository
+	executor      transaction.Executor
+	transactor    transaction.Transactor
+	shipmentRepo  repository.ShipmentRepository
+	orderDelivery OrderDeliveryUpdater
 }
 
 func NewUpdateShipmentStatusUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
 	shipmentRepo repository.ShipmentRepository,
-	orderRepo orderRepo.OrderRepository,
+	orderDelivery OrderDeliveryUpdater,
 ) *UpdateShipmentStatusUsecase {
 	return &UpdateShipmentStatusUsecase{
-		executor:     executor,
-		transactor:   transactor,
-		shipmentRepo: shipmentRepo,
-		orderRepo:    orderRepo,
+		executor:      executor,
+		transactor:    transactor,
+		shipmentRepo:  shipmentRepo,
+		orderDelivery: orderDelivery,
 	}
 }
 
@@ -68,22 +66,7 @@ func (u *UpdateShipmentStatusUsecase) Execute(
 		}
 
 		if input.Status == domain.ShipmentStatusDelivered {
-			order, err := u.orderRepo.GetByID(ctx, exec, shipment.OrderID)
-			if err != nil {
-				return fmt.Errorf("failed to get parent order: %w", err)
-			}
-			if order == nil {
-				return apperrors.NewNotFound("parent order not found")
-			}
-
-			if err := order.UpdateStatus(orderDomain.OrderStatusDelivered); err != nil {
-				return apperrors.NewInvalidInput(err.Error())
-			}
-
-			if err := u.orderRepo.UpdateStatus(ctx, exec,
-				order.ID,
-				orderDomain.OrderStatusDelivered,
-			); err != nil {
+			if err := u.orderDelivery.MarkOrderDelivered(ctx, exec, shipment.OrderID); err != nil {
 				return fmt.Errorf("failed to update order status to delivered: %w", err)
 			}
 		}

@@ -6,9 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"komecore/internal/common/authctx"
 	apperrors "komecore/internal/common/errors"
-	authenDomain "komecore/internal/modules/auth/domain"
-	staffDomain "komecore/internal/modules/staff/domain"
 	userDomain "komecore/internal/modules/user/domain"
 	"komecore/internal/modules/user/usecase"
 
@@ -38,7 +37,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
 		emptyName := "   "
 		input := usecase.UpdateProfileInput{Name: &emptyName}
-		authCtx := authenDomain.AuthContext{UserID: userID}
+		authCtx := authctx.AuthContext{UserID: userID}
 
 		result, err := uc.Execute(ctx, authCtx, input)
 		assert.Nil(t, result)
@@ -55,7 +54,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 
 		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
-		authCtx := authenDomain.AuthContext{UserID: userID}
+		authCtx := authctx.AuthContext{UserID: userID}
 
 		result, err := uc.Execute(ctx, authCtx, input)
 		assert.Nil(t, result)
@@ -72,7 +71,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 
 		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
-		authCtx := authenDomain.AuthContext{UserID: userID}
+		authCtx := authctx.AuthContext{UserID: userID}
 
 		result, err := uc.Execute(ctx, authCtx, input)
 		assert.Nil(t, result)
@@ -81,10 +80,8 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("success updates customer profile", func(t *testing.T) {
-		account := &authenDomain.Account{
-			ID:     uuid.New(),
-			UserID: userID,
-			Type:   authenDomain.AccountTypeCustomer,
+		account := &usecase.UserAccount{
+			Type: authctx.AccountTypeCustomer,
 		}
 		updatedUser := &userDomain.User{
 			ID:        userID,
@@ -107,10 +104,10 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 			Phone:     &newPhone,
 			AvatarURL: &newAvatar,
 		}
-		authCtx := authenDomain.AuthContext{
+		authCtx := authctx.AuthContext{
 			UserID:      userID,
 			CustomerID:  &customerID,
-			AccountType: authenDomain.AccountTypeCustomer,
+			AccountType: authctx.AccountTypeCustomer,
 		}
 
 		result, err := uc.Execute(ctx, authCtx, input)
@@ -127,12 +124,10 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("success updates staff profile", func(t *testing.T) {
-		account := &authenDomain.Account{
-			ID:     uuid.New(),
-			UserID: userID,
-			Type:   authenDomain.AccountTypeStaff,
+		account := &usecase.UserAccount{
+			Type: authctx.AccountTypeStaff,
 		}
-		updatedStaff := &staffDomain.StaffProfile{
+		updatedStaff := &userDomain.StaffProfile{
 			ID:        staffID,
 			UserID:    userID,
 			Name:      newName,
@@ -154,10 +149,10 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 			Phone:     &newPhone,
 			AvatarURL: &newAvatar,
 		}
-		authCtx := authenDomain.AuthContext{
+		authCtx := authctx.AuthContext{
 			UserID:      userID,
 			StaffID:     &staffID,
-			AccountType: authenDomain.AccountTypeStaff,
+			AccountType: authctx.AccountTypeStaff,
 		}
 
 		result, err := uc.Execute(ctx, authCtx, input)
@@ -173,10 +168,8 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("returns error when SaveProfile fails", func(t *testing.T) {
-		account := &authenDomain.Account{
-			ID:     uuid.New(),
-			UserID: userID,
-			Type:   authenDomain.AccountTypeCustomer,
+		account := &usecase.UserAccount{
+			Type: authctx.AccountTypeCustomer,
 		}
 
 		exec := &mockExecutor{}
@@ -187,7 +180,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 
 		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
-		authCtx := authenDomain.AuthContext{UserID: userID}
+		authCtx := authctx.AuthContext{UserID: userID}
 
 		result, err := uc.Execute(ctx, authCtx, input)
 		assert.Nil(t, result)
@@ -196,10 +189,8 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("returns not found error when customer user is missing after save", func(t *testing.T) {
-		account := &authenDomain.Account{
-			ID:     uuid.New(),
-			UserID: userID,
-			Type:   authenDomain.AccountTypeCustomer,
+		account := &usecase.UserAccount{
+			Type: authctx.AccountTypeCustomer,
 		}
 
 		exec := &mockExecutor{}
@@ -210,7 +201,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 
 		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
-		authCtx := authenDomain.AuthContext{UserID: userID}
+		authCtx := authctx.AuthContext{UserID: userID}
 
 		result, err := uc.Execute(ctx, authCtx, input)
 		assert.Nil(t, result)
@@ -219,10 +210,8 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 	})
 
 	t.Run("returns error when staff profile retrieval fails", func(t *testing.T) {
-		account := &authenDomain.Account{
-			ID:     uuid.New(),
-			UserID: userID,
-			Type:   authenDomain.AccountTypeStaff,
+		account := &usecase.UserAccount{
+			Type: authctx.AccountTypeStaff,
 		}
 
 		exec := &mockExecutor{}
@@ -233,7 +222,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 
 		uc := usecase.NewUpdateCurrentProfileUsecase(exec, tx, accountRepo, staffRepo, userRepo)
 		input := usecase.UpdateProfileInput{Name: &newName}
-		authCtx := authenDomain.AuthContext{UserID: userID}
+		authCtx := authctx.AuthContext{UserID: userID}
 
 		result, err := uc.Execute(ctx, authCtx, input)
 		assert.Nil(t, result)

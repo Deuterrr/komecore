@@ -6,7 +6,6 @@ import (
 	"time"
 
 	paymentgateway "komecore/internal/infra/payment-gateway"
-	orderDomain "komecore/internal/modules/order/domain"
 	paymentDomain "komecore/internal/modules/payment/domain"
 	applogger "komecore/pkg/logger"
 
@@ -46,9 +45,9 @@ func TestSyncPendingPayments_ReconcileOnePaid(t *testing.T) {
 	orderID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &mockOrder{
 		ID:     orderID,
-		Status: orderDomain.OrderStatusPending,
+		Status: "pending",
 	}
 
 	providerOrderID := orderID.String()
@@ -63,7 +62,7 @@ func TestSyncPendingPayments_ReconcileOnePaid(t *testing.T) {
 	}
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{paymentID: payment}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{orderID: order}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		result: &paymentgateway.NotificationResult{
 			GatewayOrderID:       orderID.String(),
@@ -74,9 +73,9 @@ func TestSyncPendingPayments_ReconcileOnePaid(t *testing.T) {
 		},
 	}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
 	logger := &mockLogger{}
-	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{})
+	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oMgr, &mockInventoryRepo{})
 
 	usecase.Execute(ctx)
 
@@ -84,7 +83,7 @@ func TestSyncPendingPayments_ReconcileOnePaid(t *testing.T) {
 		t.Errorf("expected payment status to be updated to Paid, got %v", payment.Status)
 	}
 
-	if order.Status != orderDomain.OrderStatusConfirmed {
+	if order.Status != "confirmed" {
 		t.Errorf("expected order status to be Confirmed, got %v", order.Status)
 	}
 }
@@ -95,9 +94,9 @@ func TestSyncPendingPayments_SkipStillPending(t *testing.T) {
 	orderID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &mockOrder{
 		ID:     orderID,
-		Status: orderDomain.OrderStatusPending,
+		Status: "pending",
 	}
 
 	providerOrderID := orderID.String()
@@ -112,7 +111,7 @@ func TestSyncPendingPayments_SkipStillPending(t *testing.T) {
 	}
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{paymentID: payment}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{orderID: order}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		result: &paymentgateway.NotificationResult{
 			GatewayOrderID: orderID.String(),
@@ -121,9 +120,9 @@ func TestSyncPendingPayments_SkipStillPending(t *testing.T) {
 		},
 	}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
 	logger := &mockLogger{}
-	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{})
+	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oMgr, &mockInventoryRepo{})
 
 	usecase.Execute(ctx)
 
@@ -169,8 +168,8 @@ func TestSyncPendingPayments_GatewayErrorDoesNotBlockOtherPayments(t *testing.T)
 	orderID2 := uuid.New()
 	paymentID2 := uuid.New()
 
-	order1 := &orderDomain.Order{ID: orderID1, Status: orderDomain.OrderStatusPending}
-	order2 := &orderDomain.Order{ID: orderID2, Status: orderDomain.OrderStatusPending}
+	order1 := &mockOrder{ID: orderID1, Status: "pending"}
+	order2 := &mockOrder{ID: orderID2, Status: "pending"}
 
 	providerOrderID1 := orderID1.String()
 	providerOrderID2 := orderID2.String()
@@ -198,7 +197,7 @@ func TestSyncPendingPayments_GatewayErrorDoesNotBlockOtherPayments(t *testing.T)
 		paymentID1: payment1,
 		paymentID2: payment2,
 	}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{
 		orderID1: order1,
 		orderID2: order2,
 	}}
@@ -218,9 +217,9 @@ func TestSyncPendingPayments_GatewayErrorDoesNotBlockOtherPayments(t *testing.T)
 		},
 	}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
 	logger := &mockLogger{}
-	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{})
+	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oMgr, &mockInventoryRepo{})
 
 	usecase.Execute(ctx)
 
@@ -254,9 +253,9 @@ func TestSyncPendingPayments_EnforceLocalExpiry(t *testing.T) {
 	orderID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &mockOrder{
 		ID:     orderID,
-		Status: orderDomain.OrderStatusPending,
+		Status: "pending",
 	}
 
 	providerOrderID := orderID.String()
@@ -273,12 +272,11 @@ func TestSyncPendingPayments_EnforceLocalExpiry(t *testing.T) {
 	}
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{paymentID: payment}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{orderID: order}}
-	oiRepo := &mockOrderItemRepo{
-		items: map[uuid.UUID][]orderDomain.OrderItem{
+	oMgr := &mockOrderPaymentManager{
+		orders: map[uuid.UUID]*mockOrder{orderID: order},
+		items: map[uuid.UUID][]OrderItemInfo{
 			orderID: {
 				{
-					OrderID:   orderID,
 					ProductID: uuid.New(),
 					ShopID:    uuid.New(),
 					Quantity:  2,
@@ -295,9 +293,9 @@ func TestSyncPendingPayments_EnforceLocalExpiry(t *testing.T) {
 		},
 	}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, oiRepo, iRepo, gateway, nil)
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, iRepo, gateway, nil)
 	logger := &mockLogger{}
-	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oRepo, oiRepo, iRepo)
+	usecase := NewSyncPendingPaymentsUsecase(pRepo, gateway, webhookUsecase, &mockExecutor{}, logger, 24*time.Hour, &mockTransactor{}, oMgr, iRepo)
 
 	usecase.Execute(ctx)
 
@@ -305,7 +303,7 @@ func TestSyncPendingPayments_EnforceLocalExpiry(t *testing.T) {
 		t.Errorf("expected payment status to be updated to Expired, got %v", payment.Status)
 	}
 
-	if order.Status != orderDomain.OrderStatusExpired {
+	if order.Status != "expired" {
 		t.Errorf("expected order status to be Expired, got %v", order.Status)
 	}
 

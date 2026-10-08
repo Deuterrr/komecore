@@ -8,7 +8,7 @@ import (
 	appmiddleware "komecore/internal/common/middleware"
 	"komecore/internal/infra/cache"
 
-	authendomain "komecore/internal/modules/auth/domain"
+	"komecore/internal/common/authctx"
 	authenRepo "komecore/internal/modules/auth/repository"
 
 	addressH "komecore/internal/modules/address/delivery/http"
@@ -83,8 +83,8 @@ func NewRouteChains(c *Container) *RouteChains {
 				appcookie.CookieStaff,
 			),
 			c.Authorizer.RequireAccountType(
-				authendomain.AccountTypeStaff,
-				authendomain.AccountTypeCustomer,
+				authctx.AccountTypeStaff,
+				authctx.AccountTypeCustomer,
 			),
 			c.Authorizer.LoadActor(c.DBExecutor),
 		),
@@ -94,9 +94,9 @@ func NewRouteChains(c *Container) *RouteChains {
 				c.DBTransactor,
 				appcookie.CookieStaff,
 			),
-			c.Authorizer.RequireAccountType(authendomain.AccountTypeStaff),
+			c.Authorizer.RequireAccountType(authctx.AccountTypeStaff),
 			c.Authorizer.LoadActor(c.DBExecutor),
-			c.Authorizer.RequireStaffRole(authendomain.RoleStaff, authendomain.RoleStaffAdmin),
+			c.Authorizer.RequireStaffRole(authctx.RoleStaff, authctx.RoleStaffAdmin),
 		),
 		StaffAdminOnly: buildChain(
 			c.Authenticator.RequireAuth(
@@ -104,9 +104,9 @@ func NewRouteChains(c *Container) *RouteChains {
 				c.DBTransactor,
 				appcookie.CookieStaff,
 			),
-			c.Authorizer.RequireAccountType(authendomain.AccountTypeStaff),
+			c.Authorizer.RequireAccountType(authctx.AccountTypeStaff),
 			c.Authorizer.LoadActor(c.DBExecutor),
-			c.Authorizer.RequireStaffRole(authendomain.RoleStaffAdmin),
+			c.Authorizer.RequireStaffRole(authctx.RoleStaffAdmin),
 		),
 		CustomerOnly: buildChain(
 			c.Authenticator.RequireAuth(
@@ -114,7 +114,7 @@ func NewRouteChains(c *Container) *RouteChains {
 				c.DBTransactor,
 				appcookie.CookieCustomer,
 			),
-			c.Authorizer.RequireAccountType(authendomain.AccountTypeCustomer),
+			c.Authorizer.RequireAccountType(authctx.AccountTypeCustomer),
 			c.Authorizer.LoadActor(c.DBExecutor),
 		),
 		CustomerWithIdempotency: buildChain(
@@ -123,7 +123,7 @@ func NewRouteChains(c *Container) *RouteChains {
 				c.DBTransactor,
 				appcookie.CookieCustomer,
 			),
-			c.Authorizer.RequireAccountType(authendomain.AccountTypeCustomer),
+			c.Authorizer.RequireAccountType(authctx.AccountTypeCustomer),
 			c.Authorizer.LoadActor(c.DBExecutor),
 			idempotencyMw.RequireIdempotency(),
 		),
@@ -220,7 +220,6 @@ func initHandlers(c *Container) *handlers {
 			&c.GetCart,
 			&c.UpdateItem,
 			&c.RemoveItem,
-			&c.Checkout,
 		),
 		user: userH.NewUserHandler(
 			&c.GetUser,
@@ -268,6 +267,7 @@ func initHandlers(c *Container) *handlers {
 			&c.DispatchShopShipment,
 			&c.GetOrderTracking,
 			&c.GetShop,
+			&c.Checkout,
 		),
 		wishlist: wishlistH.NewWishlistHandler(
 			&c.GetWishlist,
@@ -386,21 +386,21 @@ func bindCatalogRoutes(r chi.Router, h *handlers, chains *RouteChains, c *Contai
 
 		r.Route("/{shopID}", func(r chi.Router) {
 			r.Get("/", chains.Core(h.shop.GetShopByID))
-			r.Put("/", chains.StaffWithPerm(c.Authorizer, authendomain.PermissionShopUpdate, h.shop.SaveShop))
+			r.Put("/", chains.StaffWithPerm(c.Authorizer, authctx.PermissionShopUpdate, h.shop.SaveShop))
 			r.Delete("/", chains.StaffAdminOnly(h.shop.DeleteShop))
 
 			r.Route("/addresses", func(r chi.Router) {
 				r.Get("/", chains.Core(h.shop.GetShopAddresses))
-				r.Post("/", chains.StaffWithPerm(c.Authorizer, authendomain.PermissionAddressManage, h.address.CreateShopAddress))
-				r.Put("/{addressID}", chains.StaffWithPerm(c.Authorizer, authendomain.PermissionAddressManage, h.address.UpdateShopAddress))
-				r.Delete("/{addressID}", chains.StaffWithPerm(c.Authorizer, authendomain.PermissionAddressManage, h.address.DeleteShopAddress))
+				r.Post("/", chains.StaffWithPerm(c.Authorizer, authctx.PermissionAddressManage, h.address.CreateShopAddress))
+				r.Put("/{addressID}", chains.StaffWithPerm(c.Authorizer, authctx.PermissionAddressManage, h.address.UpdateShopAddress))
+				r.Delete("/{addressID}", chains.StaffWithPerm(c.Authorizer, authctx.PermissionAddressManage, h.address.DeleteShopAddress))
 			})
 
 			r.Route("/products", func(r chi.Router) {
 				r.Get("/", chains.Core(h.shop.GetShopProducts))
-				r.Post("/{productID}/inventories", chains.StaffWithPerm(c.Authorizer, authendomain.PermissionInventoryManage, h.inventory.AddInventory))
-				r.Put("/{productID}/inventories", chains.StaffWithPerm(c.Authorizer, authendomain.PermissionInventoryManage, h.inventory.UpdateInventory))
-				r.Delete("/{productID}/inventories", chains.StaffWithPerm(c.Authorizer, authendomain.PermissionInventoryManage, h.inventory.RemoveInventory))
+				r.Post("/{productID}/inventories", chains.StaffWithPerm(c.Authorizer, authctx.PermissionInventoryManage, h.inventory.AddInventory))
+				r.Put("/{productID}/inventories", chains.StaffWithPerm(c.Authorizer, authctx.PermissionInventoryManage, h.inventory.UpdateInventory))
+				r.Delete("/{productID}/inventories", chains.StaffWithPerm(c.Authorizer, authctx.PermissionInventoryManage, h.inventory.RemoveInventory))
 			})
 		})
 	})
@@ -411,8 +411,8 @@ func bindCommerceRoutes(r chi.Router, h *handlers, chains *RouteChains) {
 		r.Get("/", chains.CustomerOnly(h.cart.GetCart))
 
 		r.Route("/checkout", func(r chi.Router) {
-			r.Post("/", chains.CustomerOnly(h.cart.Checkout))
-			r.Post("/calculate", chains.CustomerOnly(h.cart.CheckoutEstimate))
+			r.Post("/", chains.CustomerOnly(h.order.Checkout))
+			r.Post("/calculate", chains.CustomerOnly(h.order.CheckoutEstimate))
 		})
 
 		r.Route("/items", func(r chi.Router) {

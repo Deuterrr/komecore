@@ -7,7 +7,6 @@ import (
 	apperrors "komecore/internal/common/errors"
 	paymentgateway "komecore/internal/infra/payment-gateway"
 	transaction "komecore/internal/infra/transactor"
-	orderRepo "komecore/internal/modules/order/repository"
 	"komecore/internal/modules/payment/domain"
 	"komecore/internal/modules/payment/repository"
 
@@ -22,7 +21,7 @@ import (
 // query Midtrans for the current status and resolve the payment —
 // without waiting for the next background reconciliation tick.
 type CheckPaymentStatusUsecase struct {
-	orderRepo      orderRepo.OrderRepository
+	orderMgr       OrderPaymentManager
 	repository     repository.PaymentRepository
 	paymentGateway paymentgateway.Provider
 	processWebhook *ProcessPaymentWebhookUsecase
@@ -30,14 +29,14 @@ type CheckPaymentStatusUsecase struct {
 }
 
 func NewCheckPaymentStatusUsecase(
-	orderRepo orderRepo.OrderRepository,
+	orderMgr OrderPaymentManager,
 	repository repository.PaymentRepository,
 	paymentGateway paymentgateway.Provider,
 	processWebhook *ProcessPaymentWebhookUsecase,
 	executor transaction.Executor,
 ) *CheckPaymentStatusUsecase {
 	return &CheckPaymentStatusUsecase{
-		orderRepo:      orderRepo,
+		orderMgr:       orderMgr,
 		repository:     repository,
 		paymentGateway: paymentGateway,
 		processWebhook: processWebhook,
@@ -75,7 +74,7 @@ func (u *CheckPaymentStatusUsecase) Execute(
 	ctx context.Context,
 	input CheckPaymentStatusInput,
 ) (*CheckPaymentStatusResult, error) {
-	order, err := u.orderRepo.GetByID(ctx, u.executor, input.OrderID)
+	order, err := u.orderMgr.GetOrderForPayment(ctx, u.executor, input.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("check payment status: retrieve order: %w", err)
 	}

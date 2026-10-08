@@ -7,8 +7,6 @@ import (
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/repository"
-	productDomain "komecore/internal/modules/product/domain"
-	productRepository "komecore/internal/modules/product/repository"
 
 	"github.com/google/uuid"
 )
@@ -16,13 +14,13 @@ import (
 type DeleteInventoryUsecase struct {
 	inventoryRepo    repository.InventoryRepository
 	executor         transaction.Executor
-	stockHistoryRepo productRepository.ProductStockHistoryRepository
+	stockHistoryRepo StockHistoryRecorder
 }
 
 func NewDeleteInventoryUsecase(
 	inventoryRepo repository.InventoryRepository,
 	executor transaction.Executor,
-	stockHistoryRepo productRepository.ProductStockHistoryRepository,
+	stockHistoryRepo StockHistoryRecorder,
 ) *DeleteInventoryUsecase {
 	return &DeleteInventoryUsecase{
 		inventoryRepo:    inventoryRepo,
@@ -56,12 +54,12 @@ func (u *DeleteInventoryUsecase) Execute(ctx context.Context, input DeleteInvent
 	}
 
 	go func() {
-		_ = u.stockHistoryRepo.RecordStockEvent(context.Background(), u.executor,
-			productDomain.ProductStockEvent{
-				ProductID: input.ProductID,
-				ShopID:    input.ShopID,
-				Available: 0,
-			},
+		_ = u.stockHistoryRepo.RecordStockEvent(
+			context.Background(),
+			u.executor,
+			input.ProductID,
+			input.ShopID,
+			0,
 		)
 	}()
 

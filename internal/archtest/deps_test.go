@@ -12,17 +12,7 @@ import (
 
 // legacyAllowedCycles contains known bidirectional module cycles slated for removal in Phase 2.
 // Format: "moduleA <-> moduleB" in alphabetical order.
-var legacyAllowedCycles = map[string]bool{
-	"cart <-> order":         true,
-	"order <-> payment":      true,
-	"order <-> shipment":     true,
-	"auth <-> staff":         true,
-	"auth <-> user":          true,
-	"staff <-> user":         true,
-	"inventory <-> product":  true,
-	"inventory <-> shop":     true,
-	"product <-> shop":       true,
-}
+var legacyAllowedCycles = map[string]bool{}
 
 func findRepoRoot(t *testing.T) string {
 	t.Helper()

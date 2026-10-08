@@ -6,7 +6,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	authenRepo "komecore/internal/modules/auth/repository"
 	staffDomain "komecore/internal/modules/staff/domain"
 	staffRepo "komecore/internal/modules/staff/repository"
 	applogger "komecore/pkg/logger"
@@ -19,8 +18,7 @@ type RemoveStaffAccountUsecase struct {
 	transactor     transaction.Transactor
 	staffRepo      staffRepo.StaffRepository
 	membershipRepo staffRepo.StaffMembershipRepository
-	accountRepo    authenRepo.AccountRepository
-	sessionRepo    authenRepo.SessionRepository
+	accountManager AccountManager
 	auditLogger    applogger.AuditLogger
 }
 
@@ -29,8 +27,7 @@ func NewRemoveStaffAccountUsecase(
 	transactor transaction.Transactor,
 	staffRepo staffRepo.StaffRepository,
 	membershipRepo staffRepo.StaffMembershipRepository,
-	accountRepo authenRepo.AccountRepository,
-	sessionRepo authenRepo.SessionRepository,
+	accountManager AccountManager,
 	auditLogger applogger.AuditLogger,
 ) *RemoveStaffAccountUsecase {
 	return &RemoveStaffAccountUsecase{
@@ -38,8 +35,7 @@ func NewRemoveStaffAccountUsecase(
 		transactor:     transactor,
 		staffRepo:      staffRepo,
 		membershipRepo: membershipRepo,
-		accountRepo:    accountRepo,
-		sessionRepo:    sessionRepo,
+		accountManager: accountManager,
 		auditLogger:    auditLogger,
 	}
 }
@@ -122,7 +118,7 @@ func (u *RemoveStaffAccountUsecase) Execute(
 		return apperrors.NewNotFound("staff account membership not found")
 	}
 
-	targetAccount, err := u.accountRepo.GetByID(ctx, u.executor, input.AccountID)
+	targetAccount, err := u.accountManager.GetByID(ctx, u.executor, input.AccountID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve target account: %w", err)
 	}
@@ -140,11 +136,11 @@ func (u *RemoveStaffAccountUsecase) Execute(
 
 		// Simple attempt for deletion.
 		// Assuming accont has type staff and at the moment is not bind with oauth.
-		if err := u.accountRepo.DeleteByUserID(ctx, exec, targetAccount.UserID); err != nil {
+		if err := u.accountManager.DeleteByUserID(ctx, exec, targetAccount.UserID); err != nil {
 			return fmt.Errorf("failed to soft delete account: %w", err)
 		}
 
-		if err := u.sessionRepo.RevokeAllByUserID(ctx, exec, targetAccount.UserID); err != nil {
+		if err := u.accountManager.RevokeSessionsByUserID(ctx, exec, targetAccount.UserID); err != nil {
 			return fmt.Errorf("failed to revoke sessions: %w", err)
 		}
 

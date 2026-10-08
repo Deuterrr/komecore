@@ -9,9 +9,6 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/domain"
 	"komecore/internal/modules/inventory/repository"
-	productDomain "komecore/internal/modules/product/domain"
-	productRepository "komecore/internal/modules/product/repository"
-	shopRepo "komecore/internal/modules/shop/repository"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -19,23 +16,23 @@ import (
 
 type CreateInventoryUsecase struct {
 	inventoryRepo    repository.InventoryRepository
-	productRepo      productRepository.ProductRepository
-	shopRepo         shopRepo.ShopRepository
+	productChecker   ProductChecker
+	shopChecker      ShopChecker
 	executor         transaction.Executor
-	stockHistoryRepo productRepository.ProductStockHistoryRepository
+	stockHistoryRepo StockHistoryRecorder
 }
 
 func NewCreateInventoryUsecase(
 	inventoryRepo repository.InventoryRepository,
-	productRepo productRepository.ProductRepository,
-	shopRepo shopRepo.ShopRepository,
+	productChecker ProductChecker,
+	shopChecker ShopChecker,
 	executor transaction.Executor,
-	stockHistoryRepo productRepository.ProductStockHistoryRepository,
+	stockHistoryRepo StockHistoryRecorder,
 ) *CreateInventoryUsecase {
 	return &CreateInventoryUsecase{
 		inventoryRepo:    inventoryRepo,
-		productRepo:      productRepo,
-		shopRepo:         shopRepo,
+		productChecker:   productChecker,
+		shopChecker:      shopChecker,
 		executor:         executor,
 		stockHistoryRepo: stockHistoryRepo,
 	}
@@ -48,19 +45,19 @@ type CreateInventoryInput struct {
 }
 
 func (u *CreateInventoryUsecase) Execute(ctx context.Context, input CreateInventoryInput) error {
-	product, err := u.productRepo.GetByID(ctx, u.executor, input.ProductID)
+	productExists, err := u.productChecker.ProductExists(ctx, u.executor, input.ProductID)
 	if err != nil {
-		return fmt.Errorf("failed to load product: %w", err)
+		return fmt.Errorf("failed to check product existence: %w", err)
 	}
-	if product == nil {
-		return apperrors.NewNotFound(productDomain.ErrProductNotFound.Error())
+	if !productExists {
+		return apperrors.NewNotFound("product not found")
 	}
 
-	shop, err := u.shopRepo.GetByID(ctx, u.executor, input.ShopID)
+	shopExists, err := u.shopChecker.ShopExists(ctx, u.executor, input.ShopID)
 	if err != nil {
-		return fmt.Errorf("failed to load shop: %w", err)
+		return fmt.Errorf("failed to check shop existence: %w", err)
 	}
-	if shop == nil {
+	if !shopExists {
 		return apperrors.NewNotFound("shop not found")
 	}
 
@@ -95,14 +92,12 @@ func (u *CreateInventoryUsecase) Execute(ctx context.Context, input CreateInvent
 	}
 
 	go func() {
-		event := productDomain.ProductStockEvent{
-			ProductID: inventory.ProductID,
-			ShopID:    inventory.ShopID,
-			Available: inventory.TotalStock - inventory.ReservedStock,
-		}
-
-		_ = u.stockHistoryRepo.RecordStockEvent(context.Background(), u.executor,
-			event,
+		_ = u.stockHistoryRepo.RecordStockEvent(
+			context.Background(),
+			u.executor,
+			inventory.ProductID,
+			inventory.ShopID,
+			inventory.TotalStock-inventory.ReservedStock,
 		)
 	}()
 

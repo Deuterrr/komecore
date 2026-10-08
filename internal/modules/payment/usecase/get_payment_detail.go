@@ -8,7 +8,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	orderRepo "komecore/internal/modules/order/repository"
 	paymentDomain "komecore/internal/modules/payment/domain"
 	paymentRepo "komecore/internal/modules/payment/repository"
 	markdown "komecore/internal/shared/markdown"
@@ -18,8 +17,7 @@ import (
 
 type GetPaymentDetailUsecase struct {
 	executor               transaction.Executor
-	orderRepo              orderRepo.OrderRepository
-	invoiceRepo            orderRepo.InvoiceRepository
+	orderMgr               OrderPaymentManager
 	paymentRepo            paymentRepo.PaymentRepository
 	paymentMethodRepo      paymentRepo.PaymentMethodRepository
 	paymentInstructionRepo paymentRepo.PaymentInstructionRepository
@@ -28,8 +26,7 @@ type GetPaymentDetailUsecase struct {
 
 func NewGetPaymentDetailUsecase(
 	executor transaction.Executor,
-	orderRepo orderRepo.OrderRepository,
-	invoiceRepo orderRepo.InvoiceRepository,
+	orderMgr OrderPaymentManager,
 	paymentRepo paymentRepo.PaymentRepository,
 	paymentMethodRepo paymentRepo.PaymentMethodRepository,
 	paymentInstructionRepo paymentRepo.PaymentInstructionRepository,
@@ -37,8 +34,7 @@ func NewGetPaymentDetailUsecase(
 ) *GetPaymentDetailUsecase {
 	return &GetPaymentDetailUsecase{
 		executor:               executor,
-		orderRepo:              orderRepo,
-		invoiceRepo:            invoiceRepo,
+		orderMgr:               orderMgr,
 		paymentRepo:            paymentRepo,
 		paymentMethodRepo:      paymentMethodRepo,
 		paymentInstructionRepo: paymentInstructionRepo,
@@ -63,7 +59,7 @@ func (u *GetPaymentDetailUsecase) Execute(
 	ctx context.Context,
 	input GetPaymentDetailInput,
 ) (*GetPaymentDetailResult, error) {
-	order, err := u.orderRepo.GetByID(ctx, u.executor, input.OrderID)
+	order, err := u.orderMgr.GetOrderForPayment(ctx, u.executor, input.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve order: %w", err)
 	}
@@ -106,7 +102,7 @@ func (u *GetPaymentDetailUsecase) Execute(
 		if cd.QRString != nil {
 			qrString = *cd.QRString
 		} else if cd.ChannelType == paymentDomain.TypeQRCode && cd.ActionURL != nil {
-			qrString = *cd.ActionURL
+			vaNumber = *cd.ActionURL
 		}
 		if cd.RedirectURL != nil {
 			redirectURL = *cd.RedirectURL
@@ -122,13 +118,12 @@ func (u *GetPaymentDetailUsecase) Execute(
 	}
 
 	if instruction != nil {
-		invoice, err := u.invoiceRepo.GetByOrderID(ctx, u.executor, order.ID)
+		invoiceNumber, err := u.orderMgr.GetInvoiceNumber(ctx, u.executor, order.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve invoice: %w", err)
 		}
-		invoiceNumber := order.Number
-		if invoice != nil {
-			invoiceNumber = invoice.Number
+		if invoiceNumber == "" {
+			invoiceNumber = order.Number
 		}
 
 		expiredAtStr := ""

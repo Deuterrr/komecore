@@ -3,11 +3,8 @@ package usecase
 import (
 	"context"
 	"errors"
-	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authenRepo "komecore/internal/modules/auth/repository"
 	staffDomain "komecore/internal/modules/staff/domain"
 	staffRepo "komecore/internal/modules/staff/repository"
 	userDomain "komecore/internal/modules/user/domain"
@@ -159,31 +156,26 @@ func (m *mockStaffMembershipRepo) DeleteByStaffID(ctx context.Context, exec tran
 var _ staffRepo.StaffMembershipRepository = (*mockStaffMembershipRepo)(nil)
 
 type mockAccountRepo struct {
-	account     *authenDomain.Account
-	deleteCalls int
+	account        *AccountInfo
+	deleteCalls    int
+	revokeCalls    int
+	revokedUserIDs []uuid.UUID
+	sessionErr     error
 }
 
-func (m *mockAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*authenDomain.Account, error) {
+func (m *mockAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*AccountInfo, error) {
 	return nil, nil
 }
 
-func (m *mockAccountRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Account, error) {
+func (m *mockAccountRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*AccountInfo, error) {
 	return m.account, nil
 }
 
-func (m *mockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Account, error) {
+func (m *mockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*AccountInfo, error) {
 	return m.account, nil
 }
 
-func (m *mockAccountRepo) ActivateByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
-	return nil
-}
-
-func (m *mockAccountRepo) UpdatePasswordByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID, hashedPassword string) error {
-	return nil
-}
-
-func (m *mockAccountRepo) Create(ctx context.Context, exec transaction.Executor, account authenDomain.Account) error {
+func (m *mockAccountRepo) CreateStaffAccount(ctx context.Context, exec transaction.Executor, input CreateAccountInput) error {
 	return nil
 }
 
@@ -192,44 +184,16 @@ func (m *mockAccountRepo) DeleteByUserID(ctx context.Context, exec transaction.E
 	return nil
 }
 
-func (m *mockAccountRepo) UpdateLastLoginAt(ctx context.Context, exec transaction.Executor, id uuid.UUID, lastLoginAt time.Time) error {
-	return nil
-}
-
-var _ authenRepo.AccountRepository = (*mockAccountRepo)(nil)
-
-type mockSessionRepo struct {
-	revokeCalls    int
-	revokedUserIDs []uuid.UUID
-	err            error
-}
-
-func (m *mockSessionRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Session, error) {
-	return nil, nil
-}
-
-func (m *mockSessionRepo) RevokeByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
-	return nil
-}
-
-func (m *mockSessionRepo) RevokeAllByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
-	if m.err != nil {
-		return m.err
+func (m *mockAccountRepo) RevokeSessionsByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
+	if m.sessionErr != nil {
+		return m.sessionErr
 	}
 	m.revokeCalls++
 	m.revokedUserIDs = append(m.revokedUserIDs, userID)
 	return nil
 }
 
-func (m *mockSessionRepo) UpdateLastActivityByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
-	return nil
-}
-
-func (m *mockSessionRepo) Save(ctx context.Context, exec transaction.Executor, session authenDomain.Session) error {
-	return nil
-}
-
-var _ authenRepo.SessionRepository = (*mockSessionRepo)(nil)
+var _ AccountManager = (*mockAccountRepo)(nil)
 
 type mockUserRepo struct {
 	user        *userDomain.User
@@ -286,7 +250,7 @@ func (m *mockPwHasher) Compare(hash, password string) error {
 	return nil
 }
 
-var _ authenRepo.PasswordHasher = (*mockPwHasher)(nil)
+var _ PasswordHasher = (*mockPwHasher)(nil)
 
 type mockUserDeletionService struct {
 	deletedUsers []uuid.UUID
@@ -301,6 +265,6 @@ func (m *mockUserDeletionService) DeleteUserRecord(ctx context.Context, exec tra
 	return nil
 }
 
-var _ authenRepo.UserDeletionService = (*mockUserDeletionService)(nil)
+var _ UserDeletionService = (*mockUserDeletionService)(nil)
 
 var errMock = errors.New("mock error")

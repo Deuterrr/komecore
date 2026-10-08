@@ -6,10 +6,8 @@ import (
 	"strings"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authenRepo "komecore/internal/modules/auth/repository"
-	staffRepo "komecore/internal/modules/staff/repository"
 	"komecore/internal/modules/user/domain"
 	userRepo "komecore/internal/modules/user/repository"
 	appclock "komecore/pkg/clock"
@@ -18,26 +16,26 @@ import (
 )
 
 type UpdateCurrentProfileUsecase struct {
-	executor    transaction.Executor
-	transactor  transaction.Transactor
-	accountRepo authenRepo.AccountRepository
-	staffRepo   staffRepo.StaffRepository
-	userRepo    userRepo.UserRepository
+	executor             transaction.Executor
+	transactor           transaction.Transactor
+	accountRepo          AccountReader
+	staffProfileProvider StaffProfileProvider
+	userRepo             userRepo.UserRepository
 }
 
 func NewUpdateCurrentProfileUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authenRepo.AccountRepository,
-	staffRepo staffRepo.StaffRepository,
+	accountRepo AccountReader,
+	staffProfileProvider StaffProfileProvider,
 	userRepo userRepo.UserRepository,
 ) *UpdateCurrentProfileUsecase {
 	return &UpdateCurrentProfileUsecase{
-		executor:    executor,
-		transactor:  transactor,
-		accountRepo: accountRepo,
-		staffRepo:   staffRepo,
-		userRepo:    userRepo,
+		executor:             executor,
+		transactor:           transactor,
+		accountRepo:          accountRepo,
+		staffProfileProvider: staffProfileProvider,
+		userRepo:             userRepo,
 	}
 }
 
@@ -49,7 +47,7 @@ type UpdateProfileInput struct {
 
 func (u *UpdateCurrentProfileUsecase) Execute(
 	ctx context.Context,
-	authCtx authenDomain.AuthContext,
+	authCtx authctx.AuthContext,
 	input UpdateProfileInput,
 ) (*ProfileResult, error) {
 	if input.Name != nil &&
@@ -86,7 +84,7 @@ func (u *UpdateCurrentProfileUsecase) Execute(
 			}
 
 			switch account.Type {
-			case authenDomain.AccountTypeCustomer:
+			case authctx.AccountTypeCustomer:
 				user, err := u.userRepo.GetByID(ctx, exec, authCtx.UserID)
 				if err != nil {
 					return fmt.Errorf("failed to retrieve user profile: %w", err)
@@ -111,8 +109,8 @@ func (u *UpdateCurrentProfileUsecase) Execute(
 					UpdatedAt: user.UpdatedAt,
 				}
 
-			case authenDomain.AccountTypeStaff:
-				staffProfile, err := u.staffRepo.GetProfileByUserID(ctx, exec, authCtx.UserID)
+			case authctx.AccountTypeStaff:
+				staffProfile, err := u.staffProfileProvider.GetProfileByUserID(ctx, exec, authCtx.UserID)
 				if err != nil {
 					return fmt.Errorf("failed to retrieve staff profile: %w", err)
 				}

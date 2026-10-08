@@ -40,3 +40,15 @@ type CustomerProfile struct {
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
 }
+
+type StaffProfile struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	Name        string
+	Username    string
+	Phone       *string
+	AvatarURL   *string
+	LastLoginAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   *time.Time
+}

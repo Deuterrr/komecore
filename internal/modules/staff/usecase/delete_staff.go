@@ -6,7 +6,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	authenRepo "komecore/internal/modules/auth/repository"
 	staffDomain "komecore/internal/modules/staff/domain"
 	staffRepo "komecore/internal/modules/staff/repository"
 	applogger "komecore/pkg/logger"
@@ -19,7 +18,7 @@ type DeleteStaffUsecase struct {
 	transactor          transaction.Transactor
 	staffRepo           staffRepo.StaffRepository
 	membershipRepo      staffRepo.StaffMembershipRepository
-	userDeletionService authenRepo.UserDeletionService
+	userDeletionService UserDeletionService
 	auditLogger         applogger.AuditLogger
 }
 
@@ -28,7 +27,7 @@ func NewDeleteStaffUsecase(
 	transactor transaction.Transactor,
 	staffRepo staffRepo.StaffRepository,
 	membershipRepo staffRepo.StaffMembershipRepository,
-	userDeletionService authenRepo.UserDeletionService,
+	userDeletionService UserDeletionService,
 	auditLogger applogger.AuditLogger,
 ) *DeleteStaffUsecase {
 	return &DeleteStaffUsecase{

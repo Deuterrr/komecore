@@ -9,8 +9,6 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/domain"
 	"komecore/internal/modules/inventory/repository"
-	productDomain "komecore/internal/modules/product/domain"
-	productRepository "komecore/internal/modules/product/repository"
 
 	"github.com/google/uuid"
 )
@@ -23,18 +21,22 @@ type mockDeleteInventoryRepository struct {
 	deleteCalls int
 }
 
-type mockProductStockHistoryRepository struct {
-	productRepository.ProductStockHistoryRepository
-	recordedEvent *productDomain.ProductStockEvent
-	recordErr     error
+type mockStockHistoryRecorder struct {
+	recordedProductID uuid.UUID
+	recordedShopID    uuid.UUID
+	recordedAvailable int
+	recordErr         error
 }
 
-func (m *mockProductStockHistoryRepository) RecordStockEvent(
+func (m *mockStockHistoryRecorder) RecordStockEvent(
 	ctx context.Context,
 	exec transaction.Executor,
-	event productDomain.ProductStockEvent,
+	productID, shopID uuid.UUID,
+	available int,
 ) error {
-	m.recordedEvent = &event
+	m.recordedProductID = productID
+	m.recordedShopID = shopID
+	m.recordedAvailable = available
 	return m.recordErr
 }
 
@@ -78,7 +80,7 @@ func TestDeleteInventory_Success(t *testing.T) {
 		inventory: existing,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
 
@@ -105,7 +107,7 @@ func TestDeleteInventory_NotFound(t *testing.T) {
 		inventory: nil,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
 
@@ -142,7 +144,7 @@ func TestDeleteInventory_ConflictWithReservations(t *testing.T) {
 		inventory: existing,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
 
@@ -185,7 +187,7 @@ func TestDeleteInventory_RepoError(t *testing.T) {
 		deleteErr: expectedErr,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
 

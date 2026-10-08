@@ -6,11 +6,8 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authenRepo "komecore/internal/modules/auth/repository"
 	staffDomain "komecore/internal/modules/staff/domain"
 	"komecore/internal/modules/staff/repository"
-	userRepo "komecore/internal/modules/user/repository"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -20,9 +17,8 @@ import (
 type AddStaffAccountUsecase struct {
 	executor       transaction.Executor
 	transactor     transaction.Transactor
-	accountRepo    authenRepo.AccountRepository
-	pwHasher       authenRepo.PasswordHasher
-	userRepo       userRepo.UserRepository
+	accountRepo    AccountManager
+	pwHasher       PasswordHasher
 	staffRepo      repository.StaffRepository
 	membershipRepo repository.StaffMembershipRepository
 	roleRepo       repository.RoleRepository
@@ -32,9 +28,8 @@ type AddStaffAccountUsecase struct {
 func NewAddStaffAccountUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authenRepo.AccountRepository,
-	pwHasher authenRepo.PasswordHasher,
-	userRepo userRepo.UserRepository,
+	accountRepo AccountManager,
+	pwHasher PasswordHasher,
 	staffRepo repository.StaffRepository,
 	membershipRepo repository.StaffMembershipRepository,
 	roleRepo repository.RoleRepository,
@@ -45,7 +40,6 @@ func NewAddStaffAccountUsecase(
 		transactor:     transactor,
 		accountRepo:    accountRepo,
 		pwHasher:       pwHasher,
-		userRepo:       userRepo,
 		staffRepo:      staffRepo,
 		membershipRepo: membershipRepo,
 		roleRepo:       roleRepo,
@@ -177,13 +171,11 @@ func (u *AddStaffAccountUsecase) Execute(
 		return fmt.Errorf("failed to generate placeholder password: %w", err)
 	}
 
-	newAccount := authenDomain.Account{
+	newAccountInput := CreateAccountInput{
 		ID:        newAccountID,
 		UserID:    existingStaff.UserID,
 		Email:     input.Email,
 		Password:  hash,
-		Status:    authenDomain.AccountActive,
-		Type:      authenDomain.AccountTypeStaff,
 		CreatedAt: now,
 	}
 
@@ -197,7 +189,7 @@ func (u *AddStaffAccountUsecase) Execute(
 	}
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		if err := u.accountRepo.Create(ctx, exec, newAccount); err != nil {
+		if err := u.accountRepo.CreateStaffAccount(ctx, exec, newAccountInput); err != nil {
 			return fmt.Errorf("failed to create account: %w", err)
 		}
 		if err := u.membershipRepo.Save(ctx, exec, newMembership); err != nil {

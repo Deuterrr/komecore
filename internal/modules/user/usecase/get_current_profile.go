@@ -3,51 +3,65 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authenRepo "komecore/internal/modules/auth/repository"
-	staffDomain "komecore/internal/modules/staff/domain"
-	staffRepo "komecore/internal/modules/staff/repository"
 	"komecore/internal/modules/user/domain"
 	userRepo "komecore/internal/modules/user/repository"
 
 	"github.com/google/uuid"
 )
 
+type UserAccount struct {
+	Type authctx.AccountType
+}
+
+type AccountReader interface {
+	GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*UserAccount, error)
+}
+
+type SessionReader interface {
+	GetLastActivity(ctx context.Context, exec transaction.Executor, sessionID uuid.UUID) (*time.Time, error)
+}
+
+type StaffProfileProvider interface {
+	GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*domain.StaffProfile, error)
+}
+
 type GetCurrentProfileUsecase struct {
-	executor    transaction.Executor
-	accountRepo authenRepo.AccountRepository
-	userRepo    userRepo.UserRepository
-	staffRepo   staffRepo.StaffRepository
-	sessionRepo authenRepo.SessionRepository
+	executor             transaction.Executor
+	accountRepo          AccountReader
+	userRepo             userRepo.UserRepository
+	staffProfileProvider StaffProfileProvider
+	sessionRepo          SessionReader
 }
 
 func NewGetCurrentProfileUsecase(
 	executor transaction.Executor,
-	accountRepo authenRepo.AccountRepository,
+	accountRepo AccountReader,
 	userRepo userRepo.UserRepository,
-	staffRepo staffRepo.StaffRepository,
-	sessionRepo authenRepo.SessionRepository,
+	staffProfileProvider StaffProfileProvider,
+	sessionRepo SessionReader,
 ) *GetCurrentProfileUsecase {
 	return &GetCurrentProfileUsecase{
-		executor:    executor,
-		accountRepo: accountRepo,
-		userRepo:    userRepo,
-		staffRepo:   staffRepo,
-		sessionRepo: sessionRepo,
+		executor:             executor,
+		accountRepo:          accountRepo,
+		userRepo:             userRepo,
+		staffProfileProvider: staffProfileProvider,
+		sessionRepo:          sessionRepo,
 	}
 }
 
 type ProfileResult struct {
 	Customer *domain.CustomerProfile
-	Staff    *staffDomain.StaffProfile
+	Staff    *domain.StaffProfile
 }
 
 func (u *GetCurrentProfileUsecase) Execute(
 	ctx context.Context,
-	authCtx authenDomain.AuthContext,
+	authCtx authctx.AuthContext,
 ) (*ProfileResult, error) {
 	account, err := u.accountRepo.GetByUserID(ctx, u.executor, authCtx.UserID)
 	if err != nil {
@@ -58,14 +72,14 @@ func (u *GetCurrentProfileUsecase) Execute(
 		return nil, apperrors.NewNotFound(string(apperrors.ErrTypeNotFound))
 	}
 
-	session, err := u.sessionRepo.GetByID(ctx, u.executor, authCtx.SessionID)
+	lastActivityAt, err := u.sessionRepo.GetLastActivity(ctx, u.executor, authCtx.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve session: %w", err)
 	}
 
 	var result ProfileResult
 	switch account.Type {
-	case authenDomain.AccountTypeCustomer:
+	case authctx.AccountTypeCustomer:
 		user, err := u.userRepo.GetByID(ctx, u.executor, authCtx.UserID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve user profile: %w", err)
@@ -86,12 +100,12 @@ func (u *GetCurrentProfileUsecase) Execute(
 			Username:    user.Username,
 			Phone:       user.Phone,
 			AvatarURL:   user.AvatarURL,
-			LastLoginAt: session.LastActivityAt,
+			LastLoginAt: lastActivityAt,
 			CreatedAt:   user.CreatedAt,
 			UpdatedAt:   user.UpdatedAt,
 		}
-	case authenDomain.AccountTypeStaff:
-		staffProfile, err := u.staffRepo.GetProfileByUserID(
+	case authctx.AccountTypeStaff:
+		staffProfile, err := u.staffProfileProvider.GetProfileByUserID(
 			ctx,
 			u.executor,
 			authCtx.UserID,
@@ -101,7 +115,9 @@ func (u *GetCurrentProfileUsecase) Execute(
 		}
 
 		result.Staff = staffProfile
-		result.Staff.LastLoginAt = session.LastActivityAt
+		if result.Staff != nil {
+			result.Staff.LastLoginAt = lastActivityAt
+		}
 	}
 
 	return &result, nil

@@ -7,7 +7,6 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
 	staffDomain "komecore/internal/modules/staff/domain"
 
 	"github.com/google/uuid"
@@ -17,20 +16,20 @@ import (
 
 type customMockAccountRepo struct {
 	mockAccountRepo
-	existingAccount       *authenDomain.Account
-	existingAccountByUser *authenDomain.Account
+	existingAccount       *AccountInfo
+	existingAccountByUser *AccountInfo
 	createCalls           int
 }
 
-func (m *customMockAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*authenDomain.Account, error) {
+func (m *customMockAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*AccountInfo, error) {
 	return m.existingAccount, nil
 }
 
-func (m *customMockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authenDomain.Account, error) {
+func (m *customMockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*AccountInfo, error) {
 	return m.existingAccountByUser, nil
 }
 
-func (m *customMockAccountRepo) Create(ctx context.Context, exec transaction.Executor, account authenDomain.Account) error {
+func (m *customMockAccountRepo) CreateStaffAccount(ctx context.Context, exec transaction.Executor, input CreateAccountInput) error {
 	m.createCalls++
 	return nil
 }
@@ -64,12 +63,11 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 		role: &staffDomain.Role{ID: roleID, Code: staffDomain.RoleStaff, Name: "Staff"},
 	}
 	pwHash := &mockPwHasher{}
-	userR := &mockUserRepo{}
 	exec := &mockExecutor{}
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewAddStaffAccountUsecase(exec, tx, accRepo, pwHash, userR, staffR, memRepo, roleR, audit)
+	uc := NewAddStaffAccountUsecase(exec, tx, accRepo, pwHash, staffR, memRepo, roleR, audit)
 
 	params := AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
@@ -93,7 +91,6 @@ func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
 		&mockTransactor{},
 		&customMockAccountRepo{},
 		&mockPwHasher{},
-		&mockUserRepo{},
 		&mockStaffRepo{},
 		&mockStaffMembershipRepo{},
 		&mockRoleRepo{},
@@ -144,7 +141,6 @@ func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
 		&mockTransactor{},
 		&customMockAccountRepo{},
 		&mockPwHasher{},
-		&mockUserRepo{},
 		staffR,
 		memRepo,
 		&mockRoleRepo{},
@@ -180,7 +176,7 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 		},
 	}
 	accRepo := &customMockAccountRepo{
-		existingAccount: &authenDomain.Account{
+		existingAccount: &AccountInfo{
 			ID:    uuid.New(),
 			Email: "taken@komecore.com",
 		},
@@ -191,7 +187,6 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 		&mockTransactor{},
 		accRepo,
 		&mockPwHasher{},
-		&mockUserRepo{},
 		&mockStaffRepo{},
 		memRepo,
 		&mockRoleRepo{},
@@ -231,7 +226,7 @@ func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
 		staff: &staffDomain.Staff{ID: targetStaffID, UserID: targetUserID},
 	}
 	accRepo := &customMockAccountRepo{
-		existingAccountByUser: &authenDomain.Account{
+		existingAccountByUser: &AccountInfo{
 			ID:     uuid.New(),
 			UserID: targetUserID,
 			Email:  "alreadybound@komecore.com",
@@ -243,7 +238,6 @@ func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
 		&mockTransactor{},
 		accRepo,
 		&mockPwHasher{},
-		&mockUserRepo{},
 		staffR,
 		memRepo,
 		&mockRoleRepo{},

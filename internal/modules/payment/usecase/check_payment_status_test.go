@@ -7,7 +7,6 @@ import (
 	"time"
 
 	paymentgateway "komecore/internal/infra/payment-gateway"
-	orderDomain "komecore/internal/modules/order/domain"
 	paymentDomain "komecore/internal/modules/payment/domain"
 
 	"github.com/google/uuid"
@@ -20,10 +19,10 @@ func TestCheckPaymentStatus_Success_Paid(t *testing.T) {
 	customerID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &mockOrder{
 		ID:         orderID,
 		CustomerID: customerID,
-		Status:     orderDomain.OrderStatusPending,
+		Status:     "pending",
 	}
 
 	providerOrderID := orderID.String()
@@ -38,7 +37,7 @@ func TestCheckPaymentStatus_Success_Paid(t *testing.T) {
 	}
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{paymentID: payment}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{orderID: order}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		result: &paymentgateway.NotificationResult{
 			GatewayOrderID:       orderID.String(),
@@ -49,8 +48,8 @@ func TestCheckPaymentStatus_Success_Paid(t *testing.T) {
 		},
 	}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
-	usecase := NewCheckPaymentStatusUsecase(oRepo, pRepo, gateway, webhookUsecase, &mockExecutor{})
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
+	usecase := NewCheckPaymentStatusUsecase(oMgr, pRepo, gateway, webhookUsecase, &mockExecutor{})
 
 	res, err := usecase.Execute(ctx, CheckPaymentStatusInput{
 		OrderID:    orderID,
@@ -73,7 +72,7 @@ func TestCheckPaymentStatus_Success_Paid(t *testing.T) {
 		t.Errorf("expected payment to be updated to Paid, got %v", payment.Status)
 	}
 
-	if order.Status != orderDomain.OrderStatusConfirmed {
+	if order.Status != "confirmed" {
 		t.Errorf("expected order status to be Confirmed, got %v", order.Status)
 	}
 }
@@ -85,11 +84,11 @@ func TestCheckPaymentStatus_OrderNotFound(t *testing.T) {
 	customerID := uuid.New()
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{}}
 	gateway := &mockPaymentGateway{}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
-	usecase := NewCheckPaymentStatusUsecase(oRepo, pRepo, gateway, webhookUsecase, &mockExecutor{})
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
+	usecase := NewCheckPaymentStatusUsecase(oMgr, pRepo, gateway, webhookUsecase, &mockExecutor{})
 
 	_, err := usecase.Execute(ctx, CheckPaymentStatusInput{
 		OrderID:    orderID,
@@ -108,18 +107,18 @@ func TestCheckPaymentStatus_WrongCustomer(t *testing.T) {
 	customerID := uuid.New()
 	wrongCustomerID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &mockOrder{
 		ID:         orderID,
 		CustomerID: customerID,
-		Status:     orderDomain.OrderStatusPending,
+		Status:     "pending",
 	}
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{orderID: order}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
-	usecase := NewCheckPaymentStatusUsecase(oRepo, pRepo, gateway, webhookUsecase, &mockExecutor{})
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
+	usecase := NewCheckPaymentStatusUsecase(oMgr, pRepo, gateway, webhookUsecase, &mockExecutor{})
 
 	_, err := usecase.Execute(ctx, CheckPaymentStatusInput{
 		OrderID:    orderID,
@@ -138,10 +137,10 @@ func TestCheckPaymentStatus_NotPending(t *testing.T) {
 	customerID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &mockOrder{
 		ID:         orderID,
 		CustomerID: customerID,
-		Status:     orderDomain.OrderStatusConfirmed,
+		Status:     "confirmed",
 	}
 
 	providerOrderID := orderID.String()
@@ -156,11 +155,11 @@ func TestCheckPaymentStatus_NotPending(t *testing.T) {
 	}
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{paymentID: payment}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{orderID: order}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
-	usecase := NewCheckPaymentStatusUsecase(oRepo, pRepo, gateway, webhookUsecase, &mockExecutor{})
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
+	usecase := NewCheckPaymentStatusUsecase(oMgr, pRepo, gateway, webhookUsecase, &mockExecutor{})
 
 	res, err := usecase.Execute(ctx, CheckPaymentStatusInput{
 		OrderID:    orderID,
@@ -187,10 +186,10 @@ func TestCheckPaymentStatus_GatewayError(t *testing.T) {
 	customerID := uuid.New()
 	paymentID := uuid.New()
 
-	order := &orderDomain.Order{
+	order := &mockOrder{
 		ID:         orderID,
 		CustomerID: customerID,
-		Status:     orderDomain.OrderStatusPending,
+		Status:     "pending",
 	}
 
 	providerOrderID := orderID.String()
@@ -205,13 +204,13 @@ func TestCheckPaymentStatus_GatewayError(t *testing.T) {
 	}
 
 	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentDomain.Payment{paymentID: payment}}
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderDomain.Order{orderID: order}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		err: errors.New("gateway error"),
 	}
 
-	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oRepo, &mockOrderItemRepo{}, &mockInventoryRepo{}, gateway, nil)
-	usecase := NewCheckPaymentStatusUsecase(oRepo, pRepo, gateway, webhookUsecase, &mockExecutor{})
+	webhookUsecase := newWebhookUsecase(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
+	usecase := NewCheckPaymentStatusUsecase(oMgr, pRepo, gateway, webhookUsecase, &mockExecutor{})
 
 	_, err := usecase.Execute(ctx, CheckPaymentStatusInput{
 		OrderID:    orderID,

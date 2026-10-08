@@ -64,7 +64,7 @@ func TestUpdateInventory_Success(t *testing.T) {
 		inventory: existing,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
 
@@ -96,7 +96,7 @@ func TestUpdateInventory_NotFound(t *testing.T) {
 		inventory: nil,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
 
@@ -134,7 +134,7 @@ func TestUpdateInventory_InvalidStock(t *testing.T) {
 		inventory: existing,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
 
@@ -175,7 +175,7 @@ func TestUpdateInventory_RepoError(t *testing.T) {
 		updateErr: expectedErr,
 	}
 	exec := &mockExecutor{}
-	stockHistoryRepo := &mockProductStockHistoryRepository{}
+	stockHistoryRepo := &mockStockHistoryRecorder{}
 
 	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
 

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	apperrors "komecore/internal/common/errors"
-	authenDomain "komecore/internal/modules/auth/domain"
 	staffDomain "komecore/internal/modules/staff/domain"
 
 	"github.com/google/uuid"
@@ -45,13 +44,12 @@ func TestRemoveStaffAccount_Success(t *testing.T) {
 	}
 
 	accountRepo := &mockAccountRepo{
-		account: &authenDomain.Account{
+		account: &AccountInfo{
 			ID:     targetAccountID,
 			UserID: targetAccountUserID,
 		},
 	}
 
-	sessionRepo := &mockSessionRepo{}
 	auditLogger := &mockAuditLogger{}
 
 	uc := NewRemoveStaffAccountUsecase(
@@ -60,7 +58,6 @@ func TestRemoveStaffAccount_Success(t *testing.T) {
 		staffRepo,
 		membershipRepo,
 		accountRepo,
-		sessionRepo,
 		auditLogger,
 	)
 
@@ -74,8 +71,8 @@ func TestRemoveStaffAccount_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, membershipRepo.deleteByAccCalls)
 	assert.Equal(t, 1, accountRepo.deleteCalls)
-	assert.Equal(t, 1, sessionRepo.revokeCalls)
-	assert.Equal(t, []uuid.UUID{targetAccountUserID}, sessionRepo.revokedUserIDs)
+	assert.Equal(t, 1, accountRepo.revokeCalls)
+	assert.Equal(t, []uuid.UUID{targetAccountUserID}, accountRepo.revokedUserIDs)
 	assert.Len(t, auditLogger.events, 1)
 	assert.Equal(t, "remove_staff_account", auditLogger.events[0].Action)
 }
@@ -91,7 +88,6 @@ func TestRemoveStaffAccount_SelfRemovalBlocked(t *testing.T) {
 		&mockStaffRepo{},
 		&mockStaffMembershipRepo{},
 		&mockAccountRepo{},
-		&mockSessionRepo{},
 		&mockAuditLogger{},
 	)
 
@@ -132,7 +128,6 @@ func TestRemoveStaffAccount_NonAdminForbidden(t *testing.T) {
 		&mockStaffRepo{},
 		membershipRepo,
 		&mockAccountRepo{},
-		&mockSessionRepo{},
 		&mockAuditLogger{},
 	)
 
@@ -176,7 +171,6 @@ func TestRemoveStaffAccount_StaffNotFound(t *testing.T) {
 		staffRepo,
 		membershipRepo,
 		&mockAccountRepo{},
-		&mockSessionRepo{},
 		&mockAuditLogger{},
 	)
 
@@ -224,7 +218,6 @@ func TestRemoveStaffAccount_TargetMembershipNotFound(t *testing.T) {
 		staffRepo,
 		membershipRepo,
 		&mockAccountRepo{},
-		&mockSessionRepo{},
 		&mockAuditLogger{},
 	)
 

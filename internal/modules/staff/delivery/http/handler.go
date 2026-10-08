@@ -5,8 +5,7 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authDomain "komecore/internal/modules/auth/domain"
-	authSvc "komecore/internal/modules/auth/infra/service"
+	"komecore/internal/common/authctx"
 	"komecore/internal/modules/staff/usecase"
 
 	"github.com/go-chi/chi/v5"
@@ -52,12 +51,12 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 		return apperrors.NewBadRequest("invalid staff id")
 	}
 
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authDomain.ErrInsufficientRole.Error())
+		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	var req addStaffAccountRequest
@@ -189,12 +188,12 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 		return apperrors.NewBadRequest("invalid staff id")
 	}
 
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authDomain.ErrInsufficientRole.Error())
+		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	input := usecase.ListStaffAccountsParams{
@@ -245,12 +244,12 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 		return apperrors.NewBadRequest("invalid staff id")
 	}
 
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authDomain.ErrInsufficientRole.Error())
+		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	var req updateStaffRequest
@@ -292,12 +291,12 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 		return apperrors.NewBadRequest("invalid staff id")
 	}
 
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authDomain.ErrInsufficientRole.Error())
+		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	input := usecase.DeleteStaffInput{
@@ -332,12 +331,12 @@ func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request
 		return apperrors.NewBadRequest("invalid account id")
 	}
 
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authDomain.ErrInsufficientRole.Error())
+		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	input := usecase.RemoveStaffAccountInput{

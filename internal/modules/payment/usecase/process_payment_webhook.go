@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	apperrors "komecore/internal/common/errors"
 	paymentgateway "komecore/internal/infra/payment-gateway"
 	transaction "komecore/internal/infra/transactor"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
 	inventoryRepo "komecore/internal/modules/inventory/repository"
-	orderDomain "komecore/internal/modules/order/domain"
-	orderRepo "komecore/internal/modules/order/repository"
 	"komecore/internal/modules/payment/domain"
 	"komecore/internal/modules/payment/repository"
 	appclock "komecore/pkg/clock"
@@ -25,8 +24,7 @@ type ProcessPaymentWebhookUsecase struct {
 	repository       repository.PaymentRepository
 	paymentEventRepo repository.PaymentEventRepository
 	webhookEventRepo repository.PaymentWebhookEventRepository
-	orderRepo        orderRepo.OrderRepository
-	orderItemRepo    orderRepo.OrderItemRepository
+	orderMgr         OrderPaymentManager
 	inventoryRepo    inventoryRepo.InventoryRepository
 	paymentGateway   paymentgateway.Provider
 	auditLogger      applogger.AuditLogger
@@ -38,8 +36,7 @@ func NewProcessPaymentWebhookUsecase(
 	repository repository.PaymentRepository,
 	paymentEventRepo repository.PaymentEventRepository,
 	webhookEventRepo repository.PaymentWebhookEventRepository,
-	orderRepo orderRepo.OrderRepository,
-	orderItemRepo orderRepo.OrderItemRepository,
+	orderMgr OrderPaymentManager,
 	inventoryRepo inventoryRepo.InventoryRepository,
 	paymentGateway paymentgateway.Provider,
 	auditLogger applogger.AuditLogger,
@@ -50,8 +47,7 @@ func NewProcessPaymentWebhookUsecase(
 		repository:       repository,
 		paymentEventRepo: paymentEventRepo,
 		webhookEventRepo: webhookEventRepo,
-		orderRepo:        orderRepo,
-		orderItemRepo:    orderItemRepo,
+		orderMgr:         orderMgr,
 		inventoryRepo:    inventoryRepo,
 		paymentGateway:   paymentGateway,
 		auditLogger:      auditLogger,
@@ -273,55 +269,28 @@ func (u *ProcessPaymentWebhookUsecase) process(
 		// transition together within the same transactional boundary
 		var (
 			newPaymentStatus domain.PaymentStatus
-			newOrderStatus   orderDomain.OrderStatus
 			action           string
 		)
 
 		switch notifResult.Status {
 		case paymentgateway.NotificationStatusSettlement:
 			newPaymentStatus = domain.PaymentStatusPaid
-			newOrderStatus = orderDomain.OrderStatusConfirmed
 			action = "commit"
 
 		case paymentgateway.NotificationStatusExpire:
 			newPaymentStatus = domain.PaymentStatusExpired
-			newOrderStatus = orderDomain.OrderStatusExpired
-			action = "release"
+			action = "release_expire"
 
 		case paymentgateway.NotificationStatusCancel:
 			newPaymentStatus = domain.PaymentStatusCancelled
-			newOrderStatus = orderDomain.OrderStatusCancelled
-			action = "release"
+			action = "release_cancel"
 
 		case paymentgateway.NotificationStatusDeny:
 			newPaymentStatus = domain.PaymentStatusFailed
-			newOrderStatus = orderDomain.OrderStatusCancelled
-			action = "release"
+			action = "release_cancel"
 
 		default:
 			return nil
-		}
-
-		order, err := u.orderRepo.GetByID(ctx, exec, payment.OrderID)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve order: %w", err)
-		}
-		if order == nil {
-			return apperrors.NewNotFound("order not found for payment")
-		}
-
-		now := appclock.Now()
-		// When payment settlement occurs, invoke order.Confirm on
-		// the domain entity to stamp ConfirmedAt and calculate
-		// the 3-day staff handling SLA (HandlingExpiresAt).
-		if newOrderStatus == orderDomain.OrderStatusConfirmed {
-			if err := order.Confirm(now, orderDomain.DefaultHandlingSLAWindow); err != nil {
-				return apperrors.NewInvalidInput(err.Error())
-			}
-		} else {
-			if err := order.UpdateStatus(newOrderStatus); err != nil {
-				return apperrors.NewInvalidInput(err.Error())
-			}
 		}
 
 		if err := u.repository.UpdateStatus(ctx, exec,
@@ -331,75 +300,63 @@ func (u *ProcessPaymentWebhookUsecase) process(
 			return fmt.Errorf("failed to update payment status: %w", err)
 		}
 
-		if err := u.orderRepo.UpdateStatusWithSLA(ctx, exec,
-			payment.OrderID,
-			newOrderStatus,
-			order.ConfirmedAt,
-			order.HandlingExpiresAt,
-		); err != nil {
-			return fmt.Errorf("failed to update order status: %w", err)
+		var (
+			orderItems []OrderItemInfo
+			orderErr   error
+		)
+		now := appclock.Now()
+		switch action {
+		case "commit":
+			orderItems, orderErr = u.orderMgr.ConfirmOrderPayment(ctx, exec, payment.OrderID, now, 72*time.Hour)
+		case "release_expire":
+			orderItems, orderErr = u.orderMgr.ExpireOrderPayment(ctx, exec, payment.OrderID)
+		case "release_cancel":
+			orderItems, orderErr = u.orderMgr.CancelOrderPayment(ctx, exec, payment.OrderID)
+		}
+		if orderErr != nil {
+			return orderErr
 		}
 
-		if action == "commit" ||
-			action == "release" {
+		for _, item := range orderItems {
+			switch action {
+			case "commit":
+				if err := u.inventoryRepo.Commit(ctx, exec,
+					item.ProductID,
+					item.ShopID,
+					item.Quantity,
+				); err != nil {
+					return fmt.Errorf("failed to commit inventory for product %s: %w", item.ProductID, err)
+				}
 
-			orderItems, err := u.orderItemRepo.ListByOrderID(ctx, exec,
-				payment.OrderID,
-			)
-			if err != nil {
-				return fmt.Errorf("failed to list order items: %w", err)
-			}
+			default:
+				if err := u.inventoryRepo.Release(ctx, exec,
+					item.ProductID,
+					item.ShopID,
+					item.Quantity,
+				); err != nil {
+					if errors.Is(err, inventoryDomain.ErrInsufficientReserved) ||
+						errors.Is(err, apperrors.ErrNotFound) {
 
-			// Apply inventory state transition based
-			// on payment outcome
-			//
-			// This step ensures stock consistency after
-			// payment resolution:
-			//   - commit   → finalize reserved stock
-			// 				  (reduce available inventory)
-			//   - release  → rollback reserved stock
-			// 				  back to available pool
-			for _, item := range orderItems {
-				switch action {
-				case "commit":
-					if err := u.inventoryRepo.Commit(ctx, exec,
-						item.ProductID,
-						item.ShopID,
-						item.Quantity,
-					); err != nil {
-						return fmt.Errorf("failed to commit inventory for product %s: %w", item.ProductID, err)
-					}
-
-				case "release":
-					if err := u.inventoryRepo.Release(ctx, exec,
-						item.ProductID,
-						item.ShopID,
-						item.Quantity,
-					); err != nil {
-						if errors.Is(err, inventoryDomain.ErrInsufficientReserved) ||
-							errors.Is(err, apperrors.ErrNotFound) {
-
-							if u.auditLogger != nil {
-								u.auditLogger.Log(ctx, applogger.AuditEvent{
-									Category:   "system",
-									Action:     "inventory_anomaly_detected",
-									Resource:   "inventory",
-									ResourceID: item.ProductID.String(),
-									Outcome:    applogger.OutcomeFailure,
-									Metadata: map[string]any{
-										"payment_id":    payment.ID.String(),
-										"order_id":      payment.OrderID.String(),
-										"product_id":    item.ProductID.String(),
-										"shop_id":       item.ShopID.String(),
-										"requested_qty": item.Quantity,
-										"reason":        err.Error(),
-									},
-								})
-							}
-							continue
+						if u.auditLogger != nil {
+							u.auditLogger.Log(ctx, applogger.AuditEvent{
+								Category:   "system",
+								Action:     "inventory_anomaly_detected",
+								Resource:   "inventory",
+								ResourceID: item.ProductID.String(),
+								Outcome:    applogger.OutcomeFailure,
+								Metadata: map[string]any{
+									"payment_id":    payment.ID.String(),
+									"order_id":      payment.OrderID.String(),
+									"product_id":    item.ProductID.String(),
+									"shop_id":       item.ShopID.String(),
+									"requested_qty": item.Quantity,
+									"reason":        err.Error(),
+								},
+							})
 						}
-						return fmt.Errorf("failed to release inventory for product %s: %w", item.ProductID, err)
+						continue
 					}
+					return fmt.Errorf("failed to release inventory for product %s: %w", item.ProductID, err)
 				}
 			}
 		}

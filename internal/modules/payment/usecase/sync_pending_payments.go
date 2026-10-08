@@ -11,8 +11,6 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
 	inventoryRepo "komecore/internal/modules/inventory/repository"
-	orderDomain "komecore/internal/modules/order/domain"
-	orderRepo "komecore/internal/modules/order/repository"
 	paymentDomain "komecore/internal/modules/payment/domain"
 	paymentRepo "komecore/internal/modules/payment/repository"
 	appclock "komecore/pkg/clock"
@@ -38,8 +36,7 @@ type SyncPendingPaymentsUsecase struct {
 	logger         applogger.Logger
 	lookbackWindow time.Duration
 	transactor     transaction.Transactor
-	orderRepo      orderRepo.OrderRepository
-	orderItemRepo  orderRepo.OrderItemRepository
+	orderMgr       OrderPaymentManager
 	inventoryRepo  inventoryRepo.InventoryRepository
 }
 
@@ -51,8 +48,7 @@ func NewSyncPendingPaymentsUsecase(
 	logger applogger.Logger,
 	lookbackWindow time.Duration,
 	transactor transaction.Transactor,
-	orderRepo orderRepo.OrderRepository,
-	orderItemRepo orderRepo.OrderItemRepository,
+	orderMgr OrderPaymentManager,
 	inventoryRepo inventoryRepo.InventoryRepository,
 ) *SyncPendingPaymentsUsecase {
 	return &SyncPendingPaymentsUsecase{
@@ -63,8 +59,7 @@ func NewSyncPendingPaymentsUsecase(
 		logger:         logger,
 		lookbackWindow: lookbackWindow,
 		transactor:     transactor,
-		orderRepo:      orderRepo,
-		orderItemRepo:  orderItemRepo,
+		orderMgr:       orderMgr,
 		inventoryRepo:  inventoryRepo,
 	}
 }
@@ -190,17 +185,6 @@ func (u *SyncPendingPaymentsUsecase) expirePaymentLocally(
 	payment paymentDomain.Payment,
 ) error {
 	return u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		order, err := u.orderRepo.GetByID(ctx, exec, payment.OrderID)
-		if err != nil {
-			return fmt.Errorf("failed to retrieve order: %w", err)
-		}
-		if order == nil {
-			return fmt.Errorf("order not found: %s", payment.OrderID)
-		}
-		if err := order.UpdateStatus(orderDomain.OrderStatusExpired); err != nil {
-			return fmt.Errorf("invalid order status transition: %w", err)
-		}
-
 		if err := u.paymentRepo.UpdateStatus(ctx, exec,
 			payment.ID,
 			paymentDomain.PaymentStatusExpired,
@@ -208,16 +192,9 @@ func (u *SyncPendingPaymentsUsecase) expirePaymentLocally(
 			return fmt.Errorf("failed to update payment status: %w", err)
 		}
 
-		if err := u.orderRepo.UpdateStatus(ctx, exec,
-			payment.OrderID,
-			orderDomain.OrderStatusExpired,
-		); err != nil {
-			return fmt.Errorf("failed to update order status: %w", err)
-		}
-
-		orderItems, err := u.orderItemRepo.ListByOrderID(ctx, exec, payment.OrderID)
+		orderItems, err := u.orderMgr.ExpireOrderPayment(ctx, exec, payment.OrderID)
 		if err != nil {
-			return fmt.Errorf("failed to list order items: %w", err)
+			return fmt.Errorf("failed to expire order payment: %w", err)
 		}
 
 		for _, item := range orderItems {

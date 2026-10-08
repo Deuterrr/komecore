@@ -4,12 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
-	orderDomain "komecore/internal/modules/order/domain"
-	orderRepo "komecore/internal/modules/order/repository"
 	"komecore/internal/modules/shipment/domain"
 
 	"github.com/google/uuid"
@@ -63,62 +60,20 @@ func (m *mockShipmentRepo) Update(_ context.Context, _ transaction.Executor, shi
 	return m.updateErr
 }
 
-type mockOrderRepo struct {
-	order        *orderDomain.Order
-	updatedState struct {
-		id     uuid.UUID
-		status orderDomain.OrderStatus
-	}
-	getErr    error
-	updateErr error
+type mockOrderDeliveryUpdater struct {
+	deliveredID uuid.UUID
+	err         error
 }
 
-func (m *mockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*orderDomain.Order, error) {
-	if m.getErr != nil {
-		return nil, m.getErr
-	}
-	if m.order != nil && m.order.ID == id {
-		return m.order, nil
-	}
-	return nil, nil
-}
-
-func (m *mockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*orderDomain.Order, error) {
-	return nil, nil
-}
-
-func (m *mockOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status orderDomain.OrderStatus) error {
-	m.updatedState.id = id
-	m.updatedState.status = status
-	return m.updateErr
-}
-
-func (m *mockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, id uuid.UUID, status orderDomain.OrderStatus, _ *time.Time, _ *time.Time) error {
-	m.updatedState.id = id
-	m.updatedState.status = status
-	return m.updateErr
-}
-
-func (m *mockOrderRepo) Save(_ context.Context, _ transaction.Executor, _ orderDomain.Order) error {
-	return nil
-}
-
-func (m *mockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ orderRepo.FindOrderParams) ([]orderDomain.Order, int, error) {
-	return nil, 0, nil
-}
-
-func (m *mockOrderRepo) SetConfirmedAndExpiry(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ time.Time, _ time.Time) error {
-	return nil
-}
-
-func (m *mockOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]orderDomain.Order, error) {
-	return nil, nil
+func (m *mockOrderDeliveryUpdater) MarkOrderDelivered(_ context.Context, _ transaction.Executor, orderID uuid.UUID) error {
+	m.deliveredID = orderID
+	return m.err
 }
 
 func TestUpdateShipmentStatus_ShipmentNotFound(t *testing.T) {
 	sRepo := &mockShipmentRepo{}
-	oRepo := &mockOrderRepo{}
-	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oRepo)
+	oUpdater := &mockOrderDeliveryUpdater{}
+	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oUpdater)
 
 	_, err := u.Execute(context.Background(), UpdateShipmentStatusInput{
 		ShipmentID: uuid.New(),
@@ -140,8 +95,8 @@ func TestUpdateShipmentStatus_InvalidTransition(t *testing.T) {
 		Status: domain.ShipmentStatusDelivered,
 	}
 	sRepo := &mockShipmentRepo{shipment: shipment}
-	oRepo := &mockOrderRepo{}
-	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oRepo)
+	oUpdater := &mockOrderDeliveryUpdater{}
+	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oUpdater)
 
 	_, err := u.Execute(context.Background(), UpdateShipmentStatusInput{
 		ShipmentID: shipment.ID,
@@ -163,8 +118,8 @@ func TestUpdateShipmentStatus_Success(t *testing.T) {
 		Status: domain.ShipmentStatusCreated,
 	}
 	sRepo := &mockShipmentRepo{shipment: shipment}
-	oRepo := &mockOrderRepo{}
-	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oRepo)
+	oUpdater := &mockOrderDeliveryUpdater{}
+	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oUpdater)
 
 	desc := "Items are packed nicely"
 	loc := "Central Hub"
@@ -196,14 +151,10 @@ func TestUpdateShipmentStatus_DeliveredTransitionsOrder(t *testing.T) {
 		OrderID: orderID,
 		Status:  domain.ShipmentStatusOutForDelivery,
 	}
-	order := &orderDomain.Order{
-		ID:     orderID,
-		Status: orderDomain.OrderStatusShipped,
-	}
 
 	sRepo := &mockShipmentRepo{shipment: shipment}
-	oRepo := &mockOrderRepo{order: order}
-	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oRepo)
+	oUpdater := &mockOrderDeliveryUpdater{}
+	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oUpdater)
 
 	_, err := u.Execute(context.Background(), UpdateShipmentStatusInput{
 		ShipmentID: shipment.ID,
@@ -214,11 +165,7 @@ func TestUpdateShipmentStatus_DeliveredTransitionsOrder(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if oRepo.updatedState.id != orderID {
-		t.Errorf("expected order status update for ID %s, got %s", orderID, oRepo.updatedState.id)
-	}
-
-	if oRepo.updatedState.status != orderDomain.OrderStatusDelivered {
-		t.Errorf("expected order status to transition to delivered, got %s", oRepo.updatedState.status)
+	if oUpdater.deliveredID != orderID {
+		t.Errorf("expected order status update for ID %s, got %s", orderID, oUpdater.deliveredID)
 	}
 }

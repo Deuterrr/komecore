@@ -30,7 +30,7 @@ import (
 
 	authenSvc "komecore/internal/modules/auth/infra/service"
 	authenRepo "komecore/internal/modules/auth/repository"
-	orderSvc "komecore/internal/modules/order/infra/service"
+	orderSvc "komecore/internal/modules/order/service"
 
 	addressRepo "komecore/internal/modules/address/repository"
 	cartRepo "komecore/internal/modules/cart/repository"
@@ -116,7 +116,7 @@ type Container struct {
 	AddItem    cartUsecase.AddItemUsecase
 	UpdateItem cartUsecase.UpdateItemUsecase
 	RemoveItem cartUsecase.RemoveItemUsecase
-	Checkout   cartUsecase.CheckoutUsecase
+	Checkout   orderUsecase.CheckoutUsecase
 
 	GetUser              userUsecase.GetUserUsecase
 	GetCurrentProfile    userUsecase.GetCurrentProfileUsecase
@@ -394,12 +394,22 @@ func buildContainer(
 		pricingService       = svcs.pricingService
 	)
 
+	orderPaymentAdapter := newOrderPaymentAdapter(orderRepo, orderItemRepo)
+	orderDeliveryAdapter := newOrderDeliveryAdapter(orderRepo)
+	inventoryProductChecker := newInventoryProductCheckerAdapter(productRepo)
+	inventoryShopChecker := newInventoryShopCheckerAdapter(shopRepo)
+	inventoryStockHistory := newInventoryStockHistoryAdapter(productStockHistoryRepo)
+	shopProductAdapter := newShopProductAdapter(inventoryRepo, productRepo)
+	staffAccountAdapter := newStaffAccountAdapter(accountRepo, sessionRepo)
+	userAccountAdapter := newUserAccountAdapter(accountRepo)
+	userSessionAdapter := newUserSessionAdapter(sessionRepo)
+	userStaffProfileAdapter := newUserStaffProfileAdapter(staffRepo)
+
 	processPaymentWebhook := *paymentUsecase.NewProcessPaymentWebhookUsecase(
 		paymentRepo,
 		paymentEventRepo,
 		paymentWebhookEventRepo,
-		orderRepo,
-		orderItemRepo,
+		orderPaymentAdapter,
 		inventoryRepo,
 		infra.PaymentGateway,
 		auditLogger,
@@ -463,19 +473,22 @@ func buildContainer(
 			imageVariantProvider,
 			infra.StorageProvider,
 		),
-		CreateInventory: *inventoryUsecase.NewCreateInventoryUsecase(inventoryRepo,
-			productRepo,
-			shopRepo,
+		CreateInventory: *inventoryUsecase.NewCreateInventoryUsecase(
+			inventoryRepo,
+			inventoryProductChecker,
+			inventoryShopChecker,
 			infra.TransactionExecutor,
-			productStockHistoryRepo,
+			inventoryStockHistory,
 		),
-		UpdateInventory: *inventoryUsecase.NewUpdateInventoryUsecase(inventoryRepo,
+		UpdateInventory: *inventoryUsecase.NewUpdateInventoryUsecase(
+			inventoryRepo,
 			infra.TransactionExecutor,
-			productStockHistoryRepo,
+			inventoryStockHistory,
 		),
-		DeleteInventory: *inventoryUsecase.NewDeleteInventoryUsecase(inventoryRepo,
+		DeleteInventory: *inventoryUsecase.NewDeleteInventoryUsecase(
+			inventoryRepo,
 			infra.TransactionExecutor,
-			productStockHistoryRepo,
+			inventoryStockHistory,
 		),
 
 		Me: *authenUsecase.NewMeUsecase(
@@ -530,9 +543,8 @@ func buildContainer(
 		AddStaffAccount: *staffUsecase.NewAddStaffAccountUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
-			accountRepo,
+			staffAccountAdapter,
 			pwHasher,
-			userRepo,
 			staffRepo,
 			membershipRepo,
 			roleRepo,
@@ -564,8 +576,7 @@ func buildContainer(
 			infra.TransactionProvider,
 			staffRepo,
 			membershipRepo,
-			accountRepo,
-			sessionRepo,
+			staffAccountAdapter,
 			auditLogger,
 		),
 
@@ -682,7 +693,7 @@ func buildContainer(
 			infra.TransactionProvider,
 			cartRepo,
 		),
-		Checkout: *cartUsecase.NewCheckoutUsecase(
+		Checkout: *orderUsecase.NewCheckoutUsecase(
 			infra.TransactionExecutor,
 			pricingService,
 		),
@@ -693,16 +704,16 @@ func buildContainer(
 		),
 		GetCurrentProfile: *userUsecase.NewGetCurrentProfileUsecase(
 			infra.TransactionExecutor,
-			accountRepo,
+			userAccountAdapter,
 			userRepo,
-			staffRepo,
-			sessionRepo,
+			userStaffProfileAdapter,
+			userSessionAdapter,
 		),
 		UpdateCurrentProfile: *userUsecase.NewUpdateCurrentProfileUsecase(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
-			accountRepo,
-			staffRepo,
+			userAccountAdapter,
+			userStaffProfileAdapter,
 			userRepo,
 		),
 
@@ -761,8 +772,7 @@ func buildContainer(
 			infra.TransactionExecutor,
 		),
 		GetShopProducts: *shopUsecase.NewGetShopProductsUsecase(
-			inventoryRepo,
-			productRepo,
+			shopProductAdapter,
 			infra.TransactionExecutor,
 		),
 
@@ -782,15 +792,14 @@ func buildContainer(
 		),
 		GetPaymentDetail: *paymentUsecase.NewGetPaymentDetailUsecase(
 			infra.TransactionExecutor,
-			orderRepo,
-			invoiceRepo,
+			orderPaymentAdapter,
 			paymentRepo,
 			paymentMethodRepo,
 			paymentInstructionRepo,
 			paymentChannelDataRepo,
 		),
 		CheckPaymentStatus: *paymentUsecase.NewCheckPaymentStatusUsecase(
-			orderRepo,
+			orderPaymentAdapter,
 			paymentRepo,
 			infra.PaymentGateway,
 			&processPaymentWebhook,
@@ -804,8 +813,7 @@ func buildContainer(
 			log,
 			time.Duration(cfg.PaymentSync.LookbackHours)*time.Hour,
 			infra.TransactionProvider,
-			orderRepo,
-			orderItemRepo,
+			orderPaymentAdapter,
 			inventoryRepo,
 		),
 		ExpirePastDuePayments: *paymentUsecase.NewExpirePastDuePaymentsUsecase(
@@ -813,8 +821,7 @@ func buildContainer(
 			infra.PaymentGateway,
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
-			orderRepo,
-			orderItemRepo,
+			orderPaymentAdapter,
 			inventoryRepo,
 			log,
 			cfg.PaymentExpiry.BatchSize,
@@ -847,7 +854,7 @@ func buildContainer(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 			shipmentRepo,
-			orderRepo,
+			orderDeliveryAdapter,
 		),
 		UpdateShipment: *shipmentUsecase.NewUpdateShipmentUsecase(
 			infra.TransactionExecutor,
