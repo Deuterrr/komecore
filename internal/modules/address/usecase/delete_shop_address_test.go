@@ -7,17 +7,23 @@ import (
 
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/domain"
-	"komecore/internal/modules/address/repository"
 
 	"github.com/google/uuid"
 )
 
 type mockDeleteShopAddressRepository struct {
-	repository.ShopAddressRepository
 	address     *domain.ShopAddress
 	getErr      error
 	deleteCalls int
 	deleteErr   error
+}
+
+func (m *mockDeleteShopAddressRepository) FindByShopID(
+	ctx context.Context,
+	exec transaction.Executor,
+	shopID uuid.UUID,
+) ([]domain.ShopAddress, error) {
+	return nil, nil
 }
 
 func (m *mockDeleteShopAddressRepository) GetByID(
@@ -29,6 +35,30 @@ func (m *mockDeleteShopAddressRepository) GetByID(
 		return nil, m.getErr
 	}
 	return m.address, nil
+}
+
+func (m *mockDeleteShopAddressRepository) UnsetActiveByShopID(
+	ctx context.Context,
+	exec transaction.Executor,
+	shopID uuid.UUID,
+) error {
+	return nil
+}
+
+func (m *mockDeleteShopAddressRepository) Create(
+	ctx context.Context,
+	exec transaction.Executor,
+	address domain.ShopAddress,
+) error {
+	return nil
+}
+
+func (m *mockDeleteShopAddressRepository) Update(
+	ctx context.Context,
+	exec transaction.Executor,
+	address domain.ShopAddress,
+) error {
+	return nil
 }
 
 func (m *mockDeleteShopAddressRepository) Delete(

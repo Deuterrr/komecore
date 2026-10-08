@@ -9,14 +9,31 @@ import (
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
-	inventoryRepo "komecore/internal/modules/inventory/repository"
 	productDomain "komecore/internal/modules/product/domain"
-	productRepo "komecore/internal/modules/product/repository"
 	"komecore/internal/modules/wishlist/domain"
-	"komecore/internal/modules/wishlist/repository"
 
 	"github.com/google/uuid"
 )
+
+type WishlistRepository interface {
+	Add(ctx context.Context, exec transaction.Executor, item domain.WishlistItem) error
+	Remove(ctx context.Context, exec transaction.Executor, customerID, productID uuid.UUID) error
+	ListByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) ([]domain.WishlistItem, error)
+	Exists(ctx context.Context, exec transaction.Executor, customerID, productID uuid.UUID) (bool, error)
+}
+
+type ProductReader interface {
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*productDomain.Product, error)
+	FindByIDs(ctx context.Context, exec transaction.Executor, ids []uuid.UUID) ([]productDomain.Product, error)
+}
+
+type InventoryReader interface {
+	ListByProductIDs(ctx context.Context, exec transaction.Executor, productIDs []uuid.UUID) (map[uuid.UUID][]inventoryDomain.Inventory, error)
+}
+
+type ProductImageReader interface {
+	ListByProductIDs(ctx context.Context, exec transaction.Executor, productIDs []uuid.UUID) (map[uuid.UUID][]productDomain.ProductImage, error)
+}
 
 type AddToWishlistInput struct {
 	CustomerID uuid.UUID
@@ -29,19 +46,19 @@ type RemoveFromWishlistInput struct {
 }
 
 type WishlistService struct {
-	wishlistRepo   repository.WishlistRepository
-	productRepo    productRepo.ProductRepository
-	inventoryRepo  inventoryRepo.InventoryRepository
-	productImgRepo productRepo.ProductImageRepository
+	wishlistRepo   WishlistRepository
+	productRepo    ProductReader
+	inventoryRepo  InventoryReader
+	productImgRepo ProductImageReader
 	fileStore      storage.Provider
 	executor       transaction.Executor
 }
 
 func NewWishlistService(
-	wishlistRepo repository.WishlistRepository,
-	productRepo productRepo.ProductRepository,
-	inventoryRepo inventoryRepo.InventoryRepository,
-	productImgRepo productRepo.ProductImageRepository,
+	wishlistRepo WishlistRepository,
+	productRepo ProductReader,
+	inventoryRepo InventoryReader,
+	productImgRepo ProductImageReader,
 	fileStore storage.Provider,
 	executor transaction.Executor,
 ) *WishlistService {

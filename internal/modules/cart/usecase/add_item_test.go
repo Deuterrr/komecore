@@ -6,29 +6,26 @@ import (
 
 	transaction "komecore/internal/infra/transactor"
 	cartDomain "komecore/internal/modules/cart/domain"
-	cartRepo "komecore/internal/modules/cart/repository"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
-	inventoryRepo "komecore/internal/modules/inventory/repository"
 	productDomain "komecore/internal/modules/product/domain"
-	productRepo "komecore/internal/modules/product/repository"
 	shopDomain "komecore/internal/modules/shop/domain"
-	shopRepo "komecore/internal/modules/shop/repository"
 
 	"github.com/google/uuid"
 )
 
-type mockTransactor struct {
-	transaction.Transactor
-}
+type mockTransactor struct{}
 
 func (m *mockTransactor) WithinTransaction(ctx context.Context, fn func(transaction.Executor) error) error {
 	return fn(&mockExecutor{})
 }
 
 type mockCartShopRepo struct {
-	shopRepo.ShopRepository
 	shop *shopDomain.Shop
 	err  error
+}
+
+func (m *mockCartShopRepo) FindByIDs(ctx context.Context, exec transaction.Executor, ids []uuid.UUID) ([]shopDomain.Shop, error) {
+	return nil, nil
 }
 
 func (m *mockCartShopRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*shopDomain.Shop, error) {
@@ -48,7 +45,6 @@ func (m *mockCartShopRepo) GetByID(ctx context.Context, exec transaction.Executo
 }
 
 type mockSaveCartRepository struct {
-	cartRepo.CartRepository
 	cart    *cartDomain.Cart
 	saved   bool
 	saveErr error
@@ -92,8 +88,15 @@ func (m *mockSaveCartRepository) Save(
 }
 
 type mockAddItemInvRepo struct {
-	inventoryRepo.InventoryRepository
 	inv *inventoryDomain.Inventory
+}
+
+func (m *mockAddItemInvRepo) ListByProductIDs(
+	ctx context.Context,
+	exec transaction.Executor,
+	productIDs []uuid.UUID,
+) (map[uuid.UUID][]inventoryDomain.Inventory, error) {
+	return nil, nil
 }
 
 func (m *mockAddItemInvRepo) GetByProductIDAndShopID(
@@ -105,8 +108,15 @@ func (m *mockAddItemInvRepo) GetByProductIDAndShopID(
 }
 
 type mockAddItemProdRepo struct {
-	productRepo.ProductRepository
 	prod *productDomain.Product
+}
+
+func (m *mockAddItemProdRepo) FindByIDs(
+	ctx context.Context,
+	exec transaction.Executor,
+	ids []uuid.UUID,
+) ([]productDomain.Product, error) {
+	return nil, nil
 }
 
 func (m *mockAddItemProdRepo) GetByID(

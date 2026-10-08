@@ -8,7 +8,6 @@ import (
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/domain"
-	"komecore/internal/modules/address/repository"
 	"komecore/internal/modules/address/usecase"
 
 	"github.com/google/uuid"
@@ -17,7 +16,6 @@ import (
 )
 
 type mockShopAddressRepo struct {
-	repository.ShopAddressRepository
 	createCalls       int
 	createError       error
 	savedAddress      *domain.ShopAddress
@@ -38,6 +36,22 @@ func (m *mockShopAddressRepo) FindByShopID(ctx context.Context, exec transaction
 		return nil, m.findByShopIDError
 	}
 	return m.shopAddresses, nil
+}
+
+func (m *mockShopAddressRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*domain.ShopAddress, error) {
+	return nil, nil
+}
+
+func (m *mockShopAddressRepo) UnsetActiveByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) error {
+	return nil
+}
+
+func (m *mockShopAddressRepo) Update(ctx context.Context, exec transaction.Executor, address domain.ShopAddress) error {
+	return nil
+}
+
+func (m *mockShopAddressRepo) Delete(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) error {
+	return nil
 }
 
 func TestCreateShopAddressUsecase_Execute(t *testing.T) {

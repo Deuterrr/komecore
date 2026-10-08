@@ -11,13 +11,38 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	orderDomain "komecore/internal/modules/order/domain"
 	orderRepo "komecore/internal/modules/order/repository"
-	productRepo "komecore/internal/modules/product/repository"
+	productDomain "komecore/internal/modules/product/domain"
 	"komecore/internal/modules/review/domain"
 	"komecore/internal/modules/review/repository"
 	query "komecore/internal/shared/query"
 
 	"github.com/google/uuid"
 )
+
+type ReviewRepository interface {
+	Create(ctx context.Context, exec transaction.Executor, review *domain.Review) error
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*domain.Review, error)
+	Delete(ctx context.Context, exec transaction.Executor, id uuid.UUID) error
+	ListByProductID(ctx context.Context, exec transaction.Executor, params repository.ListReviewsParams) ([]domain.ReviewWithCustomer, int, error)
+	GetRatingSummary(ctx context.Context, exec transaction.Executor, productID uuid.UUID) (*domain.ProductRatingSummary, error)
+	HasReviewedOrder(ctx context.Context, exec transaction.Executor, customerID, productID, orderID uuid.UUID) (bool, error)
+	GetReviewedOrderIDs(ctx context.Context, exec transaction.Executor, customerID, productID uuid.UUID) ([]uuid.UUID, error)
+}
+
+type ProductRatingUpdater interface {
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*productDomain.Product, error)
+	UpdateRating(ctx context.Context, exec transaction.Executor, id uuid.UUID, averageRating float64, reviewCount int) error
+}
+
+type OrderReader interface {
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*orderDomain.Order, error)
+	FindOrders(ctx context.Context, exec transaction.Executor, params orderRepo.FindOrderParams) ([]orderDomain.Order, int, error)
+}
+
+type OrderItemReader interface {
+	ListByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]orderDomain.OrderItem, error)
+	ListByOrderIDs(ctx context.Context, exec transaction.Executor, orderIDs []uuid.UUID) ([]orderDomain.OrderItem, error)
+}
 
 type CreateReviewInput struct {
 	CustomerID uuid.UUID
@@ -49,20 +74,20 @@ type DeleteReviewInput struct {
 }
 
 type ReviewService struct {
-	reviewRepo    repository.ReviewRepository
-	productRepo   productRepo.ProductRepository
-	orderRepo     orderRepo.OrderRepository
-	orderItemRepo orderRepo.OrderItemRepository
+	reviewRepo    ReviewRepository
+	productRepo   ProductRatingUpdater
+	orderRepo     OrderReader
+	orderItemRepo OrderItemReader
 	cache         cache.Cache
 	executor      transaction.Executor
 	transactor    transaction.Transactor
 }
 
 func NewReviewService(
-	reviewRepo repository.ReviewRepository,
-	productRepo productRepo.ProductRepository,
-	orderRepo orderRepo.OrderRepository,
-	orderItemRepo orderRepo.OrderItemRepository,
+	reviewRepo ReviewRepository,
+	productRepo ProductRatingUpdater,
+	orderRepo OrderReader,
+	orderItemRepo OrderItemReader,
 	cache cache.Cache,
 	executor transaction.Executor,
 	transactor transaction.Transactor,

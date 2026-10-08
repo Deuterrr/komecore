@@ -7,7 +7,6 @@ import (
 	orderDomain "komecore/internal/modules/order/domain"
 	orderRepo "komecore/internal/modules/order/repository"
 	productDomain "komecore/internal/modules/product/domain"
-	productRepo "komecore/internal/modules/product/repository"
 	"komecore/internal/modules/review/domain"
 	"komecore/internal/modules/review/repository"
 
@@ -119,7 +118,6 @@ func (m *mockReviewRepo) GetReviewedOrderIDs(_ context.Context, _ transaction.Ex
 }
 
 type mockProductRepo struct {
-	productRepo.ProductRepository
 	products           map[uuid.UUID]*productDomain.Product
 	updatedRatings     map[uuid.UUID]float64
 	updatedReviewCount map[uuid.UUID]int
@@ -148,7 +146,6 @@ func (m *mockProductRepo) UpdateRating(_ context.Context, _ transaction.Executor
 }
 
 type mockOrderRepo struct {
-	orderRepo.OrderRepository
 	orders map[uuid.UUID]*orderDomain.Order
 }
 
@@ -180,7 +177,6 @@ func (m *mockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, pa
 }
 
 type mockOrderItemRepo struct {
-	orderRepo.OrderItemRepository
 	items map[uuid.UUID][]orderDomain.OrderItem
 }
 

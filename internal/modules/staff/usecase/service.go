@@ -9,6 +9,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	staffDomain "komecore/internal/modules/staff/domain"
 	staffRepo "komecore/internal/modules/staff/repository"
+	userDomain "komecore/internal/modules/user/domain"
 	userRepo "komecore/internal/modules/user/repository"
 	query "komecore/internal/shared/query"
 	appclock "komecore/pkg/clock"
@@ -70,13 +71,39 @@ type RemoveStaffAccountInput struct {
 	AccountID      uuid.UUID
 }
 
+type StaffRepository interface {
+	Create(ctx context.Context, exec transaction.Executor, staff staffDomain.Staff) error
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staffDomain.Staff, error)
+	FindStaff(ctx context.Context, exec transaction.Executor, params staffRepo.FindStaffParams) ([]staffDomain.StaffProfile, int, error)
+	Update(ctx context.Context, exec transaction.Executor, staffID uuid.UUID, name string, logoUrl *string, bannerUrl *string) error
+	Delete(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) error
+}
+
+type StaffMembershipRepository interface {
+	GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staffDomain.StaffMembership, error)
+	ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staffDomain.Role, error)
+	Save(ctx context.Context, exec transaction.Executor, membership staffDomain.StaffMembership) error
+	ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]staffDomain.StaffAccountMember, error)
+	DeleteByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) error
+	DeleteByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) error
+}
+
+type RoleRepository interface {
+	GetByCode(ctx context.Context, exec transaction.Executor, code staffDomain.RoleCode) (*staffDomain.Role, error)
+}
+
+type UserRepository interface {
+	GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*userDomain.User, error)
+	CreateUser(ctx context.Context, exec transaction.Executor, props userRepo.CreateUserProps) error
+}
+
 type StaffService struct {
 	executor            transaction.Executor
 	transactor          transaction.Transactor
-	staffRepo           staffRepo.StaffRepository
-	membershipRepo      staffRepo.StaffMembershipRepository
-	roleRepo            staffRepo.RoleRepository
-	userRepo            userRepo.UserRepository
+	staffRepo           StaffRepository
+	membershipRepo      StaffMembershipRepository
+	roleRepo            RoleRepository
+	userRepo            UserRepository
 	accountManager      AccountManager
 	pwHasher            PasswordHasher
 	userDeletionService UserDeletionService
@@ -86,10 +113,10 @@ type StaffService struct {
 func NewStaffService(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	staffRepo staffRepo.StaffRepository,
-	membershipRepo staffRepo.StaffMembershipRepository,
-	roleRepo staffRepo.RoleRepository,
-	userRepo userRepo.UserRepository,
+	staffRepo StaffRepository,
+	membershipRepo StaffMembershipRepository,
+	roleRepo RoleRepository,
+	userRepo UserRepository,
 	accountManager AccountManager,
 	pwHasher PasswordHasher,
 	userDeletionService UserDeletionService,

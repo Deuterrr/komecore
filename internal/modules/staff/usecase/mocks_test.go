@@ -70,10 +70,6 @@ func (m *mockStaffRepo) GetByID(ctx context.Context, exec transaction.Executor, 
 	return m.staff, nil
 }
 
-func (m *mockStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*staffDomain.StaffProfile, error) {
-	return nil, nil
-}
-
 func (m *mockStaffRepo) FindStaff(ctx context.Context, exec transaction.Executor, params staffRepo.FindStaffParams) ([]staffDomain.StaffProfile, int, error) {
 	return nil, 0, nil
 }
@@ -88,7 +84,7 @@ func (m *mockStaffRepo) Delete(ctx context.Context, exec transaction.Executor, s
 	return m.deleteError
 }
 
-var _ staffRepo.StaffRepository = (*mockStaffRepo)(nil)
+var _ StaffRepository = (*mockStaffRepo)(nil)
 
 type mockStaffMembershipRepo struct {
 	membership         *staffDomain.StaffMembership
@@ -103,10 +99,6 @@ type mockStaffMembershipRepo struct {
 	saveCalls          int
 	deleteByAccCalls   int
 	deleteByStaffCalls int
-}
-
-func (m *mockStaffMembershipRepo) GetByAccountID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID) (*staffDomain.StaffMembership, error) {
-	return m.membership, nil
 }
 
 func (m *mockStaffMembershipRepo) GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staffDomain.StaffMembership, error) {
@@ -138,11 +130,6 @@ func (m *mockStaffMembershipRepo) ListAccountsByStaffID(ctx context.Context, exe
 	return m.accounts, nil
 }
 
-func (m *mockStaffMembershipRepo) DeleteByAccountID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID) error {
-	m.deleteByAccCalls++
-	return m.deleteByAccErr
-}
-
 func (m *mockStaffMembershipRepo) DeleteByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) error {
 	m.deleteByAccCalls++
 	return m.deleteByAccErr
@@ -153,7 +140,7 @@ func (m *mockStaffMembershipRepo) DeleteByStaffID(ctx context.Context, exec tran
 	return m.deleteByStaffErr
 }
 
-var _ staffRepo.StaffMembershipRepository = (*mockStaffMembershipRepo)(nil)
+var _ StaffMembershipRepository = (*mockStaffMembershipRepo)(nil)
 
 type mockAccountRepo struct {
 	account        *AccountInfo
@@ -200,10 +187,6 @@ type mockUserRepo struct {
 	createCalls int
 }
 
-func (m *mockUserRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*userDomain.User, error) {
-	return m.user, nil
-}
-
 func (m *mockUserRepo) GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*userDomain.User, error) {
 	return m.user, nil
 }
@@ -213,15 +196,7 @@ func (m *mockUserRepo) CreateUser(ctx context.Context, exec transaction.Executor
 	return nil
 }
 
-func (m *mockUserRepo) SaveProfile(ctx context.Context, exec transaction.Executor, props userRepo.SaveProfileProps) error {
-	return nil
-}
-
-func (m *mockUserRepo) Delete(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
-	return nil
-}
-
-var _ userRepo.UserRepository = (*mockUserRepo)(nil)
+var _ UserRepository = (*mockUserRepo)(nil)
 
 type mockRoleRepo struct {
 	role *staffDomain.Role
@@ -231,14 +206,7 @@ func (m *mockRoleRepo) GetByCode(ctx context.Context, exec transaction.Executor,
 	return m.role, nil
 }
 
-func (m *mockRoleRepo) GetRolesByAccountAndStaff(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staffDomain.Role, error) {
-	if m.role != nil {
-		return []staffDomain.Role{*m.role}, nil
-	}
-	return nil, nil
-}
-
-var _ staffRepo.RoleRepository = (*mockRoleRepo)(nil)
+var _ RoleRepository = (*mockRoleRepo)(nil)
 
 type mockPwHasher struct{}
 

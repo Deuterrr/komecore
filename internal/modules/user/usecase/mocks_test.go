@@ -32,7 +32,6 @@ func (m *mockTransactor) WithinTransaction(
 }
 
 type mockUserRepo struct {
-	userRepo.UserRepository
 	user             *userDomain.User
 	getByIDError     error
 	saveProfileError error

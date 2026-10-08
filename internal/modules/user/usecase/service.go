@@ -43,13 +43,18 @@ type UpdateProfileInput struct {
 	AvatarURL *string
 }
 
+type UserRepository interface {
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*domain.User, error)
+	SaveProfile(ctx context.Context, exec transaction.Executor, props userRepo.SaveProfileProps) error
+}
+
 type UserService struct {
 	executor             transaction.Executor
 	transactor           transaction.Transactor
 	accountRepo          AccountReader
 	staffProfileProvider StaffProfileProvider
 	sessionRepo          SessionReader
-	userRepo             userRepo.UserRepository
+	userRepo             UserRepository
 }
 
 func NewUserService(
@@ -58,7 +63,7 @@ func NewUserService(
 	accountRepo AccountReader,
 	staffProfileProvider StaffProfileProvider,
 	sessionRepo SessionReader,
-	userRepo userRepo.UserRepository,
+	userRepo UserRepository,
 ) *UserService {
 	return &UserService{
 		executor:             executor,

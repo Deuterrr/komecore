@@ -8,16 +8,37 @@ import (
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/cart/domain"
-	"komecore/internal/modules/cart/repository"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
-	inventoryRepo "komecore/internal/modules/inventory/repository"
 	productDomain "komecore/internal/modules/product/domain"
-	productRepo "komecore/internal/modules/product/repository"
 	shopDomain "komecore/internal/modules/shop/domain"
-	shopRepo "komecore/internal/modules/shop/repository"
 
 	"github.com/google/uuid"
 )
+
+type CartRepository interface {
+	GetWithItemsByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (*domain.Cart, error)
+	NewCart(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (*domain.Cart, error)
+	Save(ctx context.Context, exec transaction.Executor, cart *domain.Cart) error
+}
+
+type ProductCatalogReader interface {
+	FindByIDs(ctx context.Context, exec transaction.Executor, ids []uuid.UUID) ([]productDomain.Product, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*productDomain.Product, error)
+}
+
+type InventoryStockReader interface {
+	ListByProductIDs(ctx context.Context, exec transaction.Executor, productIDs []uuid.UUID) (map[uuid.UUID][]inventoryDomain.Inventory, error)
+	GetByProductIDAndShopID(ctx context.Context, exec transaction.Executor, productID, shopID uuid.UUID) (*inventoryDomain.Inventory, error)
+}
+
+type ProductImageCatalogReader interface {
+	ListByProductIDs(ctx context.Context, exec transaction.Executor, productIDs []uuid.UUID) (map[uuid.UUID][]productDomain.ProductImage, error)
+}
+
+type ShopCatalogReader interface {
+	FindByIDs(ctx context.Context, exec transaction.Executor, ids []uuid.UUID) ([]shopDomain.Shop, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*shopDomain.Shop, error)
+}
 
 const MaxCartItemQuantity = 80
 
@@ -69,22 +90,22 @@ type RemoveItemByIDInput struct {
 }
 
 type CartService struct {
-	cartRepo       repository.CartRepository
-	inventoryRepo  inventoryRepo.InventoryRepository
-	productRepo    productRepo.ProductRepository
-	productImgRepo productRepo.ProductImageRepository
-	shopRepo       shopRepo.ShopRepository
+	cartRepo       CartRepository
+	inventoryRepo  InventoryStockReader
+	productRepo    ProductCatalogReader
+	productImgRepo ProductImageCatalogReader
+	shopRepo       ShopCatalogReader
 	fileStore      storage.Provider
 	executor       transaction.Executor
 	transactor     transaction.Transactor
 }
 
 func NewCartService(
-	cartRepo repository.CartRepository,
-	inventoryRepo inventoryRepo.InventoryRepository,
-	productRepo productRepo.ProductRepository,
-	productImgRepo productRepo.ProductImageRepository,
-	shopRepo shopRepo.ShopRepository,
+	cartRepo CartRepository,
+	inventoryRepo InventoryStockReader,
+	productRepo ProductCatalogReader,
+	productImgRepo ProductImageCatalogReader,
+	shopRepo ShopCatalogReader,
 	fileStore storage.Provider,
 	executor transaction.Executor,
 	transactor transaction.Transactor,

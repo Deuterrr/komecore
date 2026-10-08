@@ -5,9 +5,7 @@ import (
 
 	transaction "komecore/internal/infra/transactor"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
-	inventoryRepo "komecore/internal/modules/inventory/repository"
 	productDomain "komecore/internal/modules/product/domain"
-	productRepo "komecore/internal/modules/product/repository"
 	"komecore/internal/modules/wishlist/domain"
 
 	"github.com/google/uuid"
@@ -69,7 +67,6 @@ func (m *mockWishlistRepo) Exists(_ context.Context, _ transaction.Executor, cus
 }
 
 type mockProductRepo struct {
-	productRepo.ProductRepository
 	products map[uuid.UUID]*productDomain.Product
 	getErr   error
 	findErr  error
@@ -96,7 +93,6 @@ func (m *mockProductRepo) FindByIDs(_ context.Context, _ transaction.Executor, i
 }
 
 type mockInventoryRepo struct {
-	inventoryRepo.InventoryRepository
 	inventories map[uuid.UUID][]inventoryDomain.Inventory
 }
 

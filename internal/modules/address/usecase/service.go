@@ -7,11 +7,28 @@ import (
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/domain"
-	"komecore/internal/modules/address/repository"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
 )
+
+type CustomerAddressRepository interface {
+	ListByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) ([]domain.CustomerAddress, error)
+	CountByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (*int, error)
+	GetByID(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) (*domain.CustomerAddress, error)
+	UnsetDefaultByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) error
+	Save(ctx context.Context, exec transaction.Executor, address domain.CustomerAddress) error
+	Delete(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) error
+}
+
+type ShopAddressRepository interface {
+	FindByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) ([]domain.ShopAddress, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*domain.ShopAddress, error)
+	UnsetActiveByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) error
+	Create(ctx context.Context, exec transaction.Executor, address domain.ShopAddress) error
+	Update(ctx context.Context, exec transaction.Executor, address domain.ShopAddress) error
+	Delete(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) error
+}
 
 type SaveCustomerAddressInput struct {
 	ID           *uuid.UUID
@@ -70,15 +87,15 @@ type UpdateShopAddressInput struct {
 }
 
 type AddressService struct {
-	customerAddressRepo repository.CustomerAddressRepository
-	shopAddressRepo     repository.ShopAddressRepository
+	customerAddressRepo CustomerAddressRepository
+	shopAddressRepo     ShopAddressRepository
 	executor            transaction.Executor
 	transactor          transaction.Transactor
 }
 
 func NewAddressService(
-	customerAddressRepo repository.CustomerAddressRepository,
-	shopAddressRepo repository.ShopAddressRepository,
+	customerAddressRepo CustomerAddressRepository,
+	shopAddressRepo ShopAddressRepository,
 	executor transaction.Executor,
 	transactor transaction.Transactor,
 ) *AddressService {

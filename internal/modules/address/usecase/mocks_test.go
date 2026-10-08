@@ -5,7 +5,6 @@ import (
 
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/domain"
-	"komecore/internal/modules/address/repository"
 
 	"github.com/google/uuid"
 )
@@ -15,7 +14,6 @@ type mockExecutor struct {
 }
 
 type mockTransactor struct {
-	transaction.Transactor
 	err error
 }
 
@@ -30,7 +28,6 @@ func (m *mockTransactor) WithinTransaction(
 }
 
 type mockCustomerAddressRepo struct {
-	repository.CustomerAddressRepository
 	addresses       map[uuid.UUID]domain.CustomerAddress
 	count           *int
 	getByIDError    error

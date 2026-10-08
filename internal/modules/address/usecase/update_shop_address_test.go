@@ -7,19 +7,25 @@ import (
 
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/domain"
-	"komecore/internal/modules/address/repository"
 
 	"github.com/google/uuid"
 )
 
 type mockUpdateShopAddressRepository struct {
-	repository.ShopAddressRepository
 	address          *domain.ShopAddress
 	getErr           error
 	updateCalls      int
 	updateErr        error
 	unsetActiveCalls int
 	unsetActiveErr   error
+}
+
+func (m *mockUpdateShopAddressRepository) FindByShopID(
+	ctx context.Context,
+	exec transaction.Executor,
+	shopID uuid.UUID,
+) ([]domain.ShopAddress, error) {
+	return nil, nil
 }
 
 func (m *mockUpdateShopAddressRepository) GetByID(
@@ -33,6 +39,14 @@ func (m *mockUpdateShopAddressRepository) GetByID(
 	return m.address, nil
 }
 
+func (m *mockUpdateShopAddressRepository) Create(
+	ctx context.Context,
+	exec transaction.Executor,
+	address domain.ShopAddress,
+) error {
+	return nil
+}
+
 func (m *mockUpdateShopAddressRepository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
@@ -40,6 +54,14 @@ func (m *mockUpdateShopAddressRepository) Update(
 ) error {
 	m.updateCalls++
 	return m.updateErr
+}
+
+func (m *mockUpdateShopAddressRepository) Delete(
+	ctx context.Context,
+	exec transaction.Executor,
+	addressID uuid.UUID,
+) error {
+	return nil
 }
 
 func (m *mockUpdateShopAddressRepository) UnsetActiveByShopID(
@@ -51,9 +73,7 @@ func (m *mockUpdateShopAddressRepository) UnsetActiveByShopID(
 	return m.unsetActiveErr
 }
 
-type mockTransactor struct {
-	transaction.Transactor
-}
+type mockTransactor struct{}
 
 func (m *mockTransactor) WithinTransaction(
 	ctx context.Context,

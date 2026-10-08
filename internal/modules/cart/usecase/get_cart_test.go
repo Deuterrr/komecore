@@ -7,11 +7,8 @@ import (
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	cartDomain "komecore/internal/modules/cart/domain"
-	cartRepo "komecore/internal/modules/cart/repository"
 	inventoryDomain "komecore/internal/modules/inventory/domain"
-	inventoryRepo "komecore/internal/modules/inventory/repository"
 	productDomain "komecore/internal/modules/product/domain"
-	productRepo "komecore/internal/modules/product/repository"
 	image "komecore/pkg/imageutil"
 
 	"github.com/google/uuid"
@@ -19,7 +16,6 @@ import (
 
 // Mocks
 type mockCartRepository struct {
-	cartRepo.CartRepository
 	cart *cartDomain.Cart
 	err  error
 }
@@ -47,8 +43,16 @@ func (m *mockCartRepository) NewCart(
 	}, nil
 }
 
+func (m *mockCartRepository) Save(
+	ctx context.Context,
+	exec transaction.Executor,
+	cart *cartDomain.Cart,
+) error {
+	m.cart = cart
+	return nil
+}
+
 type mockInventoryRepository struct {
-	inventoryRepo.InventoryRepository
 	inventories map[uuid.UUID][]inventoryDomain.Inventory
 	err         error
 }
@@ -64,8 +68,15 @@ func (m *mockInventoryRepository) ListByProductIDs(
 	return m.inventories, nil
 }
 
+func (m *mockInventoryRepository) GetByProductIDAndShopID(
+	ctx context.Context,
+	exec transaction.Executor,
+	productID, shopID uuid.UUID,
+) (*inventoryDomain.Inventory, error) {
+	return nil, nil
+}
+
 type mockProductRepository struct {
-	productRepo.ProductRepository
 	products []productDomain.Product
 	err      error
 }
@@ -81,8 +92,20 @@ func (m *mockProductRepository) FindByIDs(
 	return m.products, nil
 }
 
+func (m *mockProductRepository) GetByID(
+	ctx context.Context,
+	exec transaction.Executor,
+	id uuid.UUID,
+) (*productDomain.Product, error) {
+	for i := range m.products {
+		if m.products[i].ID == id {
+			return &m.products[i], nil
+		}
+	}
+	return nil, nil
+}
+
 type mockProductImageRepository struct {
-	productRepo.ProductImageRepository
 	images map[uuid.UUID][]productDomain.ProductImage
 	err    error
 }
