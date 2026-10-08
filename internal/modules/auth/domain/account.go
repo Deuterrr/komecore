@@ -3,6 +3,7 @@ package domain
 import (
 	"time"
 
+	"komecore/internal/common/authctx"
 	query "komecore/internal/shared/query"
 
 	"github.com/google/uuid"
@@ -10,7 +11,7 @@ import (
 
 type (
 	AccountStatus string
-	AccountType   string
+	AccountType   = authctx.AccountType
 )
 
 const (
@@ -21,8 +22,8 @@ const (
 )
 
 const (
-	AccountTypeCustomer AccountType = "customer"
-	AccountTypeStaff    AccountType = "staff"
+	AccountTypeCustomer = authctx.AccountTypeCustomer
+	AccountTypeStaff    = authctx.AccountTypeStaff
 )
 
 var (

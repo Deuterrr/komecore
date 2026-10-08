@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authorDomain "komecore/internal/modules/auth/domain"
 	"komecore/internal/modules/shop/domain"
 	"komecore/internal/modules/shop/repository"
 
@@ -59,9 +59,9 @@ func TestDeleteShop_Success(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaffAdmin},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
 		},
 	}
 
@@ -83,9 +83,9 @@ func TestDeleteShop_ForbiddenForNonAdmin(t *testing.T) {
 	repo := &mockDeleteShopRepository{}
 	exec := &mockExecutor{}
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaff},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaff},
 		},
 	}
 
@@ -108,9 +108,9 @@ func TestDeleteShop_NotFound(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaffAdmin},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
 		},
 	}
 
@@ -133,9 +133,9 @@ func TestDeleteShop_AlreadyDeleted(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaffAdmin},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
 		},
 	}
 
@@ -159,9 +159,9 @@ func TestDeleteShop_RepoErrorOnGet(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaffAdmin},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
 		},
 	}
 
@@ -189,9 +189,9 @@ func TestDeleteShop_RepoErrorOnDelete(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaffAdmin},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
 		},
 	}
 

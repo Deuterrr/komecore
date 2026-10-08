@@ -4,15 +4,15 @@ import (
 	"net/http"
 
 	apperrors "komecore/internal/common/errors"
-	authdomain "komecore/internal/modules/auth/domain"
+	"komecore/internal/common/authctx"
 
 	"github.com/google/uuid"
 )
 
 // RequireAuth extracts and validates that the request context has an authenticated session.
 // Returns 401 Unauthorized if missing or unauthenticated.
-func RequireAuth(r *http.Request) (*authdomain.AuthContext, error) {
-	authCtx, ok := authdomain.GetAuthContext(r.Context())
+func RequireAuth(r *http.Request) (*authctx.AuthContext, error) {
+	authCtx, ok := authctx.GetAuthContext(r.Context())
 	if !ok || !authCtx.IsAuthenticated {
 		return nil, apperrors.NewUnauthorized("authentication required")
 	}
@@ -21,7 +21,7 @@ func RequireAuth(r *http.Request) (*authdomain.AuthContext, error) {
 
 // RequireCustomer extracts and validates that the request is authenticated by a customer.
 // Returns 401 Unauthorized if unauthenticated, or 403 Forbidden if not a customer account.
-func RequireCustomer(r *http.Request) (*authdomain.AuthContext, uuid.UUID, error) {
+func RequireCustomer(r *http.Request) (*authctx.AuthContext, uuid.UUID, error) {
 	authCtx, err := RequireAuth(r)
 	if err != nil {
 		return nil, uuid.Nil, err
@@ -34,7 +34,7 @@ func RequireCustomer(r *http.Request) (*authdomain.AuthContext, uuid.UUID, error
 
 // RequireStaff extracts and validates that the request is authenticated by a staff member.
 // Returns 401 Unauthorized if unauthenticated, or 403 Forbidden if not a staff account.
-func RequireStaff(r *http.Request) (*authdomain.AuthContext, uuid.UUID, error) {
+func RequireStaff(r *http.Request) (*authctx.AuthContext, uuid.UUID, error) {
 	authCtx, err := RequireAuth(r)
 	if err != nil {
 		return nil, uuid.Nil, err

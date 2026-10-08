@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authorDomain "komecore/internal/modules/auth/domain"
 	"komecore/internal/modules/shop/domain"
 	"komecore/internal/modules/shop/repository"
 	slug "komecore/pkg/slug"
@@ -50,9 +50,9 @@ func TestSaveShop_AdminCreate(t *testing.T) {
 	exec := &mockExecutor{}
 	slugGen := slug.NewGenerator()
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaffAdmin},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaffAdmin},
 		},
 	}
 
@@ -92,9 +92,9 @@ func TestSaveShop_RegularStaffCreate(t *testing.T) {
 	exec := &mockExecutor{}
 	slugGen := slug.NewGenerator()
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaff},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaff},
 		},
 	}
 
@@ -147,9 +147,9 @@ func TestSaveShop_RegularStaffUpdatePreservesStatus(t *testing.T) {
 	exec := &mockExecutor{}
 	slugGen := slug.NewGenerator()
 
-	actor := authorDomain.Actor{
-		Roles: []authorDomain.Role{
-			{Code: authorDomain.RoleStaff},
+	actor := authctx.Actor{
+		Roles: []authctx.Role{
+			{Code: authctx.RoleStaff},
 		},
 	}
 

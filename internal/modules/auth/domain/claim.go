@@ -3,14 +3,16 @@ package domain
 import (
 	"time"
 
+	"komecore/internal/common/authctx"
+
 	"github.com/google/uuid"
 )
 
-type TokenType string
+type TokenType = authctx.TokenType
 
 const (
-	TokenTypeAccess  TokenType = "access"
-	TokenTypeRefresh TokenType = "refresh"
+	TokenTypeAccess  = authctx.TokenTypeAccess
+	TokenTypeRefresh = authctx.TokenTypeRefresh
 )
 
 // TokenClaims represents the claims extracted from an authentication token.

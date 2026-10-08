@@ -6,8 +6,7 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authDomain "komecore/internal/modules/auth/domain"
-	authSvc "komecore/internal/modules/auth/infra/service"
+	"komecore/internal/common/authctx"
 	shopDomain "komecore/internal/modules/shop/domain"
 	"komecore/internal/modules/shop/usecase"
 
@@ -106,12 +105,12 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 		input.ApprovalStatus = &approvalParam
 	}
 
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if ok && actor.StaffID != nil && !actor.IsSuperAdmin() {
 		allAssigned := actor.GetAssignedShopIDs()
 		var assignedIDs []uuid.UUID
 		for _, sID := range allAssigned {
-			if actor.HasPermission(sID, authDomain.PermissionShopView) || actor.HasPermission(sID, authDomain.PermissionOrderRead) {
+			if actor.HasPermission(sID, authctx.PermissionShopView) || actor.HasPermission(sID, authctx.PermissionOrderRead) {
 				assignedIDs = append(assignedIDs, sID)
 			}
 		}
@@ -207,7 +206,7 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
@@ -342,7 +341,7 @@ func (h *ShopHandler) GetShopProducts(w http.ResponseWriter, r *http.Request) er
 }
 
 func (h *ShopHandler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}

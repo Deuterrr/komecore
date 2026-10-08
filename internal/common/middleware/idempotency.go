@@ -10,8 +10,8 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
+	"komecore/internal/common/authctx"
 	"komecore/internal/infra/cache"
-	authendomain "komecore/internal/modules/auth/domain"
 )
 
 type IdempotencyStatus string
@@ -139,7 +139,7 @@ func (b *bodyRecorder) Write(data []byte) (int, error) {
 }
 
 func resolveActorID(ctx context.Context, r *http.Request) string {
-	if authCtx, ok := authendomain.GetAuthContext(ctx); ok && authCtx.IsAuthenticated {
+	if authCtx, ok := authctx.GetAuthContext(ctx); ok && authCtx.IsAuthenticated {
 		if authCtx.CustomerID != nil {
 			return authCtx.CustomerID.String()
 		}

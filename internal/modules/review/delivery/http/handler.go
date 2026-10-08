@@ -5,7 +5,7 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authService "komecore/internal/modules/auth/infra/service"
+	"komecore/internal/common/authctx"
 	"komecore/internal/modules/review/usecase"
 )
 
@@ -120,13 +120,13 @@ func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ReviewHandler) DeleteReview(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authService.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok || actor == nil {
 		authCtx, err := apphttp.RequireAuth(r)
 		if err != nil {
 			return err
 		}
-		actor = authService.ActorFromAuthContext(authCtx)
+		actor = authctx.ActorFromAuthContext(authCtx)
 	}
 
 	reviewID, err := apphttp.ParamUUID(r, "id")

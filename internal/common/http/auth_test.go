@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	apphttp "komecore/internal/common/http"
-	authdomain "komecore/internal/modules/auth/domain"
+	"komecore/internal/common/authctx"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ func TestRequireAuth(t *testing.T) {
 
 	t.Run("unauthenticated context returns unauthorized", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		req = req.WithContext(authdomain.WithAuthContext(req.Context(), &authdomain.AuthContext{
+		req = req.WithContext(authctx.WithAuthContext(req.Context(), &authctx.AuthContext{
 			IsAuthenticated: false,
 		}))
 		ctx, err := apphttp.RequireAuth(req)
@@ -36,7 +36,7 @@ func TestRequireAuth(t *testing.T) {
 	t.Run("authenticated context returns auth context", func(t *testing.T) {
 		userID := uuid.New()
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		req = req.WithContext(authdomain.WithAuthContext(req.Context(), &authdomain.AuthContext{
+		req = req.WithContext(authctx.WithAuthContext(req.Context(), &authctx.AuthContext{
 			UserID:          userID,
 			IsAuthenticated: true,
 		}))
@@ -59,7 +59,7 @@ func TestRequireCustomer(t *testing.T) {
 
 	t.Run("authenticated without customer id returns forbidden", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		req = req.WithContext(authdomain.WithAuthContext(req.Context(), &authdomain.AuthContext{
+		req = req.WithContext(authctx.WithAuthContext(req.Context(), &authctx.AuthContext{
 			UserID:          uuid.New(),
 			IsAuthenticated: true,
 			CustomerID:      nil,
@@ -74,7 +74,7 @@ func TestRequireCustomer(t *testing.T) {
 	t.Run("valid customer returns auth context and customer id", func(t *testing.T) {
 		expectedID := uuid.New()
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		req = req.WithContext(authdomain.WithAuthContext(req.Context(), &authdomain.AuthContext{
+		req = req.WithContext(authctx.WithAuthContext(req.Context(), &authctx.AuthContext{
 			UserID:          uuid.New(),
 			IsAuthenticated: true,
 			CustomerID:      &expectedID,
@@ -97,7 +97,7 @@ func TestRequireStaff(t *testing.T) {
 
 	t.Run("authenticated without staff id returns forbidden", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		req = req.WithContext(authdomain.WithAuthContext(req.Context(), &authdomain.AuthContext{
+		req = req.WithContext(authctx.WithAuthContext(req.Context(), &authctx.AuthContext{
 			UserID:          uuid.New(),
 			IsAuthenticated: true,
 			StaffID:         nil,
@@ -112,7 +112,7 @@ func TestRequireStaff(t *testing.T) {
 	t.Run("valid staff returns auth context and staff id", func(t *testing.T) {
 		expectedID := uuid.New()
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
-		req = req.WithContext(authdomain.WithAuthContext(req.Context(), &authdomain.AuthContext{
+		req = req.WithContext(authctx.WithAuthContext(req.Context(), &authctx.AuthContext{
 			UserID:          uuid.New(),
 			IsAuthenticated: true,
 			StaffID:         &expectedID,

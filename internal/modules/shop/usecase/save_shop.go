@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authorDomain "komecore/internal/modules/auth/domain"
 	"komecore/internal/modules/shop/domain"
 	"komecore/internal/modules/shop/repository"
 	appclock "komecore/pkg/clock"
@@ -43,12 +43,12 @@ type SaveShopInput struct {
 
 func (u *SaveShopUsecase) Execute(
 	ctx context.Context,
-	actor authorDomain.Actor,
+	actor authctx.Actor,
 	input SaveShopInput,
 ) error {
 	isAdmin := false
 	for _, actorRole := range actor.Roles {
-		if actorRole.Code == authorDomain.RoleStaffAdmin {
+		if actorRole.Code == authctx.RoleStaffAdmin {
 			isAdmin = true
 			break
 		}

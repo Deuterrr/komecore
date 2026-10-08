@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	apperrors "komecore/internal/common/errors"
-	authDomain "komecore/internal/modules/auth/domain"
+	"komecore/internal/common/authctx"
 	productDomain "komecore/internal/modules/product/domain"
 	"komecore/internal/modules/review/domain"
 	"komecore/internal/modules/review/usecase"
@@ -32,9 +32,9 @@ func TestDeleteReview_CustomerOwner_Success(t *testing.T) {
 	}
 
 	uc := usecase.NewDeleteReviewUsecase(revRepo, pRepo, nil, nil, &mockTransactor{})
-	actor := &authDomain.Actor{
+	actor := &authctx.Actor{
 		CustomerID: &custID,
-		Type:       authDomain.AccountTypeCustomer,
+		Type:       authctx.AccountTypeCustomer,
 	}
 
 	err := uc.Execute(ctx, usecase.DeleteReviewInput{
@@ -65,9 +65,9 @@ func TestDeleteReview_CustomerNotOwner_Forbidden(t *testing.T) {
 	}
 
 	uc := usecase.NewDeleteReviewUsecase(revRepo, pRepo, nil, nil, &mockTransactor{})
-	actor := &authDomain.Actor{
+	actor := &authctx.Actor{
 		CustomerID: &attackerCustID,
-		Type:       authDomain.AccountTypeCustomer,
+		Type:       authctx.AccountTypeCustomer,
 	}
 
 	err := uc.Execute(ctx, usecase.DeleteReviewInput{
@@ -96,10 +96,10 @@ func TestDeleteReview_StaffAdmin_Success(t *testing.T) {
 
 	uc := usecase.NewDeleteReviewUsecase(revRepo, pRepo, nil, nil, &mockTransactor{})
 	staffID := uuid.New()
-	actor := &authDomain.Actor{
+	actor := &authctx.Actor{
 		StaffID: &staffID,
-		Type:    authDomain.AccountTypeStaff,
-		Roles:   []authDomain.Role{{Code: authDomain.RoleStaffAdmin}},
+		Type:    authctx.AccountTypeStaff,
+		Roles:   []authctx.Role{{Code: authctx.RoleStaffAdmin}},
 	}
 
 	err := uc.Execute(ctx, usecase.DeleteReviewInput{

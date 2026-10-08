@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authorDomain "komecore/internal/modules/auth/domain"
 	"komecore/internal/modules/shop/repository"
 
 	"github.com/google/uuid"
@@ -29,12 +29,12 @@ func NewDeleteShopUsecase(
 
 func (u *DeleteShopUsecase) Execute(
 	ctx context.Context,
-	actor authorDomain.Actor,
+	actor authctx.Actor,
 	shopID uuid.UUID,
 ) error {
 	isAdmin := false
 	for _, role := range actor.Roles {
-		if role.Code == authorDomain.RoleStaffAdmin {
+		if role.Code == authctx.RoleStaffAdmin {
 			isAdmin = true
 			break
 		}

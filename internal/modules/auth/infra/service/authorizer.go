@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"net/http"
 	"slices"
 
@@ -9,6 +8,7 @@ import (
 	apphttp "komecore/internal/common/http"
 	appmiddleware "komecore/internal/common/middleware"
 	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/common/authctx"
 	"komecore/internal/modules/auth/domain"
 	"komecore/internal/modules/auth/repository"
 
@@ -143,44 +143,8 @@ func (s *authorizer) OptionalLoadActor(exec transaction.Executor) appmiddleware.
 	}
 }
 
-type actorContextKey struct{}
-
-func WithActor(ctx context.Context, actor *domain.Actor) context.Context {
-	return context.WithValue(ctx, actorContextKey{}, actor)
-}
-
-func GetActor(ctx context.Context) (*domain.Actor, bool) {
-	actor, ok := ctx.Value(actorContextKey{}).(*domain.Actor)
-	return actor, ok
-}
-
-func ActorFromAuthContext(authCtx *domain.AuthContext) *domain.Actor {
-	if authCtx == nil {
-		return nil
-	}
-
-	accType := authCtx.AccountType
-	if accType == "" {
-		if authCtx.StaffID != nil {
-			accType = domain.AccountTypeStaff
-		} else {
-			accType = domain.AccountTypeCustomer
-		}
-	}
-
-	var roles []domain.Role
-	for _, r := range authCtx.Roles {
-		roles = append(roles, domain.Role{
-			Code: domain.RoleCode(r),
-			Name: r,
-		})
-	}
-
-	return &domain.Actor{
-		AccountID:  authCtx.UserID,
-		Type:       accType,
-		StaffID:    authCtx.StaffID,
-		CustomerID: authCtx.CustomerID,
-		Roles:      roles,
-	}
-}
+var (
+	WithActor            = authctx.WithActor
+	GetActor             = authctx.GetActor
+	ActorFromAuthContext = authctx.ActorFromAuthContext
+)

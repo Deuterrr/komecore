@@ -7,7 +7,7 @@ import (
 	apperrors "komecore/internal/common/errors"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
-	authDomain "komecore/internal/modules/auth/domain"
+	"komecore/internal/common/authctx"
 	productRepo "komecore/internal/modules/product/repository"
 	"komecore/internal/modules/review/repository"
 
@@ -16,7 +16,7 @@ import (
 
 type DeleteReviewInput struct {
 	ReviewID uuid.UUID
-	Actor    *authDomain.Actor
+	Actor    *authctx.Actor
 }
 
 type DeleteReviewUsecase struct {
@@ -61,11 +61,11 @@ func (u *DeleteReviewUsecase) Execute(ctx context.Context, input DeleteReviewInp
 	}
 
 	switch input.Actor.Type {
-	case authDomain.AccountTypeCustomer:
+	case authctx.AccountTypeCustomer:
 		if input.Actor.CustomerID == nil || *input.Actor.CustomerID != review.CustomerID {
 			return apperrors.NewForbidden("forbidden: cannot delete review belonging to another customer")
 		}
-	case authDomain.AccountTypeStaff:
+	case authctx.AccountTypeStaff:
 		// Staff is authorized to delete/moderate reviews
 	default:
 		return apperrors.NewForbidden("forbidden: unauthorized to delete reviews")

@@ -1,6 +1,10 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	"komecore/internal/common/authctx"
+)
 
 var (
 	ErrInvalidCredentials   = errors.New("invalid credentials")
@@ -28,10 +32,10 @@ var (
 )
 
 var (
-	ErrAuthenticationRequired = errors.New("authentication required")
+	ErrAuthenticationRequired = authctx.ErrAuthenticationRequired
 )
 
 var (
-	ErrStaffRequired    = errors.New("staff account required")
-	ErrInsufficientRole = errors.New("insufficient role for operation")
+	ErrStaffRequired    = authctx.ErrStaffRequired
+	ErrInsufficientRole = authctx.ErrInsufficientRole
 )
