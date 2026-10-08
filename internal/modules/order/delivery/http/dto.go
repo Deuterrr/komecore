@@ -173,19 +173,3 @@ type orderResponse struct {
 	Shipments         []shipmentDetailResponse `json:"shipments"`
 	Address           *orderAddressResponse    `json:"address,omitempty"`
 }
-
-type trackingTimelineEventResponse struct {
-	Status      string    `json:"status"`
-	Description string    `json:"description"`
-	Location    string    `json:"location"`
-	Timestamp   time.Time `json:"timestamp"`
-}
-
-type orderTrackingResponse struct {
-	OrderID        string                          `json:"order_id"`
-	ShipmentID     string                          `json:"shipment_id"`
-	Courier        string                          `json:"courier"`
-	TrackingNumber *string                         `json:"tracking_number,omitempty"`
-	Warning        *string                         `json:"warning,omitempty"`
-	Timeline       []trackingTimelineEventResponse `json:"timeline"`
-}

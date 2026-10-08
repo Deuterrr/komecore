@@ -43,9 +43,9 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 			itemsResponse = append(itemsResponse, checkoutItemResponse{
 				ProductID:   item.ProductID,
 				CartItemID:  item.CartItemID,
-				ShopID:      item.ShopID,
-				Name:        item.Name,
-				Price:       item.Price,
+				ShopID:      shop.ShopID,
+				Name:        item.ProductName,
+				Price:       item.UnitPrice,
 				Quantity:    item.Quantity,
 				Subtotal:    item.Subtotal,
 				ItemOptions: normOpts,
@@ -53,7 +53,7 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		var shippingResponse []checkoutCouriersResponse
-		for _, courier := range shop.CostCouriers {
+		for _, courier := range shop.CourierOptions {
 			shippingResponse = append(shippingResponse, checkoutCouriersResponse{
 				Code:    courier.Code,
 				Name:    courier.Name,
@@ -79,7 +79,7 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 	var paymentMethods []paymentMethodResponse
 	for _, pM := range result.PaymentMethods {
 		paymentMethod := paymentMethodResponse{
-			ID:          pM.ID,
+			ID:          pM.PaymentMethodID,
 			Name:        pM.Name,
 			Type:        pM.Type,
 			Description: pM.Description,
@@ -104,8 +104,8 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 		PaymentMethods: paymentMethods,
 	}
 
-	if result.TotalAll > 0 {
-		resp.TotalAll = &result.TotalAll
+	if result.GrandTotal > 0 {
+		resp.TotalAll = &result.GrandTotal
 	}
 
 	apphttp.WriteJSON(w, http.StatusOK, resp)
@@ -154,23 +154,12 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 			itemsResponse = append(itemsResponse, checkoutItemResponse{
 				ProductID:   item.ProductID,
 				CartItemID:  item.CartItemID,
-				ShopID:      item.ShopID,
-				Name:        item.Name,
-				Price:       item.Price,
+				ShopID:      shop.ShopID,
+				Name:        item.ProductName,
+				Price:       item.UnitPrice,
 				Quantity:    item.Quantity,
 				Subtotal:    item.Subtotal,
 				ItemOptions: normOpts,
-			})
-		}
-
-		var shippingResponse []checkoutCouriersResponse
-		for _, courier := range shop.CostCouriers {
-			shippingResponse = append(shippingResponse, checkoutCouriersResponse{
-				Code:    courier.Code,
-				Name:    courier.Name,
-				Service: courier.Service,
-				ETD:     courier.ETD,
-				Fee:     courier.Fee,
 			})
 		}
 
@@ -181,13 +170,11 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 			Subtotal: shop.Subtotal,
 			Total:    &shop.Total,
 			Items:    itemsResponse,
-		}
-		if shop.SelectedCourier != nil {
-			shopReponse.SelectedCourier = selectedCourierResponse{
+			SelectedCourier: selectedCourierResponse{
 				Code:    shop.SelectedCourier.Code,
 				Service: shop.SelectedCourier.Service,
 				Fee:     shop.SelectedCourier.Fee,
-			}
+			},
 		}
 
 		shopsResponse = append(shopsResponse, shopReponse)
@@ -196,7 +183,7 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 	var paymentMethods []paymentMethodResponse
 	for _, pM := range result.PaymentMethods {
 		paymentMethod := paymentMethodResponse{
-			ID:          pM.ID,
+			ID:          pM.PaymentMethodID,
 			Name:        pM.Name,
 			Type:        pM.Type,
 			Description: pM.Description,
@@ -211,7 +198,7 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 	var selectedPayment *paymentMethodResponse
 	if result.SelectedPaymentMethod != nil {
 		selectedPayment = &paymentMethodResponse{
-			ID:          result.SelectedPaymentMethod.ID,
+			ID:          result.SelectedPaymentMethod.PaymentMethodID,
 			Name:        result.SelectedPaymentMethod.Name,
 			Type:        result.SelectedPaymentMethod.Type,
 			Description: result.SelectedPaymentMethod.Description,
@@ -228,14 +215,16 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 			Phone:         result.Address.Phone,
 			FullAddress:   result.Address.FullAddress,
 		},
-		Shops:                  shopsResponse,
-		TotalShipping:          result.TotalShippingFee,
-		Subtotal:               result.Subtotal,
-		SelectedPaymentMethods: *selectedPayment,
+		Shops:         shopsResponse,
+		TotalShipping: result.TotalShippingFee,
+		Subtotal:      result.Subtotal,
+	}
+	if selectedPayment != nil {
+		resp.SelectedPaymentMethods = *selectedPayment
 	}
 
-	if result.TotalAll > 0 {
-		resp.TotalAll = &result.TotalAll
+	if result.GrandTotal > 0 {
+		resp.TotalAll = &result.GrandTotal
 	}
 
 	apphttp.WriteJSON(w, http.StatusOK, resp)

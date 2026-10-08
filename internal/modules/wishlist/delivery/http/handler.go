@@ -9,20 +9,12 @@ import (
 )
 
 type WishlistHandler struct {
-	getWishlist        *usecase.GetWishlistUsecase
-	addToWishlist      *usecase.AddToWishlistUsecase
-	removeFromWishlist *usecase.RemoveFromWishlistUsecase
+	service *usecase.WishlistService
 }
 
-func NewWishlistHandler(
-	getWishlist *usecase.GetWishlistUsecase,
-	addToWishlist *usecase.AddToWishlistUsecase,
-	removeFromWishlist *usecase.RemoveFromWishlistUsecase,
-) *WishlistHandler {
+func NewWishlistHandler(service *usecase.WishlistService) *WishlistHandler {
 	return &WishlistHandler{
-		getWishlist:        getWishlist,
-		addToWishlist:      addToWishlist,
-		removeFromWishlist: removeFromWishlist,
+		service: service,
 	}
 }
 
@@ -32,29 +24,14 @@ func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
-	views, err := h.getWishlist.Execute(r.Context(), customerID)
+	views, err := h.service.GetWishlist(r.Context(), customerID)
 	if err != nil {
 		return err
 	}
 
-	items := make([]wishlistItemResponse, 0, len(views))
-	for _, v := range views {
-		items = append(items, wishlistItemResponse{
-			ProductID:    v.ProductID,
-			SKU:          v.SKU,
-			Name:         v.Name,
-			Slug:         v.Slug,
-			Price:        v.Price,
-			PrimaryImage: v.PrimaryImage,
-			InStock:      v.InStock,
-			TotalStock:   v.TotalStock,
-			CreatedAt:    v.CreatedAt,
-		})
-	}
-
 	apphttp.WriteJSON(w, http.StatusOK, wishlistResponse{
-		Items: items,
-		Total: len(items),
+		Items: views,
+		Total: len(views),
 	})
 	return nil
 }
@@ -70,7 +47,7 @@ func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) 
 		return apperrors.NewBadRequest("invalid product id")
 	}
 
-	err = h.addToWishlist.Execute(r.Context(), usecase.AddToWishlistInput{
+	err = h.service.AddToWishlist(r.Context(), usecase.AddToWishlistInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 	})
@@ -96,7 +73,7 @@ func (h *WishlistHandler) RemoveFromWishlist(w http.ResponseWriter, r *http.Requ
 		return apperrors.NewBadRequest("invalid product id")
 	}
 
-	err = h.removeFromWishlist.Execute(r.Context(), usecase.RemoveFromWishlistInput{
+	err = h.service.RemoveFromWishlist(r.Context(), usecase.RemoveFromWishlistInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 	})

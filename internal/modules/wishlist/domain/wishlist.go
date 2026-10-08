@@ -13,13 +13,13 @@ type WishlistItem struct {
 }
 
 type WishlistProductView struct {
-	ProductID    uuid.UUID
-	SKU          string
-	Name         string
-	Slug         string
-	Price        int64
-	PrimaryImage *string
-	InStock      bool
-	TotalStock   int
-	CreatedAt    time.Time
+	ProductID    uuid.UUID `json:"product_id"`
+	SKU          string    `json:"sku"`
+	Name         string    `json:"name"`
+	Slug         string    `json:"slug"`
+	Price        int64     `json:"price"`
+	PrimaryImage *string   `json:"primary_image"`
+	InStock      bool      `json:"in_stock"`
+	TotalStock   int       `json:"total_stock"`
+	CreatedAt    time.Time `json:"created_at"`
 }
