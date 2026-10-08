@@ -67,7 +67,7 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewAddStaffAccountUsecase(exec, tx, accRepo, pwHash, staffR, memRepo, roleR, audit)
+	uc := NewStaffService(exec, tx, staffR, memRepo, roleR, nil, accRepo, pwHash, nil, audit)
 
 	params := AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
@@ -77,7 +77,7 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 		Password:       "password123",
 	}
 
-	err := uc.Execute(context.Background(), params)
+	err := uc.AddStaffAccount(context.Background(), params)
 	require.NoError(t, err)
 	assert.Equal(t, 1, accRepo.createCalls)
 	assert.Equal(t, 1, memRepo.saveCalls)
@@ -86,19 +86,21 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 }
 
 func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
-	uc := NewAddStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
-		&customMockAccountRepo{},
-		&mockPwHasher{},
 		&mockStaffRepo{},
 		&mockStaffMembershipRepo{},
 		&mockRoleRepo{},
+		nil,
+		&customMockAccountRepo{},
+		&mockPwHasher{},
+		nil,
 		&mockAuditLogger{},
 	)
 
 	// Missing email
-	err := uc.Execute(context.Background(), AddStaffAccountParams{
+	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		Email:    "",
 		Password: "password123",
 	})
@@ -108,7 +110,7 @@ func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
 	assert.Equal(t, 400, badReq.StatusCode)
 
 	// Missing password
-	err = uc.Execute(context.Background(), AddStaffAccountParams{
+	err = uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		Email:    "staff@komecore.com",
 		Password: "",
 	})
@@ -136,18 +138,20 @@ func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
 		staff: &staffDomain.Staff{ID: targetStaffID, UserID: uuid.New()},
 	}
 
-	uc := NewAddStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
-		&customMockAccountRepo{},
-		&mockPwHasher{},
 		staffR,
 		memRepo,
 		&mockRoleRepo{},
+		nil,
+		&customMockAccountRepo{},
+		&mockPwHasher{},
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(context.Background(), AddStaffAccountParams{
+	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,
@@ -182,18 +186,20 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 		},
 	}
 
-	uc := NewAddStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
-		accRepo,
-		&mockPwHasher{},
 		&mockStaffRepo{},
 		memRepo,
 		&mockRoleRepo{},
+		nil,
+		accRepo,
+		&mockPwHasher{},
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(context.Background(), AddStaffAccountParams{
+	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,
@@ -233,18 +239,20 @@ func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
 		},
 	}
 
-	uc := NewAddStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
-		accRepo,
-		&mockPwHasher{},
 		staffR,
 		memRepo,
 		&mockRoleRepo{},
+		nil,
+		accRepo,
+		&mockPwHasher{},
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(context.Background(), AddStaffAccountParams{
+	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,

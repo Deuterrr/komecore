@@ -28,8 +28,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewDeleteCustomerAddressUsecase(exec, repo)
-		err := uc.Execute(ctx, addressID)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
+		err := uc.DeleteCustomerAddress(ctx, addressID)
 
 		require.NoError(t, err)
 		assert.Equal(t, 1, repo.getByIDCalls)
@@ -41,8 +41,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		repo := newMockCustomerAddressRepo() // empty
 		exec := &mockExecutor{}
 
-		uc := usecase.NewDeleteCustomerAddressUsecase(exec, repo)
-		err := uc.Execute(ctx, addressID)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
+		err := uc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsNotFound(err))
@@ -58,8 +58,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewDeleteCustomerAddressUsecase(exec, repo)
-		err := uc.Execute(ctx, addressID)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
+		err := uc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsConflict(err))
@@ -71,8 +71,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		repo.getByIDError = errors.New("db get error")
 		exec := &mockExecutor{}
 
-		uc := usecase.NewDeleteCustomerAddressUsecase(exec, repo)
-		err := uc.Execute(ctx, addressID)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
+		err := uc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve address")
@@ -89,8 +89,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		repo.deleteError = errors.New("db delete error")
 		exec := &mockExecutor{}
 
-		uc := usecase.NewDeleteCustomerAddressUsecase(exec, repo)
-		err := uc.Execute(ctx, addressID)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
+		err := uc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to delete address")

@@ -40,10 +40,10 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		input := baseInput
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		require.NoError(t, err)
 		assert.Equal(t, 1, repo.saveCalls)
 		assert.Equal(t, 1, repo.unsetDefaultCalls)
@@ -61,12 +61,12 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		isDefaultFalse := false
 		input := baseInput
 		input.IsDefault = &isDefaultFalse
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		require.NoError(t, err)
 		assert.Equal(t, 1, repo.saveCalls)
 		assert.Equal(t, 0, repo.unsetDefaultCalls)
@@ -81,12 +81,12 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		isDefaultTrue := true
 		input := baseInput
 		input.IsDefault = &isDefaultTrue
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		require.NoError(t, err)
 		assert.Equal(t, 1, repo.saveCalls)
 		assert.Equal(t, 1, repo.unsetDefaultCalls)
@@ -101,10 +101,10 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		input := baseInput
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsConflict(err))
 		assert.Equal(t, 0, repo.saveCalls)
@@ -115,12 +115,12 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		invalidLat := 120.0 // > 90
 		input := baseInput
 		input.Latitude = &invalidLat
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsBadRequest(err))
 		assert.Equal(t, 0, repo.saveCalls)
@@ -132,13 +132,13 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		tx := &mockTransactor{}
 
 		existingID := uuid.New()
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		input := baseInput
 		input.ID = &existingID
 		isDefaultFalse := false
 		input.IsDefault = &isDefaultFalse
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		require.NoError(t, err)
 		assert.Equal(t, 1, repo.saveCalls)
 		assert.Equal(t, 0, repo.countCalls) // count not called on update
@@ -152,10 +152,10 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		input := baseInput
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to count addresses")
 		assert.Equal(t, 0, repo.saveCalls)
@@ -169,10 +169,10 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		input := baseInput
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to unset default address")
 	})
@@ -185,10 +185,10 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 		exec := &mockExecutor{}
 		tx := &mockTransactor{}
 
-		uc := usecase.NewSaveCustomerAddressUsecase(exec, tx, repo)
+		uc := usecase.NewAddressService(repo, nil, exec, tx)
 		input := baseInput
 
-		err := uc.Execute(ctx, input)
+		err := uc.SaveCustomerAddress(ctx, input)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to save address")
 	})

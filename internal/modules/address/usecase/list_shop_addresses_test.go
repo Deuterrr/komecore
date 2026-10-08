@@ -31,8 +31,8 @@ func TestListShopAddressesUsecase_FindByShopID(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewListShopAddressesUsecase(repo, exec)
-		result, err := uc.FindByShopID(ctx, shopID)
+		uc := usecase.NewAddressService(nil, repo, exec, nil)
+		result, err := uc.ListShopAddresses(ctx, shopID)
 
 		require.NoError(t, err)
 		assert.Equal(t, expected, result)
@@ -45,8 +45,8 @@ func TestListShopAddressesUsecase_FindByShopID(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewListShopAddressesUsecase(repo, exec)
-		result, err := uc.FindByShopID(ctx, shopID)
+		uc := usecase.NewAddressService(nil, repo, exec, nil)
+		result, err := uc.ListShopAddresses(ctx, shopID)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)

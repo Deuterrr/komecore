@@ -36,16 +36,21 @@ func TestUpdateStaff_Success(t *testing.T) {
 
 	auditLogger := &mockAuditLogger{}
 
-	uc := NewUpdateStaffUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 		auditLogger,
 	)
 
 	newName := "Updated Branch"
-	err := uc.Execute(ctx, UpdateStaffInput{
+	err := uc.UpdateStaff(ctx, UpdateStaffInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,
@@ -69,15 +74,20 @@ func TestUpdateStaff_EmptyName(t *testing.T) {
 	actorAccountID := uuid.New()
 	actorStaffID := uuid.New()
 
-	uc := NewUpdateStaffUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		&mockStaffRepo{},
 		&mockStaffMembershipRepo{},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(ctx, UpdateStaffInput{
+	err := uc.UpdateStaff(ctx, UpdateStaffInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        actorStaffID,
@@ -114,15 +124,20 @@ func TestUpdateStaff_UnauthorizedRole(t *testing.T) {
 		staff: &staffDomain.Staff{ID: actorStaffID},
 	}
 
-	uc := NewUpdateStaffUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(ctx, UpdateStaffInput{
+	err := uc.UpdateStaff(ctx, UpdateStaffInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        actorStaffID,

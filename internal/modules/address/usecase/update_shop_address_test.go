@@ -100,9 +100,9 @@ func TestUpdateShopAddress_Success(t *testing.T) {
 		PostalCode:  "17520",
 	}
 
-	uc := NewUpdateShopAddressUsecase(repo, exec, transactor)
+	uc := NewAddressService(nil, repo, exec, transactor)
 
-	err := uc.Execute(ctx, input)
+	err := uc.UpdateShopAddress(ctx, input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -128,9 +128,9 @@ func TestUpdateShopAddress_NotFound(t *testing.T) {
 		ShopID: uuid.New(),
 	}
 
-	uc := NewUpdateShopAddressUsecase(repo, exec, transactor)
+	uc := NewAddressService(nil, repo, exec, transactor)
 
-	err := uc.Execute(ctx, input)
+	err := uc.UpdateShopAddress(ctx, input)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -158,9 +158,9 @@ func TestUpdateShopAddress_ShopIDMismatch(t *testing.T) {
 		ShopID: differentShopID,
 	}
 
-	uc := NewUpdateShopAddressUsecase(repo, exec, transactor)
+	uc := NewAddressService(nil, repo, exec, transactor)
 
-	err := uc.Execute(ctx, input)
+	err := uc.UpdateShopAddress(ctx, input)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -183,9 +183,9 @@ func TestUpdateShopAddress_AlreadyDeleted(t *testing.T) {
 		ShopID: shopID,
 	}
 
-	uc := NewUpdateShopAddressUsecase(repo, exec, transactor)
+	uc := NewAddressService(nil, repo, exec, transactor)
 
-	err := uc.Execute(ctx, input)
+	err := uc.UpdateShopAddress(ctx, input)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -205,9 +205,9 @@ func TestUpdateShopAddress_RepoGetError(t *testing.T) {
 		ShopID: uuid.New(),
 	}
 
-	uc := NewUpdateShopAddressUsecase(repo, exec, transactor)
+	uc := NewAddressService(nil, repo, exec, transactor)
 
-	err := uc.Execute(ctx, input)
+	err := uc.UpdateShopAddress(ctx, input)
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("expected error '%v', got '%v'", expectedErr, err)
 	}

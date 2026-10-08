@@ -15,32 +15,14 @@ import (
 type StaffHandler = staffHandler
 
 type staffHandler struct {
-	addStaffAccount    *usecase.AddStaffAccountUsecase
-	createStaff        *usecase.CreateStaffUsecase
-	findStaff          *usecase.FindStaffUsecase
-	listStaffAccounts  *usecase.ListStaffAccountsUsecase
-	updateStaff        *usecase.UpdateStaffUsecase
-	deleteStaff        *usecase.DeleteStaffUsecase
-	removeStaffAccount *usecase.RemoveStaffAccountUsecase
+	service *usecase.StaffService
 }
 
 func NewStaffHandler(
-	addStaffAccount *usecase.AddStaffAccountUsecase,
-	createStaff *usecase.CreateStaffUsecase,
-	findStaff *usecase.FindStaffUsecase,
-	listStaffAccounts *usecase.ListStaffAccountsUsecase,
-	updateStaff *usecase.UpdateStaffUsecase,
-	deleteStaff *usecase.DeleteStaffUsecase,
-	removeStaffAccount *usecase.RemoveStaffAccountUsecase,
+	service *usecase.StaffService,
 ) *staffHandler {
 	return &staffHandler{
-		addStaffAccount:    addStaffAccount,
-		createStaff:        createStaff,
-		findStaff:          findStaff,
-		listStaffAccounts:  listStaffAccounts,
-		updateStaff:        updateStaff,
-		deleteStaff:        deleteStaff,
-		removeStaffAccount: removeStaffAccount,
+		service: service,
 	}
 }
 
@@ -79,7 +61,7 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 		Password:       req.Password,
 	}
 
-	err = h.addStaffAccount.Execute(r.Context(), input)
+	err = h.service.AddStaffAccount(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -113,7 +95,7 @@ func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 		BannerUrl:   req.BannerUrl,
 	}
 
-	err := h.createStaff.Execute(r.Context(), input)
+	err := h.service.CreateStaff(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -152,7 +134,7 @@ func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 		input.ID = &id
 	}
 
-	staff, total, err := h.findStaff.Execute(r.Context(), input)
+	staff, total, err := h.service.FindStaff(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -202,7 +184,7 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 		StaffID:        staffID,
 	}
 
-	accounts, err := h.listStaffAccounts.Execute(r.Context(), input)
+	accounts, err := h.service.ListStaffAccounts(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -271,7 +253,7 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 		BannerUrl:      req.BannerUrl,
 	}
 
-	err = h.updateStaff.Execute(r.Context(), input)
+	err = h.service.UpdateStaff(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -305,7 +287,7 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 		StaffID:        staffID,
 	}
 
-	err = h.deleteStaff.Execute(r.Context(), input)
+	err = h.service.DeleteStaff(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -346,7 +328,7 @@ func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request
 		AccountID:      accountID,
 	}
 
-	err = h.removeStaffAccount.Execute(r.Context(), input)
+	err = h.service.RemoveStaffAccount(r.Context(), input)
 	if err != nil {
 		return err
 	}

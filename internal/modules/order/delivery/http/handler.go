@@ -29,7 +29,7 @@ type orderHandler struct {
 	updateOrderStatus    *usecase.UpdateOrderStatusUsecase
 	dispatchShopShipment *usecase.DispatchShopShipmentUsecase
 	getOrderTracking     *usecase.GetOrderTrackingUsecase
-	getShop              *shopUsecase.GetShopUsecase
+	shopService          *shopUsecase.ShopService
 	checkout             *usecase.CheckoutUsecase
 }
 
@@ -40,7 +40,7 @@ func NewOrderHandler(
 	updateOrderStatus *usecase.UpdateOrderStatusUsecase,
 	dispatchShopShipment *usecase.DispatchShopShipmentUsecase,
 	getOrderTracking *usecase.GetOrderTrackingUsecase,
-	getShop *shopUsecase.GetShopUsecase,
+	shopService *shopUsecase.ShopService,
 	checkout *usecase.CheckoutUsecase,
 ) *orderHandler {
 	return &orderHandler{
@@ -50,7 +50,7 @@ func NewOrderHandler(
 		updateOrderStatus:    updateOrderStatus,
 		dispatchShopShipment: dispatchShopShipment,
 		getOrderTracking:     getOrderTracking,
-		getShop:              getShop,
+		shopService:          shopService,
 		checkout:             checkout,
 	}
 }
@@ -719,29 +719,11 @@ func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 		return apperrors.NewNotFound("tracking information not found")
 	}
 
-	timeline := make([]trackingTimelineEventResponse, len(result.Timeline))
-	for i, e := range result.Timeline {
-		timeline[i] = trackingTimelineEventResponse{
-			Status:      e.Status,
-			Description: e.Description,
-			Location:    e.Location,
-			Timestamp:   e.Timestamp,
-		}
-	}
-
 	if result.Warning != nil {
 		w.Header().Set("X-Warning", *result.Warning)
 	}
 
-	resp := orderTrackingResponse{
-		OrderID:        result.OrderID.String(),
-		ShipmentID:     result.ShipmentID.String(),
-		Courier:        result.Courier,
-		TrackingNumber: result.TrackingNumber,
-		Warning:        result.Warning,
-		Timeline:       timeline,
-	}
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	apphttp.WriteJSON(w, http.StatusOK, result)
 	return nil
 }
 
@@ -797,25 +779,7 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 		w.Header().Set("X-Warning", *result.Warning)
 	}
 
-	timeline := make([]trackingTimelineEventResponse, len(result.Timeline))
-	for i, e := range result.Timeline {
-		timeline[i] = trackingTimelineEventResponse{
-			Status:      e.Status,
-			Description: e.Description,
-			Location:    e.Location,
-			Timestamp:   e.Timestamp,
-		}
-	}
-
-	resp := orderTrackingResponse{
-		OrderID:        result.OrderID.String(),
-		ShipmentID:     result.ShipmentID.String(),
-		Courier:        result.Courier,
-		TrackingNumber: result.TrackingNumber,
-		Warning:        result.Warning,
-		Timeline:       timeline,
-	}
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	apphttp.WriteJSON(w, http.StatusOK, result)
 	return nil
 }
 
@@ -966,10 +930,10 @@ func (h *orderHandler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, err
 		if targetSlug == "all" {
 			return nil, false, nil
 		}
-		if h.getShop == nil {
+		if h.shopService == nil {
 			return nil, true, apperrors.NewInternal(errors.New("shop filter service unavailable"))
 		}
-		shop, err := h.getShop.GetBySlug(r.Context(), targetSlug)
+		shop, err := h.shopService.GetBySlug(r.Context(), targetSlug)
 		if err != nil {
 			return nil, true, err
 		}

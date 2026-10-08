@@ -56,9 +56,9 @@ func TestDeleteShopAddress_Success(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	uc := NewDeleteShopAddressUsecase(repo, exec)
+	uc := NewAddressService(nil, repo, exec, nil)
 
-	err := uc.Execute(ctx, shopID, addressID)
+	err := uc.DeleteShopAddress(ctx, shopID, addressID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -84,9 +84,9 @@ func TestDeleteShopAddress_ConflictWhenActive(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	uc := NewDeleteShopAddressUsecase(repo, exec)
+	uc := NewAddressService(nil, repo, exec, nil)
 
-	err := uc.Execute(ctx, shopID, addressID)
+	err := uc.DeleteShopAddress(ctx, shopID, addressID)
 	if err == nil {
 		t.Fatal("expected conflict error when deleting active address, got nil")
 	}
@@ -103,9 +103,9 @@ func TestDeleteShopAddress_NotFound(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	uc := NewDeleteShopAddressUsecase(repo, exec)
+	uc := NewAddressService(nil, repo, exec, nil)
 
-	err := uc.Execute(ctx, uuid.New(), uuid.New())
+	err := uc.DeleteShopAddress(ctx, uuid.New(), uuid.New())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -127,9 +127,9 @@ func TestDeleteShopAddress_ShopIDMismatch(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	uc := NewDeleteShopAddressUsecase(repo, exec)
+	uc := NewAddressService(nil, repo, exec, nil)
 
-	err := uc.Execute(ctx, uuid.New(), addressID)
+	err := uc.DeleteShopAddress(ctx, uuid.New(), addressID)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -146,9 +146,9 @@ func TestDeleteShopAddress_AlreadyDeleted(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	uc := NewDeleteShopAddressUsecase(repo, exec)
+	uc := NewAddressService(nil, repo, exec, nil)
 
-	err := uc.Execute(ctx, shopID, addressID)
+	err := uc.DeleteShopAddress(ctx, shopID, addressID)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -162,9 +162,9 @@ func TestDeleteShopAddress_RepoGetError(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	uc := NewDeleteShopAddressUsecase(repo, exec)
+	uc := NewAddressService(nil, repo, exec, nil)
 
-	err := uc.Execute(ctx, uuid.New(), uuid.New())
+	err := uc.DeleteShopAddress(ctx, uuid.New(), uuid.New())
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("expected error '%v', got '%v'", expectedErr, err)
 	}

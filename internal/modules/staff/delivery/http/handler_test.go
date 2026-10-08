@@ -222,14 +222,20 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRe
 	audit := &mockAuditor{}
 	userDeletionSvc := &testUserDeletionService{}
 
-	createUC := usecase.NewCreateStaffUsecase(sRepo, uRepo, exec, tx, audit)
-	addUC := usecase.NewAddStaffAccountUsecase(exec, tx, aRepo, hasher, sRepo, mRepo, rRepo, audit)
-	listUC := usecase.NewListStaffAccountsUsecase(exec, sRepo, mRepo, audit)
-	updateUC := usecase.NewUpdateStaffUsecase(exec, tx, sRepo, mRepo, audit)
-	deleteUC := usecase.NewDeleteStaffUsecase(exec, tx, sRepo, mRepo, userDeletionSvc, audit)
-	removeUC := usecase.NewRemoveStaffAccountUsecase(exec, tx, sRepo, mRepo, aRepo, audit)
+	svc := usecase.NewStaffService(
+		exec,
+		tx,
+		sRepo,
+		mRepo,
+		rRepo,
+		uRepo,
+		aRepo,
+		hasher,
+		userDeletionSvc,
+		audit,
+	)
 
-	handler := NewStaffHandler(addUC, createUC, nil, listUC, updateUC, deleteUC, removeUC)
+	handler := NewStaffHandler(svc)
 	return handler, sRepo, mRepo
 }
 

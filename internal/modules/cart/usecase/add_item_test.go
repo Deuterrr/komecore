@@ -155,9 +155,9 @@ func TestAddItem_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewAddItemUsecase(exec, tx, cartR, invR, prodR, shopR)
+	uc := NewCartService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
 
-	err := uc.Execute(ctx, AddItemInput{
+	err := uc.AddItem(ctx, AddItemInput{
 		CustomerID: customerID,
 		ShopID:     shopID,
 		ProductID:  productID,
@@ -193,9 +193,9 @@ func TestAddItem_RejectInactiveShop(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewAddItemUsecase(exec, tx, cartR, invR, prodR, shopR)
+	uc := NewCartService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
 
-	err := uc.Execute(ctx, AddItemInput{
+	err := uc.AddItem(ctx, AddItemInput{
 		CustomerID: customerID,
 		ShopID:     shopID,
 		ProductID:  productID,
@@ -227,9 +227,9 @@ func TestAddItem_RejectPendingShop(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewAddItemUsecase(exec, tx, cartR, invR, prodR, shopR)
+	uc := NewCartService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
 
-	err := uc.Execute(ctx, AddItemInput{
+	err := uc.AddItem(ctx, AddItemInput{
 		CustomerID: customerID,
 		ShopID:     shopID,
 		ProductID:  productID,
@@ -279,9 +279,9 @@ func TestAddItem_RejectInactiveProduct(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewAddItemUsecase(exec, tx, cartR, invR, prodR, shopR)
+	uc := NewCartService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
 
-	err := uc.Execute(ctx, AddItemInput{
+	err := uc.AddItem(ctx, AddItemInput{
 		CustomerID: customerID,
 		ShopID:     shopID,
 		ProductID:  productID,
@@ -331,9 +331,9 @@ func TestAddItem_RejectArchivedProduct(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewAddItemUsecase(exec, tx, cartR, invR, prodR, shopR)
+	uc := NewCartService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
 
-	err := uc.Execute(ctx, AddItemInput{
+	err := uc.AddItem(ctx, AddItemInput{
 		CustomerID: customerID,
 		ShopID:     shopID,
 		ProductID:  productID,
@@ -385,10 +385,10 @@ func TestAddItem_MultiStyle_StockExceeded(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewAddItemUsecase(exec, tx, cartR, invR, prodR, shopR)
+	uc := NewCartService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
 
 	// Try adding 3 of Large (Total across styles would be 3 small + 3 large = 6 > 5)
-	err := uc.Execute(ctx, AddItemInput{
+	err := uc.AddItem(ctx, AddItemInput{
 		CustomerID:  customerID,
 		ShopID:      shopID,
 		ProductID:   productID,
@@ -441,10 +441,10 @@ func TestAddItem_MultiStyle_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewAddItemUsecase(exec, tx, cartR, invR, prodR, shopR)
+	uc := NewCartService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
 
 	// Add 2 of Large (Total across styles = 2 + 2 = 4 <= 5)
-	err := uc.Execute(ctx, AddItemInput{
+	err := uc.AddItem(ctx, AddItemInput{
 		CustomerID:  customerID,
 		ShopID:      shopID,
 		ProductID:   productID,

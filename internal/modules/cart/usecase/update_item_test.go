@@ -43,10 +43,10 @@ func TestUpdateItemByID_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewUpdateItemUsecase(exec, tx, cartR, invR, prodR)
+	uc := NewCartService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
 	opt := cartDomain.ItemOptions{"size": "large", "color": "red"}
-	err := uc.ExecuteByID(ctx, UpdateItemByIDInput{
+	err := uc.UpdateItemByID(ctx, UpdateItemByIDInput{
 		CustomerID:  customerID,
 		CartItemID:  cartItemID,
 		Quantity:    4,
@@ -102,10 +102,10 @@ func TestUpdateItemByID_NilOptions_PreservesExistingOptions(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewUpdateItemUsecase(exec, tx, cartR, invR, prodR)
+	uc := NewCartService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
 	// Update with ItemOptions == nil (quantity-only update)
-	err := uc.ExecuteByID(ctx, UpdateItemByIDInput{
+	err := uc.UpdateItemByID(ctx, UpdateItemByIDInput{
 		CustomerID:  customerID,
 		CartItemID:  cartItemID,
 		Quantity:    6,
@@ -157,10 +157,10 @@ func TestUpdateItemByID_MultiStyle_StockExceeded(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewUpdateItemUsecase(exec, tx, cartR, invR, prodR)
+	uc := NewCartService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
 	// Try increasing large item from 3 to 5 (Total in cart would be 2 small + 5 large = 7 > 6)
-	err := uc.ExecuteByID(ctx, UpdateItemByIDInput{
+	err := uc.UpdateItemByID(ctx, UpdateItemByIDInput{
 		CustomerID:  customerID,
 		CartItemID:  largeItemID,
 		Quantity:    5,
@@ -204,9 +204,9 @@ func TestUpdateItemByID_InsufficientStock(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewUpdateItemUsecase(exec, tx, cartR, invR, prodR)
+	uc := NewCartService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
-	err := uc.ExecuteByID(ctx, UpdateItemByIDInput{
+	err := uc.UpdateItemByID(ctx, UpdateItemByIDInput{
 		CustomerID: customerID,
 		CartItemID: cartItemID,
 		Quantity:   5, // exceeds available stock 3
@@ -233,9 +233,9 @@ func TestUpdateItemByID_CartItemNotFound(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewUpdateItemUsecase(exec, tx, cartR, invR, prodR)
+	uc := NewCartService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
-	err := uc.ExecuteByID(ctx, UpdateItemByIDInput{
+	err := uc.UpdateItemByID(ctx, UpdateItemByIDInput{
 		CustomerID: customerID,
 		CartItemID: uuid.New(), // random non-existent cart item
 		Quantity:   1,
@@ -285,10 +285,10 @@ func TestUpdateItem_Execute_NoOptions_PreservesOptions(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewUpdateItemUsecase(exec, tx, cartR, invR, prodR)
+	uc := NewCartService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
 	// Execute without options (e.g. PUT /{shopID}/{productID})
-	err := uc.Execute(ctx, UpdateItemInput{
+	err := uc.UpdateItem(ctx, UpdateItemInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		ShopID:     shopID,

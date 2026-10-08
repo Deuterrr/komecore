@@ -38,16 +38,20 @@ func TestDeleteStaff_Success(t *testing.T) {
 	userDeletionService := &mockUserDeletionService{}
 	auditLogger := &mockAuditLogger{}
 
-	uc := NewDeleteStaffUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
+		nil,
+		nil,
 		userDeletionService,
 		auditLogger,
 	)
 
-	err := uc.Execute(ctx, DeleteStaffInput{
+	err := uc.DeleteStaff(ctx, DeleteStaffInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,
@@ -93,16 +97,20 @@ func TestDeleteStaff_NotFound(t *testing.T) {
 
 	userDeletionService := &mockUserDeletionService{}
 
-	uc := NewDeleteStaffUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
+		nil,
+		nil,
 		userDeletionService,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(ctx, DeleteStaffInput{
+	err := uc.DeleteStaff(ctx, DeleteStaffInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        uuid.New(),

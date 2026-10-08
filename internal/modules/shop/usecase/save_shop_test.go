@@ -56,13 +56,13 @@ func TestSaveShop_AdminCreate(t *testing.T) {
 		},
 	}
 
-	uc := NewSaveShopUsecase(repo, slugGen, exec)
+	uc := NewShopService(repo, nil, nil, slugGen, exec)
 
 	isActive := true
 	approvalStatus := string(domain.ShopApprovalStatusApproved)
 	desc := "Admin Shop"
 
-	err := uc.Execute(ctx, actor, SaveShopInput{
+	err := uc.SaveShop(ctx, actor, SaveShopInput{
 		Name:           "Jakarta Central",
 		Description:    &desc,
 		IsActive:       &isActive,
@@ -98,14 +98,14 @@ func TestSaveShop_RegularStaffCreate(t *testing.T) {
 		},
 	}
 
-	uc := NewSaveShopUsecase(repo, slugGen, exec)
+	uc := NewShopService(repo, nil, nil, slugGen, exec)
 
 	isActive := true
 	approvalStatus := string(domain.ShopApprovalStatusApproved)
 	desc := "Staff Shop"
 
 	// Regular staff attempts to pass active=true and approved
-	err := uc.Execute(ctx, actor, SaveShopInput{
+	err := uc.SaveShop(ctx, actor, SaveShopInput{
 		Name:           "Bandung Branch",
 		Description:    &desc,
 		IsActive:       &isActive,
@@ -153,10 +153,10 @@ func TestSaveShop_RegularStaffUpdatePreservesStatus(t *testing.T) {
 		},
 	}
 
-	uc := NewSaveShopUsecase(repo, slugGen, exec)
+	uc := NewShopService(repo, nil, nil, slugGen, exec)
 
 	newDesc := "Updated Description"
-	err := uc.Execute(ctx, actor, SaveShopInput{
+	err := uc.SaveShop(ctx, actor, SaveShopInput{
 		ID:          &shopID,
 		Name:        "New Name",
 		Description: &newDesc,

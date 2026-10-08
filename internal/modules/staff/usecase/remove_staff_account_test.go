@@ -52,16 +52,20 @@ func TestRemoveStaffAccount_Success(t *testing.T) {
 
 	auditLogger := &mockAuditLogger{}
 
-	uc := NewRemoveStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
 		accountRepo,
+		nil,
+		nil,
 		auditLogger,
 	)
 
-	err := uc.Execute(ctx, RemoveStaffAccountInput{
+	err := uc.RemoveStaffAccount(ctx, RemoveStaffAccountInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   staffID,
 		StaffID:        staffID,
@@ -82,16 +86,20 @@ func TestRemoveStaffAccount_SelfRemovalBlocked(t *testing.T) {
 	actorAccountID := uuid.New()
 	staffID := uuid.New()
 
-	uc := NewRemoveStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		&mockStaffRepo{},
 		&mockStaffMembershipRepo{},
+		nil,
+		nil,
 		&mockAccountRepo{},
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(ctx, RemoveStaffAccountInput{
+	err := uc.RemoveStaffAccount(ctx, RemoveStaffAccountInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   staffID,
 		StaffID:        staffID,
@@ -122,16 +130,20 @@ func TestRemoveStaffAccount_NonAdminForbidden(t *testing.T) {
 		},
 	}
 
-	uc := NewRemoveStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		&mockStaffRepo{},
 		membershipRepo,
+		nil,
+		nil,
 		&mockAccountRepo{},
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(ctx, RemoveStaffAccountInput{
+	err := uc.RemoveStaffAccount(ctx, RemoveStaffAccountInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   staffID,
 		StaffID:        staffID,
@@ -165,16 +177,20 @@ func TestRemoveStaffAccount_StaffNotFound(t *testing.T) {
 		staff: nil,
 	}
 
-	uc := NewRemoveStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
 		&mockAccountRepo{},
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(ctx, RemoveStaffAccountInput{
+	err := uc.RemoveStaffAccount(ctx, RemoveStaffAccountInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   staffID,
 		StaffID:        staffID,
@@ -212,16 +228,20 @@ func TestRemoveStaffAccount_TargetMembershipNotFound(t *testing.T) {
 		},
 	}
 
-	uc := NewRemoveStaffAccountUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
 		&mockAccountRepo{},
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	err := uc.Execute(ctx, RemoveStaffAccountInput{
+	err := uc.RemoveStaffAccount(ctx, RemoveStaffAccountInput{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   staffID,
 		StaffID:        staffID,

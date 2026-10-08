@@ -186,9 +186,7 @@ func initHandlers(c *Container) *handlers {
 			&c.GetProductStats,
 		),
 		inventory: inventoryH.NewInventoryHandler(
-			&c.CreateInventory,
-			&c.UpdateInventory,
-			&c.DeleteInventory,
+			&c.Inventory,
 		),
 		auth: authH.NewAuthHandler(
 			&c.Me,
@@ -207,33 +205,16 @@ func initHandlers(c *Container) *handlers {
 			c.GoogleOAuth,
 		),
 		staff: staffH.NewStaffHandler(
-			&c.AddStaffAccount,
-			&c.CreateStaff,
-			&c.FindStaff,
-			&c.ListStaffAccounts,
-			&c.UpdateStaff,
-			&c.DeleteStaff,
-			&c.RemoveStaffAccount,
+			&c.Staff,
 		),
 		cart: cartH.NewCartHandler(
-			&c.AddItem,
-			&c.GetCart,
-			&c.UpdateItem,
-			&c.RemoveItem,
+			&c.Cart,
 		),
 		user: userH.NewUserHandler(
-			&c.GetUser,
-			&c.GetCurrentProfile,
-			&c.UpdateCurrentProfile,
+			&c.User,
 		),
 		address: addressH.NewAddressHandler(
-			&c.ListUserAddresses,
-			&c.CreateUserAddress,
-			&c.DeleteUserAddress,
-			&c.ListShopAddresses,
-			&c.SaveShopAddress,
-			&c.UpdateShopAddress,
-			&c.DeleteShopAddress,
+			&c.Address,
 		),
 		payment: paymentH.NewPaymentHandler(
 			&c.SavePaymentMethod,
@@ -244,15 +225,10 @@ func initHandlers(c *Container) *handlers {
 			&c.CheckPaymentStatus,
 		),
 		shop: shopH.NewShopHandler(
-			&c.FindShops,
-			&c.GetShop,
-			&c.SaveShop,
-			&c.DeleteShop,
-			&c.GetShopAddresses,
-			&c.GetShopProducts,
+			&c.Shop,
 		),
 		courier: courierH.NewCourierHandler(
-			&c.ListAllCouriers,
+			&c.Courier,
 		),
 		shipment: shipmentH.NewShipmentHandler(
 			&c.EstimateShippingOptions,
@@ -266,18 +242,14 @@ func initHandlers(c *Container) *handlers {
 			&c.UpdateOrderStatus,
 			&c.DispatchShopShipment,
 			&c.GetOrderTracking,
-			&c.GetShop,
+			&c.Shop,
 			&c.Checkout,
 		),
 		wishlist: wishlistH.NewWishlistHandler(
-			&c.GetWishlist,
-			&c.AddToWishlist,
-			&c.RemoveFromWishlist,
+			&c.Wishlist,
 		),
 		review: reviewH.NewReviewHandler(
-			&c.CreateReview,
-			&c.ListReviews,
-			&c.DeleteReview,
+			&c.Review,
 		),
 	}
 }

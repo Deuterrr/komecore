@@ -12,32 +12,14 @@ import (
 )
 
 type AddressHandler struct {
-	listCustomerAddresses *usecase.ListCustomerAddressesUsecase
-	saveCustomerAddress   *usecase.SaveCustomerAddressUsecase
-	deleteCustomerAddress *usecase.DeleteCustomerAddressUsecase
-	listShopAddresses     *usecase.ListShopAddressesUsecase
-	createShopAddress     *usecase.CreateShopAddressUsecase
-	updateShopAddress     *usecase.UpdateShopAddressUsecase
-	deleteShopAddress     *usecase.DeleteShopAddressUsecase
+	service *usecase.AddressService
 }
 
 func NewAddressHandler(
-	listCustomerAddresses *usecase.ListCustomerAddressesUsecase,
-	saveCustomerAddress *usecase.SaveCustomerAddressUsecase,
-	deleteCustomerAddress *usecase.DeleteCustomerAddressUsecase,
-	listShopAddresses *usecase.ListShopAddressesUsecase,
-	createShopAddress *usecase.CreateShopAddressUsecase,
-	updateShopAddress *usecase.UpdateShopAddressUsecase,
-	deleteShopAddress *usecase.DeleteShopAddressUsecase,
+	service *usecase.AddressService,
 ) *AddressHandler {
 	return &AddressHandler{
-		listCustomerAddresses: listCustomerAddresses,
-		saveCustomerAddress:   saveCustomerAddress,
-		deleteCustomerAddress: deleteCustomerAddress,
-		listShopAddresses:     listShopAddresses,
-		createShopAddress:     createShopAddress,
-		updateShopAddress:     updateShopAddress,
-		deleteShopAddress:     deleteShopAddress,
+		service: service,
 	}
 }
 
@@ -47,7 +29,7 @@ func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 
-	addresses, err := h.listCustomerAddresses.ListByCustomerID(r.Context(), customerID)
+	addresses, err := h.service.ListCustomerAddresses(r.Context(), customerID)
 	if err != nil {
 		return err
 	}
@@ -146,7 +128,7 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 		Longitude:    req.Longitude,
 	}
 
-	err = h.saveCustomerAddress.Execute(r.Context(), input)
+	err = h.service.SaveCustomerAddress(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -170,7 +152,7 @@ func (h *AddressHandler) DeleteUserAddress(w http.ResponseWriter, r *http.Reques
 		return apperrors.NewBadRequest("invalid address id")
 	}
 
-	err = h.deleteCustomerAddress.Execute(r.Context(), addressID)
+	err = h.service.DeleteCustomerAddress(r.Context(), addressID)
 	if err != nil {
 		return err
 	}
@@ -189,7 +171,7 @@ func (h *AddressHandler) ListShopAddresses(w http.ResponseWriter, r *http.Reques
 		return apperrors.NewBadRequest("invalid shop id")
 	}
 
-	result, err := h.listShopAddresses.FindByShopID(r.Context(), shopID)
+	result, err := h.service.ListShopAddresses(r.Context(), shopID)
 	if err != nil {
 		return err
 	}
@@ -276,7 +258,7 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 		Longitude:   req.Longitude,
 	}
 
-	err = h.createShopAddress.Execute(r.Context(), input)
+	err = h.service.CreateShopAddress(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -345,7 +327,7 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 		Longitude:   req.Longitude,
 	}
 
-	err = h.updateShopAddress.Execute(r.Context(), input)
+	err = h.service.UpdateShopAddress(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -369,7 +351,7 @@ func (h *AddressHandler) DeleteShopAddress(w http.ResponseWriter, r *http.Reques
 		return apperrors.NewBadRequest("invalid shop id")
 	}
 
-	err = h.deleteShopAddress.Execute(r.Context(), shopID, addressID)
+	err = h.service.DeleteShopAddress(r.Context(), shopID, addressID)
 	if err != nil {
 		return err
 	}

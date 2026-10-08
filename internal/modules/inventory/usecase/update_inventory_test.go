@@ -66,9 +66,9 @@ func TestUpdateInventory_Success(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
-	err := uc.Execute(ctx, UpdateInventoryInput{
+	err := uc.UpdateInventory(ctx, UpdateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     20,
@@ -98,9 +98,9 @@ func TestUpdateInventory_NotFound(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
-	err := uc.Execute(ctx, UpdateInventoryInput{
+	err := uc.UpdateInventory(ctx, UpdateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     20,
@@ -136,10 +136,10 @@ func TestUpdateInventory_InvalidStock(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
 	// Attempting to set stock to less than reserved stock
-	err := uc.Execute(ctx, UpdateInventoryInput{
+	err := uc.UpdateInventory(ctx, UpdateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     1,
@@ -177,9 +177,9 @@ func TestUpdateInventory_RepoError(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewUpdateInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
-	err := uc.Execute(ctx, UpdateInventoryInput{
+	err := uc.UpdateInventory(ctx, UpdateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     20,

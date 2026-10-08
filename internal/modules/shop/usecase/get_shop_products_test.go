@@ -48,8 +48,8 @@ func TestGetShopProducts_Success(t *testing.T) {
 	}
 	exec := &mockExecutor{}
 
-	uc := NewGetShopProductsUsecase(provider, exec)
-	results, err := uc.Execute(context.Background(), shopID)
+	uc := NewShopService(nil, nil, provider, nil, exec)
+	results, err := uc.GetShopProducts(context.Background(), shopID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

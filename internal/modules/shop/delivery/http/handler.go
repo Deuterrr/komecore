@@ -15,29 +15,14 @@ import (
 )
 
 type ShopHandler struct {
-	findShops        *usecase.FindShopsUsecase
-	getShop          *usecase.GetShopUsecase
-	createShop       *usecase.SaveShopUsecase
-	deleteShop       *usecase.DeleteShopUsecase
-	getShopAddresses *usecase.GetShopAddressesUsecase
-	getShopProducts  *usecase.GetShopProductsUsecase
+	service *usecase.ShopService
 }
 
 func NewShopHandler(
-	findShops *usecase.FindShopsUsecase,
-	getShop *usecase.GetShopUsecase,
-	createShop *usecase.SaveShopUsecase,
-	deleteShop *usecase.DeleteShopUsecase,
-	getShopAddresses *usecase.GetShopAddressesUsecase,
-	getShopProducts *usecase.GetShopProductsUsecase,
+	service *usecase.ShopService,
 ) *ShopHandler {
 	return &ShopHandler{
-		findShops:        findShops,
-		getShop:          getShop,
-		createShop:       createShop,
-		deleteShop:       deleteShop,
-		getShopAddresses: getShopAddresses,
-		getShopProducts:  getShopProducts,
+		service: service,
 	}
 }
 
@@ -54,11 +39,11 @@ func (h *ShopHandler) resolveShopID(r *http.Request) (uuid.UUID, error) {
 		return parsed, nil
 	}
 
-	if h.getShop == nil {
+	if h.service == nil {
 		return uuid.Nil, apperrors.NewNotFound("shop not found")
 	}
 
-	shop, err := h.getShop.GetBySlug(r.Context(), param)
+	shop, err := h.service.GetBySlug(r.Context(), param)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -128,7 +113,7 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 		input.ShopIDs = assignedIDs
 	}
 
-	shops, total, err := h.findShops.Execute(r.Context(), input)
+	shops, total, err := h.service.FindShops(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -172,13 +157,13 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 	var result *shopDomain.Shop
 	if parsed, err := uuid.Parse(param); err == nil {
 		var getErr error
-		result, getErr = h.getShop.GetByID(r.Context(), parsed)
+		result, getErr = h.service.GetByID(r.Context(), parsed)
 		if getErr != nil {
 			return getErr
 		}
 	} else {
 		var getErr error
-		result, getErr = h.getShop.GetBySlug(r.Context(), param)
+		result, getErr = h.service.GetBySlug(r.Context(), param)
 		if getErr != nil {
 			return getErr
 		}
@@ -247,7 +232,7 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 		ApprovalStatus: req.ApprovalStatus,
 	}
 
-	err := h.createShop.Execute(
+	err := h.service.SaveShop(
 		r.Context(),
 		*actor,
 		input,
@@ -270,7 +255,7 @@ func (h *ShopHandler) GetShopAddresses(w http.ResponseWriter, r *http.Request) e
 		return err
 	}
 
-	result, err := h.getShopAddresses.Execute(r.Context(), shopID)
+	result, err := h.service.GetShopAddresses(r.Context(), shopID)
 	if err != nil {
 		return err
 	}
@@ -307,7 +292,7 @@ func (h *ShopHandler) GetShopProducts(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
-	result, err := h.getShopProducts.Execute(r.Context(), shopID)
+	result, err := h.service.GetShopProducts(r.Context(), shopID)
 	if err != nil {
 		return err
 	}
@@ -351,7 +336,7 @@ func (h *ShopHandler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	if err := h.deleteShop.Execute(r.Context(), *actor, shopID); err != nil {
+	if err := h.service.DeleteShop(r.Context(), *actor, shopID); err != nil {
 		return err
 	}
 

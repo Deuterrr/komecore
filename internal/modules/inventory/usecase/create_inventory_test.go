@@ -70,9 +70,9 @@ func TestCreateInventory_Success(t *testing.T) {
 	exec := &mockExecutor{}
 	recorder := &mockStockHistoryRecorder{}
 
-	uc := NewCreateInventoryUsecase(repo, productChecker, shopChecker, exec, recorder)
+	uc := NewInventoryService(repo, productChecker, shopChecker, exec, recorder)
 
-	err := uc.Execute(ctx, CreateInventoryInput{
+	err := uc.CreateInventory(ctx, CreateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     15,
@@ -98,9 +98,9 @@ func TestCreateInventory_ProductNotFound(t *testing.T) {
 	exec := &mockExecutor{}
 	recorder := &mockStockHistoryRecorder{}
 
-	uc := NewCreateInventoryUsecase(repo, productChecker, shopChecker, exec, recorder)
+	uc := NewInventoryService(repo, productChecker, shopChecker, exec, recorder)
 
-	err := uc.Execute(ctx, CreateInventoryInput{
+	err := uc.CreateInventory(ctx, CreateInventoryInput{
 		ProductID: uuid.New(),
 		ShopID:    uuid.New(),
 		Stock:     15,
@@ -123,9 +123,9 @@ func TestCreateInventory_ShopNotFound(t *testing.T) {
 	exec := &mockExecutor{}
 	recorder := &mockStockHistoryRecorder{}
 
-	uc := NewCreateInventoryUsecase(repo, productChecker, shopChecker, exec, recorder)
+	uc := NewInventoryService(repo, productChecker, shopChecker, exec, recorder)
 
-	err := uc.Execute(ctx, CreateInventoryInput{
+	err := uc.CreateInventory(ctx, CreateInventoryInput{
 		ProductID: uuid.New(),
 		ShopID:    uuid.New(),
 		Stock:     15,
@@ -157,9 +157,9 @@ func TestCreateInventory_AlreadyExists(t *testing.T) {
 	exec := &mockExecutor{}
 	recorder := &mockStockHistoryRecorder{}
 
-	uc := NewCreateInventoryUsecase(repo, productChecker, shopChecker, exec, recorder)
+	uc := NewInventoryService(repo, productChecker, shopChecker, exec, recorder)
 
-	err := uc.Execute(ctx, CreateInventoryInput{
+	err := uc.CreateInventory(ctx, CreateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     15,

@@ -44,9 +44,9 @@ func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
 		repo.addresses[addrOther.ID] = addrOther
 
 		exec := &mockExecutor{}
-		uc := usecase.NewListCustomerAddressesUsecase(repo, exec)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
 
-		result, err := uc.ListByCustomerID(ctx, customerID)
+		result, err := uc.ListCustomerAddresses(ctx, customerID)
 		require.NoError(t, err)
 		assert.Len(t, result, 2)
 		assert.Equal(t, 1, repo.listCalls)
@@ -55,9 +55,9 @@ func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
 	t.Run("success returns empty slice when customer has no addresses", func(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
 		exec := &mockExecutor{}
-		uc := usecase.NewListCustomerAddressesUsecase(repo, exec)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
 
-		result, err := uc.ListByCustomerID(ctx, customerID)
+		result, err := uc.ListCustomerAddresses(ctx, customerID)
 		require.NoError(t, err)
 		assert.Empty(t, result)
 		assert.Equal(t, 1, repo.listCalls)
@@ -67,9 +67,9 @@ func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
 		repo.listError = errors.New("db list error")
 		exec := &mockExecutor{}
-		uc := usecase.NewListCustomerAddressesUsecase(repo, exec)
+		uc := usecase.NewAddressService(repo, nil, exec, nil)
 
-		result, err := uc.ListByCustomerID(ctx, customerID)
+		result, err := uc.ListCustomerAddresses(ctx, customerID)
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "failed to retrieve address")

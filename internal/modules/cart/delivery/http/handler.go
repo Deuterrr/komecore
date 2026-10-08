@@ -12,23 +12,14 @@ import (
 )
 
 type CartHandler struct {
-	addItem    *usecase.AddItemUsecase
-	getCart    *usecase.GetCartUsecase
-	updateItem *usecase.UpdateItemUsecase
-	removeItem *usecase.RemoveItemUsecase
+	service *usecase.CartService
 }
 
 func NewCartHandler(
-	addItem *usecase.AddItemUsecase,
-	getCart *usecase.GetCartUsecase,
-	updateItem *usecase.UpdateItemUsecase,
-	removeItem *usecase.RemoveItemUsecase,
+	service *usecase.CartService,
 ) *CartHandler {
 	return &CartHandler{
-		addItem:    addItem,
-		getCart:    getCart,
-		updateItem: updateItem,
-		removeItem: removeItem,
+		service: service,
 	}
 }
 
@@ -38,7 +29,7 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	result, err := h.getCart.Execute(r.Context(), customerID)
+	result, err := h.service.GetCart(r.Context(), customerID)
 	if err != nil {
 		return err
 	}
@@ -144,7 +135,7 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 		Quantity:    req.Quantity,
 		ItemOptions: opt.Normalized(),
 	}
-	if err := h.addItem.Execute(r.Context(), input); err != nil {
+	if err := h.service.AddItem(r.Context(), input); err != nil {
 		return err
 	}
 
@@ -196,7 +187,7 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 		ItemOptions: opt,
 	}
 
-	if err := h.updateItem.Execute(r.Context(), input); err != nil {
+	if err := h.service.UpdateItem(r.Context(), input); err != nil {
 		return err
 	}
 
@@ -242,7 +233,7 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 		ItemOptions: opt,
 	}
 
-	if err := h.updateItem.ExecuteByID(r.Context(), input); err != nil {
+	if err := h.service.UpdateItemByID(r.Context(), input); err != nil {
 		return err
 	}
 
@@ -276,7 +267,7 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 		ShopID:     shopID,
 	}
 
-	if err := h.removeItem.Execute(r.Context(), input); err != nil {
+	if err := h.service.RemoveItem(r.Context(), input); err != nil {
 		return err
 	}
 
@@ -304,7 +295,7 @@ func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) err
 		CartItemID: cartItemID,
 	}
 
-	if err := h.removeItem.ExecuteByID(r.Context(), input); err != nil {
+	if err := h.service.RemoveItemByID(r.Context(), input); err != nil {
 		return err
 	}
 

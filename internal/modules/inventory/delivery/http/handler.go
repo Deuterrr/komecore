@@ -9,20 +9,14 @@ import (
 )
 
 type InventoryHandler struct {
-	createInventory *usecase.CreateInventoryUsecase
-	updateInventory *usecase.UpdateInventoryUsecase
-	deleteInventory *usecase.DeleteInventoryUsecase
+	service *usecase.InventoryService
 }
 
 func NewInventoryHandler(
-	createInventory *usecase.CreateInventoryUsecase,
-	updateInventory *usecase.UpdateInventoryUsecase,
-	deleteInventory *usecase.DeleteInventoryUsecase,
+	service *usecase.InventoryService,
 ) *InventoryHandler {
 	return &InventoryHandler{
-		createInventory: createInventory,
-		updateInventory: updateInventory,
-		deleteInventory: deleteInventory,
+		service: service,
 	}
 }
 
@@ -51,7 +45,7 @@ func (h *InventoryHandler) AddInventory(w http.ResponseWriter, r *http.Request) 
 		ShopID:    shopID,
 		Stock:     req.Stock,
 	}
-	if err := h.createInventory.Execute(r.Context(), input); err != nil {
+	if err := h.service.CreateInventory(r.Context(), input); err != nil {
 		return err
 	}
 
@@ -86,7 +80,7 @@ func (h *InventoryHandler) UpdateInventory(w http.ResponseWriter, r *http.Reques
 		ShopID:    shopID,
 		Stock:     req.Stock,
 	}
-	if err := h.updateInventory.Execute(r.Context(), input); err != nil {
+	if err := h.service.UpdateInventory(r.Context(), input); err != nil {
 		return err
 	}
 
@@ -111,7 +105,7 @@ func (h *InventoryHandler) RemoveInventory(w http.ResponseWriter, r *http.Reques
 		ProductID: productID,
 		ShopID:    shopID,
 	}
-	if err := h.deleteInventory.Execute(r.Context(), input); err != nil {
+	if err := h.service.DeleteInventory(r.Context(), input); err != nil {
 		return err
 	}
 

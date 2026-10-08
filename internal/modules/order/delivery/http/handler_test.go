@@ -146,7 +146,7 @@ func (m *hMockShipmentRepo) Update(_ context.Context, _ transaction.Executor, _ 
 
 func TestResolveShopFilter_NilGetShopDependency_ReturnsError(t *testing.T) {
 	handler := &orderHandler{
-		getShop: nil,
+		shopService: nil,
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/orders?shop_slug=test-shop", nil)

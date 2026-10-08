@@ -82,9 +82,9 @@ func TestDeleteInventory_Success(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
-	err := uc.Execute(ctx, DeleteInventoryInput{
+	err := uc.DeleteInventory(ctx, DeleteInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 	})
@@ -109,9 +109,9 @@ func TestDeleteInventory_NotFound(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
-	err := uc.Execute(ctx, DeleteInventoryInput{
+	err := uc.DeleteInventory(ctx, DeleteInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 	})
@@ -146,9 +146,9 @@ func TestDeleteInventory_ConflictWithReservations(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
-	err := uc.Execute(ctx, DeleteInventoryInput{
+	err := uc.DeleteInventory(ctx, DeleteInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 	})
@@ -189,9 +189,9 @@ func TestDeleteInventory_RepoError(t *testing.T) {
 	exec := &mockExecutor{}
 	stockHistoryRepo := &mockStockHistoryRecorder{}
 
-	uc := NewDeleteInventoryUsecase(repo, exec, stockHistoryRepo)
+	uc := NewInventoryService(repo, nil, nil, exec, stockHistoryRepo)
 
-	err := uc.Execute(ctx, DeleteInventoryInput{
+	err := uc.DeleteInventory(ctx, DeleteInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 	})

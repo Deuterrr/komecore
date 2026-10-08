@@ -52,14 +52,20 @@ func TestListStaffAccounts_Success(t *testing.T) {
 
 	auditLogger := &mockAuditLogger{}
 
-	uc := NewListStaffAccountsUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
+		nil,
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 		auditLogger,
 	)
 
-	results, err := uc.Execute(ctx, ListStaffAccountsParams{
+	results, err := uc.ListStaffAccounts(ctx, ListStaffAccountsParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,
@@ -97,14 +103,20 @@ func TestListStaffAccounts_UnauthorizedRole(t *testing.T) {
 		staff: &staffDomain.Staff{ID: actorStaffID},
 	}
 
-	uc := NewListStaffAccountsUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
+		nil,
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	_, err := uc.Execute(ctx, ListStaffAccountsParams{
+	_, err := uc.ListStaffAccounts(ctx, ListStaffAccountsParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        actorStaffID,
@@ -140,14 +152,20 @@ func TestListStaffAccounts_StaffNotFound(t *testing.T) {
 		staff: nil,
 	}
 
-	uc := NewListStaffAccountsUsecase(
+	uc := NewStaffService(
 		&mockExecutor{},
+		nil,
 		staffRepo,
 		membershipRepo,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 		&mockAuditLogger{},
 	)
 
-	_, err := uc.Execute(ctx, ListStaffAccountsParams{
+	_, err := uc.ListStaffAccounts(ctx, ListStaffAccountsParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        uuid.New(),

@@ -66,8 +66,8 @@ func TestCreateShopAddressUsecase_Execute(t *testing.T) {
 		repo := &mockShopAddressRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewCreateShopAddressUsecase(repo, exec)
-		err := uc.Execute(ctx, baseInput)
+		uc := usecase.NewAddressService(nil, repo, exec, nil)
+		err := uc.CreateShopAddress(ctx, baseInput)
 
 		require.NoError(t, err)
 		assert.Equal(t, 1, repo.createCalls)
@@ -81,12 +81,12 @@ func TestCreateShopAddressUsecase_Execute(t *testing.T) {
 		repo := &mockShopAddressRepo{}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewCreateShopAddressUsecase(repo, exec)
+		uc := usecase.NewAddressService(nil, repo, exec, nil)
 		invalidLng := 200.0 // > 180
 		input := baseInput
 		input.Longitude = &invalidLng
 
-		err := uc.Execute(ctx, input)
+		err := uc.CreateShopAddress(ctx, input)
 		assert.Error(t, err)
 		assert.True(t, apperrors.IsBadRequest(err))
 		assert.Equal(t, 0, repo.createCalls)
@@ -98,8 +98,8 @@ func TestCreateShopAddressUsecase_Execute(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := usecase.NewCreateShopAddressUsecase(repo, exec)
-		err := uc.Execute(ctx, baseInput)
+		uc := usecase.NewAddressService(nil, repo, exec, nil)
+		err := uc.CreateShopAddress(ctx, baseInput)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to save address")

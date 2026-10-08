@@ -65,9 +65,9 @@ func TestDeleteShop_Success(t *testing.T) {
 		},
 	}
 
-	uc := NewDeleteShopUsecase(repo, exec)
+	uc := NewShopService(repo, nil, nil, nil, exec)
 
-	err := uc.Execute(ctx, actor, shopID)
+	err := uc.DeleteShop(ctx, actor, shopID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -89,9 +89,9 @@ func TestDeleteShop_ForbiddenForNonAdmin(t *testing.T) {
 		},
 	}
 
-	uc := NewDeleteShopUsecase(repo, exec)
+	uc := NewShopService(repo, nil, nil, nil, exec)
 
-	err := uc.Execute(ctx, actor, shopID)
+	err := uc.DeleteShop(ctx, actor, shopID)
 	if err == nil {
 		t.Fatal("expected error for non-admin actor, got nil")
 	}
@@ -114,9 +114,9 @@ func TestDeleteShop_NotFound(t *testing.T) {
 		},
 	}
 
-	uc := NewDeleteShopUsecase(repo, exec)
+	uc := NewShopService(repo, nil, nil, nil, exec)
 
-	err := uc.Execute(ctx, actor, uuid.New())
+	err := uc.DeleteShop(ctx, actor, uuid.New())
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -139,9 +139,9 @@ func TestDeleteShop_AlreadyDeleted(t *testing.T) {
 		},
 	}
 
-	uc := NewDeleteShopUsecase(repo, exec)
+	uc := NewShopService(repo, nil, nil, nil, exec)
 
-	err := uc.Execute(ctx, actor, shopID)
+	err := uc.DeleteShop(ctx, actor, shopID)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -165,9 +165,9 @@ func TestDeleteShop_RepoErrorOnGet(t *testing.T) {
 		},
 	}
 
-	uc := NewDeleteShopUsecase(repo, exec)
+	uc := NewShopService(repo, nil, nil, nil, exec)
 
-	err := uc.Execute(ctx, actor, uuid.New())
+	err := uc.DeleteShop(ctx, actor, uuid.New())
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("expected error '%v', got '%v'", expectedErr, err)
 	}
@@ -195,9 +195,9 @@ func TestDeleteShop_RepoErrorOnDelete(t *testing.T) {
 		},
 	}
 
-	uc := NewDeleteShopUsecase(repo, exec)
+	uc := NewShopService(repo, nil, nil, nil, exec)
 
-	err := uc.Execute(ctx, actor, shopID)
+	err := uc.DeleteShop(ctx, actor, shopID)
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("expected error '%v', got '%v'", expectedErr, err)
 	}

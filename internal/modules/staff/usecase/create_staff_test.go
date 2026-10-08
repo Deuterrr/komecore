@@ -18,14 +18,14 @@ func TestCreateStaffUsecase_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewCreateStaffUsecase(staffR, userR, exec, tx, audit)
+	uc := NewStaffService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
 
 	input := CreateStaffInput{
 		Name:     "Floral Logistics",
 		Username: "floral-logistics",
 	}
 
-	err := uc.Execute(context.Background(), input)
+	err := uc.CreateStaff(context.Background(), input)
 	require.NoError(t, err)
 	assert.Equal(t, 1, userR.createCalls)
 	assert.Equal(t, 1, staffR.createCalls)
@@ -40,10 +40,10 @@ func TestCreateStaffUsecase_ValidationErrors(t *testing.T) {
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewCreateStaffUsecase(staffR, userR, exec, tx, audit)
+	uc := NewStaffService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
 
 	// Missing name
-	err := uc.Execute(context.Background(), CreateStaffInput{
+	err := uc.CreateStaff(context.Background(), CreateStaffInput{
 		Name:     "",
 		Username: "floral-logistics",
 	})
@@ -53,7 +53,7 @@ func TestCreateStaffUsecase_ValidationErrors(t *testing.T) {
 	assert.Equal(t, 400, badReq.StatusCode)
 
 	// Missing username
-	err = uc.Execute(context.Background(), CreateStaffInput{
+	err = uc.CreateStaff(context.Background(), CreateStaffInput{
 		Name:     "Floral Logistics",
 		Username: "",
 	})
@@ -73,14 +73,14 @@ func TestCreateStaffUsecase_DuplicateUsername(t *testing.T) {
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewCreateStaffUsecase(staffR, userR, exec, tx, audit)
+	uc := NewStaffService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
 
 	input := CreateStaffInput{
 		Name:     "Floral Logistics",
 		Username: "existing-user",
 	}
 
-	err := uc.Execute(context.Background(), input)
+	err := uc.CreateStaff(context.Background(), input)
 	assert.Error(t, err)
 	var appErr *apperrors.AppError
 	assert.ErrorAs(t, err, &appErr)

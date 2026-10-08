@@ -86,9 +86,7 @@ type Container struct {
 	DeleteProduct    productUsecase.DeleteProductUsecase
 	AddProductImages productUsecase.AddProductImagesUsecase
 	GetProductStats  productUsecase.GetProductStatsUsecase
-	CreateInventory  inventoryUsecase.CreateInventoryUsecase
-	UpdateInventory  inventoryUsecase.UpdateInventoryUsecase
-	DeleteInventory  inventoryUsecase.DeleteInventoryUsecase
+	Inventory inventoryUsecase.InventoryService
 
 	Me                   authenUsecase.MeUsecase
 	LoginCustomer        authenUsecase.LoginCustomerUsecase
@@ -104,40 +102,16 @@ type Container struct {
 	RefreshToken         authenUsecase.RefreshTokenUsecase
 	DeleteAccount        authenUsecase.DeleteAccountUsecase
 
-	FindStaff          staffUsecase.FindStaffUsecase
-	CreateStaff        staffUsecase.CreateStaffUsecase
-	AddStaffAccount    staffUsecase.AddStaffAccountUsecase
-	ListStaffAccounts  staffUsecase.ListStaffAccountsUsecase
-	UpdateStaff        staffUsecase.UpdateStaffUsecase
-	DeleteStaff        staffUsecase.DeleteStaffUsecase
-	RemoveStaffAccount staffUsecase.RemoveStaffAccountUsecase
+	Staff staffUsecase.StaffService
 
-	GetCart    cartUsecase.GetCartUsecase
-	AddItem    cartUsecase.AddItemUsecase
-	UpdateItem cartUsecase.UpdateItemUsecase
-	RemoveItem cartUsecase.RemoveItemUsecase
-	Checkout   orderUsecase.CheckoutUsecase
+	Cart     cartUsecase.CartService
+	Checkout orderUsecase.CheckoutUsecase
 
-	GetUser              userUsecase.GetUserUsecase
-	GetCurrentProfile    userUsecase.GetCurrentProfileUsecase
-	UpdateCurrentProfile userUsecase.UpdateCurrentProfileUsecase
+	User userUsecase.UserService
 
-	ListUserAddresses addressUsecase.ListCustomerAddressesUsecase
-	CreateUserAddress addressUsecase.SaveCustomerAddressUsecase
-	DeleteUserAddress addressUsecase.DeleteCustomerAddressUsecase
+	Address addressUsecase.AddressService
 
-	ListShopAddresses addressUsecase.ListShopAddressesUsecase
-	SaveShopAddress   addressUsecase.CreateShopAddressUsecase
-	UpdateShopAddress addressUsecase.UpdateShopAddressUsecase
-	DeleteShopAddress addressUsecase.DeleteShopAddressUsecase
-
-	FindShops  shopUsecase.FindShopsUsecase
-	GetShop    shopUsecase.GetShopUsecase
-	SaveShop   shopUsecase.SaveShopUsecase
-	DeleteShop shopUsecase.DeleteShopUsecase
-
-	GetShopAddresses shopUsecase.GetShopAddressesUsecase
-	GetShopProducts  shopUsecase.GetShopProductsUsecase
+	Shop shopUsecase.ShopService
 
 	SavePaymentMethod      paymentUsecase.SavePaymentMethodUsecase
 	ListPaymentMethod      paymentUsecase.ListPaymentMethodUsecase
@@ -150,7 +124,7 @@ type Container struct {
 	SyncPaymentMethods     paymentUsecase.SyncPaymentMethodsUsecase
 	ProcessOrderRefund     paymentUsecase.ProcessOrderRefundUsecase
 
-	ListAllCouriers courierUsecase.ListCouriersUsecase
+	Courier courierUsecase.CourierService
 
 	EstimateShippingOptions shipmentUsecase.EstimateShippingOptionsUsecase
 	UpdateShipmentStatus    shipmentUsecase.UpdateShipmentStatusUsecase
@@ -164,13 +138,8 @@ type Container struct {
 	GetOrderTracking        orderUsecase.GetOrderTrackingUsecase
 	ExpireUnfulfilledOrders orderUsecase.ExpireUnfulfilledOrdersUsecase
 
-	GetWishlist        wishlistUsecase.GetWishlistUsecase
-	AddToWishlist      wishlistUsecase.AddToWishlistUsecase
-	RemoveFromWishlist wishlistUsecase.RemoveFromWishlistUsecase
-
-	CreateReview reviewUsecase.CreateReviewUsecase
-	ListReviews  reviewUsecase.ListReviewsUsecase
-	DeleteReview reviewUsecase.DeleteReviewUsecase
+	Wishlist wishlistUsecase.WishlistService
+	Review   reviewUsecase.ReviewService
 
 	Limiter applimiter.Limiter
 }
@@ -473,20 +442,10 @@ func buildContainer(
 			imageVariantProvider,
 			infra.StorageProvider,
 		),
-		CreateInventory: *inventoryUsecase.NewCreateInventoryUsecase(
+		Inventory: *inventoryUsecase.NewInventoryService(
 			inventoryRepo,
 			inventoryProductChecker,
 			inventoryShopChecker,
-			infra.TransactionExecutor,
-			inventoryStockHistory,
-		),
-		UpdateInventory: *inventoryUsecase.NewUpdateInventoryUsecase(
-			inventoryRepo,
-			infra.TransactionExecutor,
-			inventoryStockHistory,
-		),
-		DeleteInventory: *inventoryUsecase.NewDeleteInventoryUsecase(
-			inventoryRepo,
 			infra.TransactionExecutor,
 			inventoryStockHistory,
 		),
@@ -529,54 +488,16 @@ func buildContainer(
 			auditLogger,
 		),
 
-		FindStaff: *staffUsecase.NewFindStaffUsecase(
-			infra.TransactionExecutor,
-			staffRepo,
-		),
-		CreateStaff: *staffUsecase.NewCreateStaffUsecase(
-			staffRepo,
-			userRepo,
+		Staff: *staffUsecase.NewStaffService(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
-			auditLogger,
-		),
-		AddStaffAccount: *staffUsecase.NewAddStaffAccountUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			staffAccountAdapter,
-			pwHasher,
 			staffRepo,
 			membershipRepo,
 			roleRepo,
-			auditLogger,
-		),
-		ListStaffAccounts: *staffUsecase.NewListStaffAccountsUsecase(
-			infra.TransactionExecutor,
-			staffRepo,
-			membershipRepo,
-			auditLogger,
-		),
-		UpdateStaff: *staffUsecase.NewUpdateStaffUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			staffRepo,
-			membershipRepo,
-			auditLogger,
-		),
-		DeleteStaff: *staffUsecase.NewDeleteStaffUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			staffRepo,
-			membershipRepo,
-			userDeletionSvc,
-			auditLogger,
-		),
-		RemoveStaffAccount: *staffUsecase.NewRemoveStaffAccountUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			staffRepo,
-			membershipRepo,
+			userRepo,
 			staffAccountAdapter,
+			pwHasher,
+			userDeletionSvc,
 			auditLogger,
 		),
 
@@ -664,7 +585,7 @@ func buildContainer(
 			auditLogger,
 		),
 
-		GetCart: *cartUsecase.NewGetCartUsecase(
+		Cart: *cartUsecase.NewCartService(
 			cartRepo,
 			inventoryRepo,
 			productRepo,
@@ -672,107 +593,34 @@ func buildContainer(
 			shopRepo,
 			infra.StorageProvider,
 			infra.TransactionExecutor,
-		),
-		AddItem: *cartUsecase.NewAddItemUsecase(
-			infra.TransactionExecutor,
 			infra.TransactionProvider,
-			cartRepo,
-			inventoryRepo,
-			productRepo,
-			shopRepo,
-		),
-		UpdateItem: *cartUsecase.NewUpdateItemUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			cartRepo,
-			inventoryRepo,
-			productRepo,
-		),
-		RemoveItem: *cartUsecase.NewRemoveItemUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			cartRepo,
 		),
 		Checkout: *orderUsecase.NewCheckoutUsecase(
 			infra.TransactionExecutor,
 			pricingService,
 		),
 
-		GetUser: *userUsecase.NewGetUserUsecase(
-			userRepo,
+		User: *userUsecase.NewUserService(
 			infra.TransactionExecutor,
-		),
-		GetCurrentProfile: *userUsecase.NewGetCurrentProfileUsecase(
-			infra.TransactionExecutor,
+			infra.TransactionProvider,
 			userAccountAdapter,
-			userRepo,
 			userStaffProfileAdapter,
 			userSessionAdapter,
-		),
-		UpdateCurrentProfile: *userUsecase.NewUpdateCurrentProfileUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			userAccountAdapter,
-			userStaffProfileAdapter,
 			userRepo,
 		),
 
-		ListUserAddresses: *addressUsecase.NewListCustomerAddressesUsecase(
+		Address: *addressUsecase.NewAddressService(
 			addressRepo,
-			infra.TransactionExecutor,
-		),
-		CreateUserAddress: *addressUsecase.NewSaveCustomerAddressUsecase(
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-			addressRepo,
-		),
-		DeleteUserAddress: *addressUsecase.NewDeleteCustomerAddressUsecase(
-			infra.TransactionExecutor,
-			addressRepo,
-		),
-
-		ListShopAddresses: *addressUsecase.NewListShopAddressesUsecase(
-			addressShopRepo,
-			infra.TransactionExecutor,
-		),
-		SaveShopAddress: *addressUsecase.NewCreateShopAddressUsecase(
-			addressShopRepo,
-			infra.TransactionExecutor,
-		),
-		UpdateShopAddress: *addressUsecase.NewUpdateShopAddressUsecase(
 			addressShopRepo,
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 		),
-		DeleteShopAddress: *addressUsecase.NewDeleteShopAddressUsecase(
-			addressShopRepo,
-			infra.TransactionExecutor,
-		),
 
-		FindShops: *shopUsecase.NewFindShopsUsecase(
-			infra.TransactionExecutor,
+		Shop: *shopUsecase.NewShopService(
 			shopRepo,
-		),
-		GetShop: *shopUsecase.NewGetShopUsecase(
-			shopRepo,
-			infra.TransactionExecutor,
-		),
-		SaveShop: *shopUsecase.NewSaveShopUsecase(
-			shopRepo,
-			slugGen,
-			infra.TransactionExecutor,
-		),
-		DeleteShop: *shopUsecase.NewDeleteShopUsecase(
-			shopRepo,
-			infra.TransactionExecutor,
-		),
-
-		GetShopAddresses: *shopUsecase.NewGetShopAddressesUsecase(
 			addressShopRepo,
-			infra.TransactionExecutor,
-		),
-		GetShopProducts: *shopUsecase.NewGetShopProductsUsecase(
 			shopProductAdapter,
+			slugGen,
 			infra.TransactionExecutor,
 		),
 
@@ -840,7 +688,7 @@ func buildContainer(
 			log,
 		),
 
-		ListAllCouriers: *courierUsecase.NewListCouriersUsecase(
+		Courier: *courierUsecase.NewCourierService(
 			infra.TransactionExecutor,
 			courierRepo,
 		),
@@ -948,7 +796,7 @@ func buildContainer(
 			5,
 		),
 
-		GetWishlist: *wishlistUsecase.NewGetWishlistUsecase(
+		Wishlist: *wishlistUsecase.NewWishlistService(
 			wishlistRepo,
 			productRepo,
 			inventoryRepo,
@@ -956,33 +804,12 @@ func buildContainer(
 			infra.StorageProvider,
 			infra.TransactionExecutor,
 		),
-		AddToWishlist: *wishlistUsecase.NewAddToWishlistUsecase(
-			wishlistRepo,
-			productRepo,
-			infra.TransactionExecutor,
-		),
-		RemoveFromWishlist: *wishlistUsecase.NewRemoveFromWishlistUsecase(
-			wishlistRepo,
-			infra.TransactionExecutor,
-		),
 
-		CreateReview: *reviewUsecase.NewCreateReviewUsecase(
+		Review: *reviewUsecase.NewReviewService(
 			reviewRepo,
 			productRepo,
 			orderRepo,
 			orderItemRepo,
-			infra.Cache,
-			infra.TransactionExecutor,
-			infra.TransactionProvider,
-		),
-		ListReviews: *reviewUsecase.NewListReviewsUsecase(
-			reviewRepo,
-			productRepo,
-			infra.TransactionExecutor,
-		),
-		DeleteReview: *reviewUsecase.NewDeleteReviewUsecase(
-			reviewRepo,
-			productRepo,
 			infra.Cache,
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
