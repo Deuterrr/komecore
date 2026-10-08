@@ -8,8 +8,7 @@ import (
 
 	apperrors "komecore/internal/common/errors"
 	apphttp "komecore/internal/common/http"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authzSvc "komecore/internal/modules/auth/infra/service"
+	"komecore/internal/common/authctx"
 	cartDomain "komecore/internal/modules/cart/domain"
 	orderDomain "komecore/internal/modules/order/domain"
 	"komecore/internal/modules/order/usecase"
@@ -31,6 +30,7 @@ type orderHandler struct {
 	dispatchShopShipment *usecase.DispatchShopShipmentUsecase
 	getOrderTracking     *usecase.GetOrderTrackingUsecase
 	getShop              *shopUsecase.GetShopUsecase
+	checkout             *usecase.CheckoutUsecase
 }
 
 func NewOrderHandler(
@@ -41,6 +41,7 @@ func NewOrderHandler(
 	dispatchShopShipment *usecase.DispatchShopShipmentUsecase,
 	getOrderTracking *usecase.GetOrderTrackingUsecase,
 	getShop *shopUsecase.GetShopUsecase,
+	checkout *usecase.CheckoutUsecase,
 ) *orderHandler {
 	return &orderHandler{
 		findOrders:           findOrders,
@@ -50,16 +51,17 @@ func NewOrderHandler(
 		dispatchShopShipment: dispatchShopShipment,
 		getOrderTracking:     getOrderTracking,
 		getShop:              getShop,
+		checkout:             checkout,
 	}
 }
 
 func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authzSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
 
-	if actor.Type != authenDomain.AccountTypeStaff {
+	if actor.Type != authctx.AccountTypeStaff {
 		return apperrors.NewForbidden("forbidden: staff account required")
 	}
 
@@ -162,7 +164,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		allAssigned := actor.GetAssignedShopIDs()
 		var assignedIDs []uuid.UUID
 		for _, sID := range allAssigned {
-			if actor.HasPermission(sID, authenDomain.PermissionOrderRead) {
+			if actor.HasPermission(sID, authctx.PermissionOrderRead) {
 				assignedIDs = append(assignedIDs, sID)
 			}
 		}
@@ -178,7 +180,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		}
 
 		if input.ShopID != nil {
-			if !actor.HasPermission(*input.ShopID, authenDomain.PermissionOrderRead) {
+			if !actor.HasPermission(*input.ShopID, authctx.PermissionOrderRead) {
 				return apperrors.NewForbidden("forbidden: missing order:read permission for this shop")
 			}
 		} else {
@@ -207,11 +209,11 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 
 // GetOrder handles GET /orders/{orderID} — staff-only, returns a single order with full detail.
 func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authzSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
-	if actor.Type != authenDomain.AccountTypeStaff {
+	if actor.Type != authctx.AccountTypeStaff {
 		return apperrors.NewForbidden("forbidden: staff account required")
 	}
 
@@ -234,7 +236,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
 		var permittedItems []orderDomain.OrderItem
 		for _, item := range result.Items {
-			if actor.HasPermission(item.ShopID, authenDomain.PermissionOrderRead) {
+			if actor.HasPermission(item.ShopID, authctx.PermissionOrderRead) {
 				permittedItems = append(permittedItems, item)
 			}
 		}
@@ -541,11 +543,11 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 // number automatically. In manual mode the optional "tracking_number" field
 // in the request body is used instead — no external call is made.
 func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authzSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
-	if actor.Type != authenDomain.AccountTypeStaff {
+	if actor.Type != authctx.AccountTypeStaff {
 		return apperrors.NewForbidden("forbidden: staff account required")
 	}
 
@@ -573,7 +575,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 
 		uniqueShops := make(map[uuid.UUID]bool)
 		for _, item := range existingOrder.Items {
-			if actor.HasPermission(item.ShopID, authenDomain.PermissionOrderUpdateStatus) {
+			if actor.HasPermission(item.ShopID, authctx.PermissionOrderUpdateStatus) {
 				uniqueShops[item.ShopID] = true
 			}
 		}
@@ -627,11 +629,11 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 // DispatchOrderShipment handles POST /orders/{orderID}/shipments — staff-only.
 // Creates a shipment for a specific shop's order items.
 func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authzSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
-	if actor.Type != authenDomain.AccountTypeStaff {
+	if actor.Type != authctx.AccountTypeStaff {
 		return apperrors.NewForbidden("forbidden: staff account required")
 	}
 
@@ -665,7 +667,7 @@ func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Requ
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
-		if !actor.HasPermission(shopID, authenDomain.PermissionOrderUpdateStatus) {
+		if !actor.HasPermission(shopID, authctx.PermissionOrderUpdateStatus) {
 			return apperrors.NewForbidden("forbidden: missing order:update_status permission for this shop")
 		}
 	}
@@ -745,11 +747,11 @@ func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 
 // GetOrderTrackingForStaff handles GET /orders/{orderID}/tracking — staff-only.
 func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.Request) error {
-	actor, ok := authzSvc.GetActor(r.Context())
+	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperrors.NewUnauthorized("authentication required")
 	}
-	if actor.Type != authenDomain.AccountTypeStaff {
+	if actor.Type != authctx.AccountTypeStaff {
 		return apperrors.NewForbidden("forbidden: staff account required")
 	}
 
@@ -769,7 +771,7 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 
 		hasAccess := false
 		for _, item := range existingOrder.Items {
-			if actor.HasPermission(item.ShopID, authenDomain.PermissionOrderRead) {
+			if actor.HasPermission(item.ShopID, authctx.PermissionOrderRead) {
 				hasAccess = true
 				break
 			}

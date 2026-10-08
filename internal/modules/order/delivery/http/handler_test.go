@@ -10,9 +10,8 @@ import (
 	"time"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
-	authzSvc "komecore/internal/modules/auth/infra/service"
 	orderDomain "komecore/internal/modules/order/domain"
 	orderRepo "komecore/internal/modules/order/repository"
 	"komecore/internal/modules/order/usecase"
@@ -193,11 +192,11 @@ func TestGetOrderTrackingForStaff_CustomerActor_ReturnsForbidden(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/orders/"+orderID.String()+"/tracking", nil)
-	actor := &authenDomain.Actor{
-		Type:       authenDomain.AccountTypeCustomer,
+	actor := &authctx.Actor{
+		Type:       authctx.AccountTypeCustomer,
 		CustomerID: &customerID,
 	}
-	ctx := authzSvc.WithActor(req.Context(), actor)
+	ctx := authctx.WithActor(req.Context(), actor)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("orderID", orderID.String())
@@ -222,8 +221,8 @@ func TestUpdateOrderStatus_CustomerActor_ReturnsForbidden(t *testing.T) {
 
 	handler := &orderHandler{}
 
-	actor := &authenDomain.Actor{
-		Type:       authenDomain.AccountTypeCustomer,
+	actor := &authctx.Actor{
+		Type:       authctx.AccountTypeCustomer,
 		CustomerID: &customerID,
 	}
 
@@ -232,7 +231,7 @@ func TestUpdateOrderStatus_CustomerActor_ReturnsForbidden(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPatch, "/orders/"+orderID.String()+"/status", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	ctx := authzSvc.WithActor(req.Context(), actor)
+	ctx := authctx.WithActor(req.Context(), actor)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("orderID", orderID.String())

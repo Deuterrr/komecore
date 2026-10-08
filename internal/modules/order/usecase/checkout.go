@@ -3,8 +3,8 @@ package usecase
 import (
 	"context"
 
+	"komecore/internal/common/authctx"
 	transaction "komecore/internal/infra/transactor"
-	authenDomain "komecore/internal/modules/auth/domain"
 	cartDomain "komecore/internal/modules/cart/domain"
 	orderRepo "komecore/internal/modules/order/repository"
 
@@ -114,7 +114,7 @@ type CheckoutResult struct {
 	TotalAll              int64
 }
 
-func (u *CheckoutUsecase) Execute(ctx context.Context, authCtx authenDomain.AuthContext, input CheckoutInput) (*CheckoutResult, error) {
+func (u *CheckoutUsecase) Execute(ctx context.Context, authCtx authctx.AuthContext, input CheckoutInput) (*CheckoutResult, error) {
 	pricingInput := orderRepo.PricingInput{
 		CustomerID:      *authCtx.CustomerID,
 		AddressID:       input.AddressID,
