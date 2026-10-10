@@ -319,6 +319,10 @@ Authorization: Bearer {{staffToken}}
 GET {{baseUrl}}/api/v1/products?page=1&limit=10&status=active&sort=price_asc
 
 
+### Search Products via PostgreSQL Full-Text Search (GIN tsvector)
+GET {{baseUrl}}/api/v1/products?q=organic+rice&sort=relevance
+
+
 ### Create Product
 POST {{baseUrl}}/api/v1/products
 Authorization: Bearer {{staffToken}}
@@ -869,4 +873,45 @@ Authorization: Bearer {{customerToken}}
 ### Remove Product from Wishlist
 DELETE {{baseUrl}}/api/v1/users/me/wishlist/{{productId}}
 Authorization: Bearer {{customerToken}}
+
+
+# ==============================================================================
+# 15. Promotions & Coupons
+# ==============================================================================
+
+### Validate Coupon (Customer)
+POST {{baseUrl}}/api/v1/coupons/validate
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "code": "PROMO2026",
+  "subtotal": 150000,
+  "shipping_fee": 20000
+}
+
+
+### List Coupons (Staff Admin)
+GET {{baseUrl}}/api/v1/admin/coupons?page=1&limit=10&is_active=true
+Authorization: Bearer {{staffToken}}
+
+
+### Create Coupon (Staff Admin)
+POST {{baseUrl}}/api/v1/admin/coupons
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "code": "FLASHSALE50",
+  "description": "50% off holiday discount with 50k cap",
+  "type": "percentage",
+  "discount_value": 50,
+  "min_spend": 100000,
+  "max_discount": 50000,
+  "quota_total": 100,
+  "starts_at": "2026-10-01T00:00:00Z",
+  "expires_at": "2026-12-31T23:59:59Z",
+  "is_active": true
+}
+
 

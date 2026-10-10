@@ -36,6 +36,8 @@ tags:
     description: Customer product reviews, ratings, and social proof
   - name: Wishlist
     description: Customer product wishlists and saved items
+  - name: Coupons & Discounts
+    description: Promotional coupon validation, management, and discount application
 
 paths:
   /health:
@@ -910,6 +912,10 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, default: 10 }
+        - name: q
+          in: query
+          description: Full-text search query across product name, SKU, and description using PostgreSQL tsvector GIN index.
+          schema: { type: string, example: "bouquet" }
         - name: name
           in: query
           schema: { type: string }
@@ -2310,7 +2316,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
               example:
-                message: "webhook processed successfully"
+  # ==============================================================================
+  # PROMOTIONS & COUPONS
+  # ==============================================================================
+  /api/v1/coupons/validate:
+    post:
+      summary: Validate Coupon and Calculate Discount
+      description: Validates a promotional coupon code against cart subtotal and shipping fee, verifying expiration, quota, and minimum spend.
+      tags:
+        - Coupons & Discounts
+      security:
+        - BearerAuth: []
+        - CookieCustomerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCouponRequest'
+      responses:
+        '200':
+          description: Coupon validation result with calculated discount amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateCouponResponse'
+        '400':
+          description: Coupon is expired, not started, quota exceeded, or minimum spend not met
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Coupon code not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/admin/coupons:
+    get:
+      summary: List Promotional Coupons (Staff Admin)
+      description: Returns a paginated list of coupon campaigns.
+      tags:
+        - Coupons & Discounts
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: code
+          in: query
+          schema: { type: string }
+        - name: is_active
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Paginated coupon listing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCouponsResponse'
+    post:
+      summary: Create Promotional Coupon (Staff Admin)
+      description: Creates a new promotional discount or coupon code with quotas and validity rules.
+      tags:
+        - Coupons & Discounts
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCouponRequest'
+      responses:
+        '201':
+          description: Coupon successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponResponse'
+        '400':
+          description: Invalid coupon configuration (dates, discount values, quota)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Coupon code already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 # ==============================================================================
 # COMPONENTS & SCHEMAS
@@ -2961,6 +3067,7 @@ components:
       properties:
         payment_method_id: { type: string, format: uuid, nullable: true, example: "d0000000-0000-0000-0000-000000000001" }
         address_id: { type: string, format: uuid, nullable: true, example: "e0000000-0000-0000-0000-000000000001" }
+        coupon_code: { type: string, nullable: true, example: "PROMO2026" }
         shops:
           type: array
           items:
@@ -2970,6 +3077,7 @@ components:
       type: object
       required: [shops]
       properties:
+        coupon_code: { type: string, nullable: true, example: "PROMO2026" }
         shops:
           type: array
           items:
@@ -3097,6 +3205,8 @@ components:
             $ref: '#/components/schemas/ShopResponse'
         subtotal: { type: integer, format: int64 }
         total_shipping: { type: integer, format: int64 }
+        discount_amount: { type: integer, format: int64, example: 25000 }
+        coupon_code: { type: string, nullable: true, example: "PROMO2026" }
         total: { type: integer, format: int64, nullable: true }
         payment_methods:
           type: array
@@ -3179,6 +3289,7 @@ components:
       required: [address_id, selected_payment, shops]
       properties:
         address_id: { type: string, format: uuid, example: "e0000000-0000-0000-0000-000000000001" }
+        coupon_code: { type: string, nullable: true, example: "PROMO2026" }
         selected_payment:
           $ref: '#/components/schemas/CreateOrderPaymentRequest'
         shops:
@@ -3547,4 +3658,69 @@ components:
       properties:
         message: { type: string, example: "product added to wishlist successfully" }
         product_id: { type: string, format: uuid, example: "b0000000-0000-0000-0000-000000000001" }
+
+    # Coupon & Discount Schemas
+    ValidateCouponRequest:
+      type: object
+      required: [code, subtotal, shipping_fee]
+      properties:
+        code: { type: string, example: "PROMO2026" }
+        subtotal: { type: integer, format: int64, example: 150000 }
+        shipping_fee: { type: integer, format: int64, example: 20000 }
+
+    ValidateCouponResponse:
+      type: object
+      required: [code, type, discount_value, discount_amount, subtotal, shipping_fee, final_total]
+      properties:
+        code: { type: string, example: "PROMO2026" }
+        type: { type: string, enum: [percentage, fixed_amount, free_shipping], example: "percentage" }
+        discount_value: { type: integer, format: int64, example: 10 }
+        discount_amount: { type: integer, format: int64, example: 15000 }
+        subtotal: { type: integer, format: int64, example: 150000 }
+        shipping_fee: { type: integer, format: int64, example: 20000 }
+        final_total: { type: integer, format: int64, example: 155000 }
+
+    CreateCouponRequest:
+      type: object
+      required: [code, type, discount_value, min_spend, quota_total, starts_at, expires_at]
+      properties:
+        code: { type: string, example: "FLASHSALE50" }
+        description: { type: string, nullable: true, example: "50% off holiday discount" }
+        type: { type: string, enum: [percentage, fixed_amount, free_shipping], example: "percentage" }
+        discount_value: { type: integer, format: int64, example: 50 }
+        min_spend: { type: integer, format: int64, example: 100000 }
+        max_discount: { type: integer, format: int64, nullable: true, example: 50000 }
+        quota_total: { type: integer, example: 100 }
+        starts_at: { type: string, format: date-time, example: "2026-10-01T00:00:00Z" }
+        expires_at: { type: string, format: date-time, example: "2026-12-31T23:59:59Z" }
+        is_active: { type: boolean, default: true }
+
+    CouponResponse:
+      type: object
+      required: [id, code, type, discount_value, min_spend, quota_total, quota_remaining, starts_at, expires_at, is_active, created_at]
+      properties:
+        id: { type: string, format: uuid, example: "c0000000-0000-0000-0000-000000000001" }
+        code: { type: string, example: "FLASHSALE50" }
+        description: { type: string, nullable: true, example: "50% off holiday discount" }
+        type: { type: string, enum: [percentage, fixed_amount, free_shipping], example: "percentage" }
+        discount_value: { type: integer, format: int64, example: 50 }
+        min_spend: { type: integer, format: int64, example: 100000 }
+        max_discount: { type: integer, format: int64, nullable: true, example: 50000 }
+        quota_total: { type: integer, example: 100 }
+        quota_remaining: { type: integer, example: 98 }
+        starts_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        is_active: { type: boolean, example: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    ListCouponsResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CouponResponse'
+        total: { type: integer, example: 1 }
 
