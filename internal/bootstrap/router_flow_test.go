@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Mock Authenticator for router integration tests
@@ -369,7 +370,6 @@ func TestRouter_APIVersioningMounts(t *testing.T) {
 
 	r.Get("/health", dummyH)
 	r.Route("/api/v1", mountEndpoints)
-	r.Group(mountEndpoints)
 
 	registered := make(map[string]bool)
 	_ = chi.Walk(r, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
@@ -381,7 +381,68 @@ func TestRouter_APIVersioningMounts(t *testing.T) {
 	assert.True(t, registered["GET /api/v1/products"])
 	assert.True(t, registered["POST /api/v1/auth/signin"])
 	assert.True(t, registered["GET /api/v1/orders"])
-	assert.True(t, registered["GET /products"])
-	assert.True(t, registered["POST /auth/signin"])
-	assert.True(t, registered["GET /orders"])
+	assert.False(t, registered["GET /products"])
+	assert.False(t, registered["POST /auth/signin"])
+	assert.False(t, registered["GET /orders"])
+}
+
+func TestRouter_CanonicalRouteAudit_ChiWalk(t *testing.T) {
+	c := createTestContainer(false, nil)
+	r := NewRouter(c)
+
+	registeredRoutes := make(map[string]bool)
+	err := chi.Walk(r, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		cleanRoute := strings.TrimRight(route, "/")
+		if cleanRoute == "" {
+			cleanRoute = "/"
+		}
+		registeredRoutes[method+" "+cleanRoute] = true
+		return nil
+	})
+	assert.NoError(t, err)
+
+	// Assert GET /health is the unversioned infra probe
+	assert.True(t, registeredRoutes["GET /health"], "health probe must be registered at unversioned root")
+
+	// Assert 100% of non-health routes reside strictly under /api/v1/
+	for route := range registeredRoutes {
+		parts := strings.SplitN(route, " ", 2)
+		require.Len(t, parts, 2)
+		path := parts[1]
+		if path == "/health" {
+			continue
+		}
+		assert.True(t, strings.HasPrefix(path, "/api/v1/"), "route %s must be versioned under /api/v1", route)
+	}
+
+	// Assert canonical orders endpoint is registered
+	assert.True(t, registeredRoutes["POST /api/v1/orders"], "canonical POST /api/v1/orders must be registered")
+	// Assert deprecated alias order endpoint is registered
+	assert.True(t, registeredRoutes["POST /api/v1/order"], "deprecated alias POST /api/v1/order must be registered")
+
+	// Assert unversioned requests receive HTTP 404 Not Found
+	unversionedRequests := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/products"},
+		{http.MethodPost, "/order"},
+		{http.MethodPost, "/orders"},
+		{http.MethodPost, "/auth/signin"},
+		{http.MethodGet, "/carts"},
+		{http.MethodGet, "/users/me"},
+	}
+
+	for _, ur := range unversionedRequests {
+		req := httptest.NewRequest(ur.method, ur.path, nil)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		assert.Equal(t, http.StatusNotFound, rec.Code, "unversioned %s %s must return 404", ur.method, ur.path)
+	}
+
+	// Assert /health returns 200 OK
+	healthReq := httptest.NewRequest(http.MethodGet, "/health", nil)
+	healthRec := httptest.NewRecorder()
+	r.ServeHTTP(healthRec, healthReq)
+	assert.Equal(t, http.StatusOK, healthRec.Code)
 }

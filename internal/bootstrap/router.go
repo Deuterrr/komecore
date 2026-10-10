@@ -3,16 +3,15 @@ package bootstrap
 import (
 	"net/http"
 
+	"komecore/internal/authctx"
 	"komecore/internal/httpx"
 	appcookie "komecore/internal/httpx/cookie"
 	appmiddleware "komecore/internal/httpx/middleware"
 	"komecore/internal/infra/cache"
 
-	"komecore/internal/authctx"
-	"komecore/internal/modules/auth/authrepo"
-
 	"komecore/internal/modules/address/addresshttp"
 	"komecore/internal/modules/auth/authhttp"
+	"komecore/internal/modules/auth/authrepo"
 	"komecore/internal/modules/cart/carthttp"
 	"komecore/internal/modules/courier/courierhttp"
 	"komecore/internal/modules/discount/discounthttp"
@@ -154,7 +153,6 @@ func NewRouter(c *Container) *chi.Mux {
 		bindCommerceRoutes(router, h, chains)
 	}
 	r.Route("/api/v1", mountModuleRoutes)
-	r.Group(mountModuleRoutes)
 
 	return r
 }
@@ -433,6 +431,7 @@ func bindCommerceRoutes(r chi.Router, h *handlers, chains *RouteChains) {
 	})
 
 	r.Route("/orders", func(r chi.Router) {
+		r.Post("/", chains.CustomerWithIdempotency(h.order.CreateOrder))
 		r.Get("/", chains.StaffOnly(h.order.FindOrders))
 		r.Get("/{orderID}", chains.StaffOnly(h.order.GetOrder))
 		r.Get("/{orderID}/tracking", chains.StaffOnly(h.order.GetOrderTrackingForStaff))
