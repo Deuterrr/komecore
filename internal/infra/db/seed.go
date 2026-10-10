@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"komecore/seeds"
+	"komecore/internal/infra/db/seeds"
 )
 
 func RunSeed(conn *Connection) error {

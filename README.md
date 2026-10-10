@@ -52,20 +52,19 @@ make run
 make test
 ```
 
-* **Tools & Environment Provided**: Task runner CLI (`Makefile`), custom schema migration tool (`cmd/migrate`), database seeder (`cmd/seed`).
+* **Tools & Environment Provided**: Task runner CLI (`Makefile`), database migration tooling (`make migrate`).
 
 #### 4. Traditional Go Toolchain
 
 ```bash
 cp .env.example .env
 go mod download
-go run ./cmd/migrate -target=postgres   # or -target=supabase / -target=sqlserver
-go run ./cmd/seed
+make migrate
 go run ./cmd/komecore
 go test -v -count=1 ./...
 ```
 
-* **Tools & Environment Provided**: Direct Go toolchain (`go` CLI), manual script execution, source UTF-8 BOM cleaner (`tools/utf8_bom_cleaner.go`).
+* **Tools & Environment Provided**: Direct Go toolchain (`go` CLI), clean single-binary application daemon (`cmd/komecore`).
 
 #### Compatible Development Tools
 

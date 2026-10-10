@@ -2,7 +2,7 @@
 # komecore — Developer Makefile
 # ==============================================================================
 
-.PHONY: all build run dev test test-integration check migrate migrate-rollback migrate-supabase migrate-supabase-all migrate-sqlserver migrate-sqlserver-rollback seed seed-supabase docker-up docker-down docker-logs clean
+.PHONY: all build run dev test test-integration check migrate migrate-rollback migrate-sqlserver migrate-sqlserver-rollback docker-up docker-down docker-logs clean
 
 
 all: build
@@ -30,7 +30,7 @@ test-integration:
 ## check: Run full pre-commit verification (format, vet, tests with race detector)
 check:
 	@echo "Checking formatting..."
-	@test -z "$$(gofmt -l internal cmd pkg seeds tools test)" || (echo "Unformatted files found:" && gofmt -l internal cmd pkg seeds tools test && exit 1)
+	@test -z "$$(gofmt -l internal cmd pkg test)" || (echo "Unformatted files found:" && gofmt -l internal cmd pkg test && exit 1)
 	@echo "Running go vet..."
 	go vet ./...
 	@echo "Running tests with race detector..."
@@ -39,36 +39,19 @@ check:
 
 ## migrate: Apply database migrations (default: PostgreSQL)
 migrate:
-	go run ./cmd/migrate -target=postgres
+	migrate -path ./migrations/postgres -database "$${POSTGRES_DSN:-postgres://komecore:komecore_secret@localhost:5432/komecore_db?sslmode=disable}" up
 
 ## migrate-rollback: Rollback 1 migration step (default: PostgreSQL)
 migrate-rollback:
-	go run ./cmd/migrate -target=postgres -rollback=true
-
-## migrate-supabase: Apply database migrations to Supabase (DB only)
-migrate-supabase:
-	go run ./cmd/migrate -target=supabase
-
-## migrate-supabase-all: Apply migrations and storage buckets to Supabase
-migrate-supabase-all:
-	go run ./cmd/migrate -target=supabase -storage=true
+	migrate -path ./migrations/postgres -database "$${POSTGRES_DSN:-postgres://komecore:komecore_secret@localhost:5432/komecore_db?sslmode=disable}" down 1
 
 ## migrate-sqlserver: Apply database migrations to SQL Server
 migrate-sqlserver:
-	go run ./cmd/migrate -target=sqlserver
+	migrate -path ./migrations/sqlserver -database "$${SQLSERVER_DSN:-sqlserver://sa:KomeCore2026!@localhost:1433?database=komecore_db}" up
 
 ## migrate-sqlserver-rollback: Rollback 1 migration step on SQL Server
 migrate-sqlserver-rollback:
-	go run ./cmd/migrate -target=sqlserver -rollback=true
-
-
-## seed: Seed initial database fixtures (default: PostgreSQL)
-seed:
-	go run ./cmd/seed -target=postgres
-
-## seed-supabase: Seed initial database fixtures to Supabase
-seed-supabase:
-	go run ./cmd/seed -target=supabase
+	migrate -path ./migrations/sqlserver -database "$${SQLSERVER_DSN:-sqlserver://sa:KomeCore2026!@localhost:1433?database=komecore_db}" down 1
 
 ## docker-up: Start container stack in background
 docker-up:

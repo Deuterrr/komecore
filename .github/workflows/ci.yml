@@ -47,8 +47,6 @@ jobs:
       - name: Build Application Binary
         run: |
           CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/komecore ./cmd/komecore
-          CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/migrate ./cmd/migrate
-          CGO_ENABLED=0 go build -ldflags="-w -s" -o bin/seed ./cmd/seed
 
   docker-build:
     name: Docker Build Validation
