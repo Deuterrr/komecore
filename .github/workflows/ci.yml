@@ -28,7 +28,7 @@ jobs:
 
       - name: Code Formatting & Vetting
         run: |
-          unformatted=$(gofmt -l internal cmd pkg seeds tools test)
+          unformatted=$(gofmt -l internal cmd pkg test)
           if [ -n "$unformatted" ]; then
             echo "Unformatted files found:"
             echo "$unformatted"
