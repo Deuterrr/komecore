@@ -2,43 +2,23 @@ package appmiddleware
 
 import (
 	"net/http"
-	"strings"
 
-	"komecore/internal/apperror"
 	"komecore/internal/httpx"
 )
 
-type ErrResponse struct {
-	Type       apperror.ErrorType `json:"type"`
-	StatusCode int                `json:"status_code"`
-	Message    string             `json:"message"`
-}
+// ErrResponse is an alias for httpx.ErrResponse for backward compatibility.
+type ErrResponse = httpx.ErrResponse
 
+// Response intercepts any returned error, formats it using httpx.WriteError,
+// and passes the error along for upstream logging and correlation.
 func Response() Middleware {
 	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			err := next(w, r)
-
 			if err != nil {
-				appErr := apperror.Resolve(err)
-
-				msg := err.Error()
-				parts := strings.Split(msg, ":")
-				if len(parts) > 0 {
-					msg = strings.TrimSpace(parts[0])
-				}
-
-				errRes := ErrResponse{
-					Type:       appErr.Type,
-					Message:    msg,
-					StatusCode: appErr.StatusCode,
-				}
-
-				httpx.WriteJSON(w, appErr.StatusCode, errRes)
-
+				httpx.WriteError(w, r, err)
 				return err
 			}
-
 			return nil
 		}
 	}
