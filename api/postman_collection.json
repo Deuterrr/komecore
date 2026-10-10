@@ -2103,14 +2103,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/order",
+              "raw": "{{baseUrl}}/api/v1/orders",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "order"
+                "orders"
               ]
             },
             "body": {

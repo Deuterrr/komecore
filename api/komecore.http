@@ -663,7 +663,8 @@ Content-Type: application/json
 # ==============================================================================
 
 ### Create Direct Order (Idempotency protected: requires Idempotency-Key header)
-POST {{baseUrl}}/api/v1/order
+# Canonical endpoint: POST /api/v1/orders (Backward-compatible alias: POST /api/v1/order)
+POST {{baseUrl}}/api/v1/orders
 Authorization: Bearer {{customerToken}}
 Idempotency-Key: {{$guid}}
 Content-Type: application/json

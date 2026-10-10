@@ -92,7 +92,7 @@ Catalog read endpoints employ high-performance Redis 7 caching to minimize Postg
 
 ### 2. Request Idempotency & Concurrency Guards
 Mutating operations vulnerable to double-submission or transient network retries enforce distributed idempotency:
-- **`POST /api/v1/order`**: Requires the `Idempotency-Key` header (UUID or string up to 128 characters).
+- **`POST /api/v1/orders`** (canonical, backward-compatible alias `POST /api/v1/order`): Requires the `Idempotency-Key` header (UUID or string up to 128 characters).
 - **Behavior & Status Codes**:
   - **Missing / Invalid Header**: Returns `400 Bad Request` (`"Idempotency-Key header is required"`).
   - **In-Flight Lock**: If a concurrent request with the same key is currently running, returns `409 Conflict` (`"a request with this idempotency key is currently processing"`).
