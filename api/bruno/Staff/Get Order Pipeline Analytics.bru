@@ -1,0 +1,15 @@
+meta {
+  name: Get Order Pipeline Analytics
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/staff/analytics/orders
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}

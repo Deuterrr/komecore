@@ -1807,6 +1807,15 @@ paths:
       security:
         - BearerAuth: []
         - CookieCustomerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Optional unique idempotency key (e.g. UUID v4, max 128 characters) to guarantee safe retries.
+          schema:
+            type: string
+            maxLength: 128
+            example: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
       requestBody:
         required: true
         content:

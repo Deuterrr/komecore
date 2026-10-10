@@ -1,0 +1,22 @@
+meta {
+  name: Validate Coupon
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/coupons/validate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{customerToken}}
+}
+
+body:json {
+  {
+    "code": "PROMO20",
+    "cart_subtotal": 250000
+  }
+}

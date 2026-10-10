@@ -23,7 +23,7 @@ dev:
 test:
 	go test -v -count=1 ./...
 
-## test-integration: Run ephemeral PostgreSQL integration test suite
+## test-integration: Run ephemeral PostgreSQL 17 & Redis 7 integration test suite
 test-integration:
 	go test -v -count=1 -tags=integration ./test/integration/...
 

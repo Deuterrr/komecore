@@ -1,0 +1,30 @@
+meta {
+  name: Create Admin Coupon
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/admin/coupons
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
+
+body:json {
+  {
+    "code": "SUMMERSALE",
+    "description": "Summer seasonal promotion",
+    "type": "percentage",
+    "discount_value": 20,
+    "min_spend": 100000,
+    "max_discount": 50000,
+    "quota_total": 100,
+    "starts_at": "2026-10-01T00:00:00Z",
+    "expires_at": "2026-12-31T23:59:59Z",
+    "is_active": true
+  }
+}

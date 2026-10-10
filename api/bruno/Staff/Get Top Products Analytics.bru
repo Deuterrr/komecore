@@ -1,0 +1,15 @@
+meta {
+  name: Get Top Products Analytics
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/staff/analytics/top-products?limit=10
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{staffToken}}
+}
