@@ -143,17 +143,17 @@ func toCouponResponse(c discountdomain.Coupon) CouponResponse {
 func mapDomainError(err error) error {
 	switch {
 	case errors.Is(err, discountdomain.ErrCouponNotFound):
-		return apperror.NewNotFound(err.Error())
+		return apperror.NewNotFoundWithCode(apperror.CodeCouponNotFound, err.Error())
 	case errors.Is(err, discountdomain.ErrCouponInactive):
 		return apperror.NewBadRequest(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponExpired):
-		return apperror.NewBadRequest(err.Error())
+		return apperror.NewBadRequestWithCode(apperror.CodeCouponExpired, err.Error())
 	case errors.Is(err, discountdomain.ErrCouponNotStarted):
 		return apperror.NewBadRequest(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponQuotaExceeded):
-		return apperror.NewBadRequest(err.Error())
+		return apperror.NewConflictWithCode(apperror.CodeCouponQuotaExhausted, err.Error())
 	case errors.Is(err, discountdomain.ErrCouponMinSpendNotMet):
-		return apperror.NewBadRequest(err.Error())
+		return apperror.NewBadRequestWithCode(apperror.CodeCouponMinSpendNotMet, err.Error())
 	case errors.Is(err, discountdomain.ErrCouponAlreadyRedeemed):
 		return apperror.NewConflict(err.Error())
 	case errors.Is(err, discountdomain.ErrDuplicateCouponCode):

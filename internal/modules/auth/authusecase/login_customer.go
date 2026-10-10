@@ -82,17 +82,17 @@ func (u *LoginCustomerUsecase) Execute(ctx context.Context, input LoginCustomerP
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if existing == nil {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Type != authdomain.AccountTypeCustomer {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Status != authdomain.AccountActive {
 		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
 	}
 
 	if err := u.pwHasher.Compare(existing.Password, input.Password); err != nil {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
 	}
 
 	var customerID *uuid.UUID

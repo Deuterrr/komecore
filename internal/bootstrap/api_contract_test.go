@@ -126,11 +126,21 @@ func TestAPIContract_OpenAPISpecValidation(t *testing.T) {
 		"OrderResponse",
 		"CartResponse",
 		"WishlistResponse",
+		"ErrorResponse",
 	}
 
 	for _, s := range expectedSchemas {
 		_, hasSchema := schemas[s]
 		assert.True(t, hasSchema, "schema %s must be defined in openapi.yaml", s)
+	}
+
+	// Verify ErrorResponse schema has standardized envelope fields
+	errSchema, ok := schemas["ErrorResponse"].(map[string]any)
+	require.True(t, ok, "ErrorResponse must be a map schema")
+	errProps, ok := errSchema["properties"].(map[string]any)
+	require.True(t, ok, "ErrorResponse must have properties")
+	for _, f := range []string{"type", "status_code", "message", "code", "request_id", "details"} {
+		assert.Contains(t, errProps, f, "ErrorResponse schema must contain property %s", f)
 	}
 }
 

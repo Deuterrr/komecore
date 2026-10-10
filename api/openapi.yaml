@@ -2621,9 +2621,33 @@ components:
 
     ErrorResponse:
       type: object
-      required: [error]
+      required:
+        - type
+        - status_code
+        - message
+        - code
+        - request_id
       properties:
-        error: { type: string, example: "invalid request parameter" }
+        type:
+          type: string
+          example: "BAD_REQUEST"
+        status_code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "invalid request parameter"
+        code:
+          type: string
+          example: "BAD_REQUEST"
+        request_id:
+          type: string
+          example: "b78b0f92-562e-4cb8-8c1d-85fa762b9a7b"
+        details:
+          type: array
+          items:
+            type: string
+          example: []
 
     # Auth Schemas
     SignUpRequest:

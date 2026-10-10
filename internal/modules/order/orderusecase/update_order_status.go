@@ -147,7 +147,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 	if order == nil {
-		return nil, apperror.NewNotFound("order not found")
+		return nil, apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 	}
 
 	oldStatus = string(order.Status)

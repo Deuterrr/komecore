@@ -107,7 +107,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 	if order == nil {
-		return nil, apperror.NewNotFound("order not found")
+		return nil, apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 	}
 	if order.Status != orderdomain.OrderStatusProcessing {
 		return nil, apperror.NewConflict(

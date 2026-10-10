@@ -230,7 +230,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if result == nil {
-		return apperror.NewNotFound("order not found")
+		return apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
@@ -399,7 +399,7 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	if result == nil {
-		return apperror.NewNotFound("order not found")
+		return apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 	}
 
 	resp := buildOrderResponse(orderusecase.OrderSearchResult{
@@ -571,7 +571,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 			OrderID: orderID,
 		})
 		if err != nil || existingOrder == nil {
-			return apperror.NewNotFound("order not found")
+			return apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 		}
 
 		uniqueShops := make(map[uuid.UUID]bool)
@@ -749,7 +749,7 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 			OrderID: orderID,
 		})
 		if err != nil || existingOrder == nil {
-			return apperror.NewNotFound("order not found")
+			return apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 		}
 
 		hasAccess := false

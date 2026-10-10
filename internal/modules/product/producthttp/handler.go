@@ -157,7 +157,7 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	if productDetail == nil {
-		return apperror.NewNotFound("product not found")
+		return apperror.NewNotFoundWithCode(apperror.CodeProductNotFound, "product not found")
 	}
 
 	var available int

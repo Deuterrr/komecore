@@ -80,17 +80,17 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if existing == nil {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Type != authdomain.AccountTypeStaff {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Status != authdomain.AccountActive {
 		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
 	}
 
 	if err := u.pwHasher.Compare(existing.Password, input.Password); err != nil {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
 	}
 
 	memberStaff, err := u.membershipRepo.GetByAccountID(ctx, u.executor, existing.ID)
@@ -98,7 +98,7 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, fmt.Errorf("failed to retrieve membership: %w", err)
 	}
 	if memberStaff == nil {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
 	}
 
 	roles, err := u.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, u.executor,

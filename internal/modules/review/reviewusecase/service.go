@@ -130,10 +130,10 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			return nil, fmt.Errorf("failed to retrieve order: %w", err)
 		}
 		if order == nil || order.CustomerID != input.CustomerID {
-			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 		if order.Status != orderdomain.OrderStatusDelivered && string(order.Status) != "completed" {
-			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 
 		items, err := s.orderItemRepo.ListByOrderID(ctx, s.executor, order.ID)
@@ -148,7 +148,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			}
 		}
 		if !hasProduct {
-			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 
 		hasReviewed, err := s.reviewRepo.HasReviewedOrder(ctx, s.executor, input.CustomerID, input.ProductID, order.ID)
@@ -156,7 +156,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			return nil, fmt.Errorf("failed to check order review status: %w", err)
 		}
 		if hasReviewed {
-			return nil, apperror.NewConflict(reviewdomain.ErrDuplicateReview.Error())
+			return nil, apperror.NewConflictWithCode(apperror.CodeDuplicateReview, reviewdomain.ErrDuplicateReview.Error())
 		}
 
 		targetOrderID = order.ID
@@ -190,7 +190,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			}
 		}
 		if len(eligibleOrderIDsMap) == 0 {
-			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 
 		reviewedIDs, err := s.reviewRepo.GetReviewedOrderIDs(ctx, s.executor, input.CustomerID, input.ProductID)
@@ -211,7 +211,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 		}
 
 		if chosenID == nil {
-			return nil, apperror.NewConflict(reviewdomain.ErrDuplicateReview.Error())
+			return nil, apperror.NewConflictWithCode(apperror.CodeDuplicateReview, reviewdomain.ErrDuplicateReview.Error())
 		}
 
 		targetOrderID = *chosenID
