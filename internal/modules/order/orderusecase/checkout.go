@@ -1,4 +1,4 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"
@@ -47,6 +47,7 @@ type CheckoutShopInput struct {
 type CheckoutInput struct {
 	PaymentMethodID *uuid.UUID
 	AddressID       *uuid.UUID
+	CouponCode      *string
 	ShopInput       []CheckoutShopInput
 }
 
@@ -55,6 +56,7 @@ func (u *CheckoutUsecase) Execute(ctx context.Context, authCtx authctx.AuthConte
 		CustomerID:      *authCtx.CustomerID,
 		AddressID:       input.AddressID,
 		PaymentMethodID: input.PaymentMethodID,
+		CouponCode:      input.CouponCode,
 		Shops: make(
 			[]orderrepo.PricingShopInput,
 			0,

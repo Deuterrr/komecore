@@ -13,6 +13,7 @@ import (
 	"komecore/internal/modules/cart/cartdomain"
 	"komecore/internal/modules/cart/cartrepo"
 	"komecore/internal/modules/courier/courierrepo"
+	"komecore/internal/modules/discount/discountusecase"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/inventory/inventoryrepo"
 	"komecore/internal/modules/order/orderrepo"
@@ -25,6 +26,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type CouponValidator interface {
+	ValidateCoupon(ctx context.Context, input discountusecase.ValidateCouponInput) (*discountusecase.ValidateCouponResult, error)
+}
+
 type pricingServiceImpl struct {
 	addressRepo       addressrepo.CustomerAddressRepository
 	cartRepo          cartrepo.CartRepository
@@ -35,6 +40,7 @@ type pricingServiceImpl struct {
 	shippingProvider  shipping.ShippingProvider
 	shopAddressRepo   addressrepo.ShopAddressRepository
 	shopRepo          shoprepo.ShopRepository
+	couponService     CouponValidator
 }
 
 func NewPricingService(
@@ -47,7 +53,7 @@ func NewPricingService(
 	shippingProvider shipping.ShippingProvider,
 	shopAddressRepo addressrepo.ShopAddressRepository,
 	shopRepo shoprepo.ShopRepository,
-) orderrepo.PricingService {
+) *pricingServiceImpl {
 	return &pricingServiceImpl{
 		addressRepo:       addressRepo,
 		cartRepo:          cartRepo,
@@ -59,6 +65,11 @@ func NewPricingService(
 		shopAddressRepo:   shopAddressRepo,
 		shopRepo:          shopRepo,
 	}
+}
+
+func (s *pricingServiceImpl) WithCouponService(cs CouponValidator) *pricingServiceImpl {
+	s.couponService = cs
+	return s
 }
 
 const defaultShippingWeightGrams = 1000
@@ -343,10 +354,28 @@ func (s *pricingServiceImpl) Calculate(
 		shopsResult = append(shopsResult, shopResult)
 	}
 
+	var discountAmount int64
+	if input.CouponCode != nil && strings.TrimSpace(*input.CouponCode) != "" && s.couponService != nil {
+		res, err := s.couponService.ValidateCoupon(ctx, discountusecase.ValidateCouponInput{
+			Code:        *input.CouponCode,
+			Subtotal:    totalSubtotal,
+			ShippingFee: totalShippingFee,
+		})
+		if err != nil {
+			return nil, err
+		}
+		discountAmount = res.DiscountAmount
+	}
+
+	totalAfterDiscount := totalSubtotal + totalShippingFee - discountAmount
+	if totalAfterDiscount < 0 {
+		totalAfterDiscount = 0
+	}
+
 	var (
 		paymentMethods        []orderrepo.PaymentMethodPricingResult
 		selectedPaymentMethod *orderrepo.PaymentMethodPricingResult
-		totalAll              = totalSubtotal + totalShippingFee
+		totalAll              = totalAfterDiscount
 	)
 
 	if input.PaymentMethodID != nil {
@@ -413,6 +442,8 @@ func (s *pricingServiceImpl) Calculate(
 		Shops:                 shopsResult,
 		Subtotal:              totalSubtotal,
 		TotalShippingFee:      totalShippingFee,
+		DiscountAmount:        discountAmount,
+		CouponCode:            input.CouponCode,
 		GrandTotal:            totalAll + leastFeePayMethod,
 		PaymentMethods:        paymentMethods,
 		SelectedPaymentMethod: selectedPaymentMethod,

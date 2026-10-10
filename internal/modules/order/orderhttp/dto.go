@@ -1,4 +1,4 @@
-﻿package orderhttp
+package orderhttp
 
 import (
 	"time"
@@ -29,6 +29,7 @@ type createOrderShopRequest struct {
 
 type createOrderRequest struct {
 	AddressID       string                    `json:"address_id"`
+	CouponCode      *string                   `json:"coupon_code,omitempty"`
 	SelectedPayment createOrderPaymentRequest `json:"selected_payment"`
 	Shops           []createOrderShopRequest  `json:"shops"`
 }

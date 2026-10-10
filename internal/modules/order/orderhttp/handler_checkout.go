@@ -1,4 +1,4 @@
-﻿package orderhttp
+package orderhttp
 
 import (
 	"net/http"
@@ -23,7 +23,8 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	reqCheckoutCalc := checkoutCalculateRequest{
-		Shops: req.Shops,
+		CouponCode: req.CouponCode,
+		Shops:      req.Shops,
 	}
 	input, err := h.parseCheckoutInput(reqCheckoutCalc)
 	if err != nil {
@@ -101,6 +102,8 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 		Shops:          shopsResponse,
 		TotalShipping:  result.TotalShippingFee,
 		Subtotal:       result.Subtotal,
+		DiscountAmount: result.DiscountAmount,
+		CouponCode:     result.CouponCode,
 		PaymentMethods: paymentMethods,
 	}
 
@@ -215,9 +218,11 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 			Phone:         result.Address.Phone,
 			FullAddress:   result.Address.FullAddress,
 		},
-		Shops:         shopsResponse,
-		TotalShipping: result.TotalShippingFee,
-		Subtotal:      result.Subtotal,
+		Shops:          shopsResponse,
+		TotalShipping:  result.TotalShippingFee,
+		Subtotal:       result.Subtotal,
+		DiscountAmount: result.DiscountAmount,
+		CouponCode:     result.CouponCode,
 	}
 	if selectedPayment != nil {
 		resp.SelectedPaymentMethods = *selectedPayment
@@ -329,6 +334,7 @@ func (h *orderHandler) parseCheckoutInput(
 	return orderusecase.CheckoutInput{
 		PaymentMethodID: paymentMethodID,
 		AddressID:       addressID,
+		CouponCode:      req.CouponCode,
 		ShopInput:       shopInput,
 	}, nil
 }

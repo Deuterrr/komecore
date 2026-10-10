@@ -504,6 +504,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 		CustomerID:      customerID,
 		AddressID:       parsedAddressID,
 		PaymentMethodID: parsedPaymentMethodID,
+		CouponCode:      req.CouponCode,
 		Shops:           shopsInput,
 	}
 	result, err := h.createOrder.Execute(r.Context(), input)

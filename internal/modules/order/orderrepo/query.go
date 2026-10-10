@@ -1,4 +1,4 @@
-﻿package orderrepo
+package orderrepo
 
 import (
 	"time"
@@ -27,6 +27,7 @@ type PricingInput struct {
 	CustomerID      uuid.UUID
 	AddressID       *uuid.UUID
 	PaymentMethodID *uuid.UUID
+	CouponCode      *string
 	Shops           []PricingShopInput
 }
 
@@ -88,6 +89,8 @@ type PricingResult struct {
 	Shops                 []PricingShopResult
 	Subtotal              int64
 	TotalShippingFee      int64
+	DiscountAmount        int64
+	CouponCode            *string
 	GrandTotal            int64
 	PaymentMethods        []PaymentMethodPricingResult
 	SelectedPaymentMethod *PaymentMethodPricingResult

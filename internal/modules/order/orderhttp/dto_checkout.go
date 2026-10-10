@@ -1,4 +1,4 @@
-﻿package orderhttp
+package orderhttp
 
 import (
 	"github.com/google/uuid"
@@ -23,12 +23,14 @@ type checkoutShopRequest struct {
 }
 
 type checkoutRequest struct {
-	Shops []checkoutShopRequest `json:"shops"`
+	CouponCode *string               `json:"coupon_code,omitempty"`
+	Shops      []checkoutShopRequest `json:"shops"`
 }
 
 type checkoutCalculateRequest struct {
 	PaymentMethodID *string               `json:"payment_method_id"`
 	AddressID       *string               `json:"address_id"`
+	CouponCode      *string               `json:"coupon_code,omitempty"`
 	Shops           []checkoutShopRequest `json:"shops"`
 }
 
@@ -89,6 +91,8 @@ type checkoutResponse struct {
 	Shops          []shopResponse          `json:"shops"`
 	Subtotal       int64                   `json:"subtotal"`
 	TotalShipping  int64                   `json:"total_shipping"`
+	DiscountAmount int64                   `json:"discount_amount"`
+	CouponCode     *string                 `json:"coupon_code,omitempty"`
 	TotalAll       *int64                  `json:"total"`
 	PaymentMethods []paymentMethodResponse `json:"payment_methods"`
 }
@@ -108,6 +112,8 @@ type checkoutCalculateResponse struct {
 	Shops                  []shopCalculateResponse `json:"shops"`
 	Subtotal               int64                   `json:"subtotal"`
 	TotalShipping          int64                   `json:"total_shipping"`
+	DiscountAmount         int64                   `json:"discount_amount"`
+	CouponCode             *string                 `json:"coupon_code,omitempty"`
 	TotalAll               *int64                  `json:"total"`
 	SelectedPaymentMethods paymentMethodResponse   `json:"selected_payment_method"`
 }

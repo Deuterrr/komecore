@@ -1,4 +1,4 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"komecore/internal/modules/auth/authrepo"
 	"komecore/internal/modules/cart/cartdomain"
 	"komecore/internal/modules/cart/cartrepo"
+	"komecore/internal/modules/discount/discountdomain"
+	"komecore/internal/modules/discount/discountusecase"
 	"komecore/internal/modules/inventory/inventoryrepo"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/order/orderrepo"
@@ -56,6 +58,7 @@ type CreateOrderInput struct {
 	CustomerID      uuid.UUID
 	AddressID       uuid.UUID
 	PaymentMethodID uuid.UUID
+	CouponCode      *string
 	Shops           []OrderShopInput
 }
 
@@ -72,6 +75,10 @@ type CreateOrderResult struct {
 	ChannelData    *paymentdomain.PaymentChannelData
 	Instruction    *string
 	Total          int64
+}
+
+type CouponRedeemer interface {
+	RedeemCoupon(ctx context.Context, exec transaction.Executor, input discountusecase.RedeemCouponInput) (*discountdomain.CouponRedemption, error)
 }
 
 type CreateOrderUsecase struct {
@@ -92,6 +99,7 @@ type CreateOrderUsecase struct {
 	userRepo               userrepo.UserRepository
 	paymentGateway         paymentgateway.Provider
 	pricingService         orderrepo.PricingService
+	couponService          CouponRedeemer
 }
 
 func NewCreateOrderUsecase(
@@ -132,6 +140,11 @@ func NewCreateOrderUsecase(
 		paymentGateway:         paymentGateway,
 		pricingService:         pricingService,
 	}
+}
+
+func (u *CreateOrderUsecase) WithCouponService(cs CouponRedeemer) *CreateOrderUsecase {
+	u.couponService = cs
+	return u
 }
 
 // Execute orchestrates the checkout workflow across cart validation, inventory,
@@ -251,6 +264,15 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		})
 	}
 
+	if pricingResult.DiscountAmount > 0 {
+		chargeItems = append(chargeItems, paymentgateway.ChargeItem{
+			ID:       "discount",
+			Name:     "Discount Voucher",
+			Quantity: 1,
+			Price:    -pricingResult.DiscountAmount,
+		})
+	}
+
 	var itemSum int64
 	for _, ci := range chargeItems {
 		itemSum += ci.Price * int64(ci.Quantity)
@@ -356,6 +378,18 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		}
 		if err := u.paymentEventRepo.Create(ctx, exec, paymentEvent); err != nil {
 			return fmt.Errorf("failed to save payment event: %w", err)
+		}
+
+		if input.CouponCode != nil && strings.TrimSpace(*input.CouponCode) != "" && u.couponService != nil {
+			if _, err := u.couponService.RedeemCoupon(ctx, exec, discountusecase.RedeemCouponInput{
+				Code:        *input.CouponCode,
+				CustomerID:  input.CustomerID,
+				OrderID:     order.ID,
+				Subtotal:    pricingResult.Subtotal,
+				ShippingFee: pricingResult.TotalShippingFee,
+			}); err != nil {
+				return fmt.Errorf("failed to redeem coupon: %w", err)
+			}
 		}
 
 		// Persist gateway channel data (QR string, VA number, deep link)
@@ -550,6 +584,7 @@ func (u *CreateOrderUsecase) validateAndCalculatePricing(
 		CustomerID:      input.CustomerID,
 		AddressID:       &input.AddressID,
 		PaymentMethodID: &input.PaymentMethodID,
+		CouponCode:      input.CouponCode,
 		Shops:           make([]orderrepo.PricingShopInput, 0, len(input.Shops)),
 	}
 
