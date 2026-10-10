@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	apperrors "komecore/internal/common/errors"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/apperror"
+	"komecore/internal/infra/paymentgateway"
 )
 
 // mapNotificationStatus converts Midtrans transaction_status + fraud_status
@@ -66,13 +66,13 @@ func mapProviderStatusCode(statusCode, statusMessage, contextPrefix string) erro
 	case "200", "201", "202", "407":
 		return nil
 	case "404":
-		return apperrors.NewNotFound(fmt.Sprintf("%s: transaction not found on payment gateway (%s)", contextPrefix, statusMessage))
+		return apperror.NewNotFound(fmt.Sprintf("%s: transaction not found on payment gateway (%s)", contextPrefix, statusMessage))
 	case "400":
-		return apperrors.NewBadRequest(fmt.Sprintf("%s: invalid payment gateway request (%s)", contextPrefix, statusMessage))
+		return apperror.NewBadRequest(fmt.Sprintf("%s: invalid payment gateway request (%s)", contextPrefix, statusMessage))
 	case "406":
-		return apperrors.NewConflict(fmt.Sprintf("%s: transaction conflict on payment gateway (%s)", contextPrefix, statusMessage))
+		return apperror.NewConflict(fmt.Sprintf("%s: transaction conflict on payment gateway (%s)", contextPrefix, statusMessage))
 	case "412":
-		return apperrors.NewBadRequest(fmt.Sprintf("%s: transaction status cannot be modified on gateway (%s)", contextPrefix, statusMessage))
+		return apperror.NewBadRequest(fmt.Sprintf("%s: transaction status cannot be modified on gateway (%s)", contextPrefix, statusMessage))
 	default:
 		if strings.HasPrefix(statusCode, "2") {
 			return nil

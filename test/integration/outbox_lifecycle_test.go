@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"komecore/internal/infra/outbox"
-	"komecore/internal/testutil/testdb"
 	applogger "komecore/pkg/logger"
+	"komecore/test/testutil/testdb"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

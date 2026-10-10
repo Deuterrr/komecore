@@ -14,7 +14,7 @@ import (
 	"komecore/internal/modules/review/reviewdomain"
 	"komecore/internal/modules/review/reviewpersistence"
 	"komecore/internal/modules/review/reviewusecase"
-	"komecore/internal/testutil/testdb"
+	"komecore/test/testutil/testdb"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

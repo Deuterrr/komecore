@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	config "komecore/internal/config"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 
 	"github.com/google/uuid"
 )
@@ -674,8 +674,8 @@ func TestCharge_GatewayNonSuccessStatus(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-2xx gateway status, got nil")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeBadRequest {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeBadRequest {
 		t.Errorf("expected BadRequest AppError, got: %v", err)
 	}
 }
@@ -1019,8 +1019,8 @@ func TestCancelTransaction_GatewayErrorStatus(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-2xx cancel response, got nil")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeBadRequest {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeBadRequest {
 		t.Errorf("expected BadRequest AppError for status 412, got: %v", err)
 	}
 }

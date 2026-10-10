@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"komecore/internal/config"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"komecore/internal/infra/cache"
-	"komecore/internal/testutil/testredis"
+	"komecore/test/testutil/testredis"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

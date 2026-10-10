@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"komecore/internal/testutil/testdb"
+	"komecore/test/testutil/testdb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

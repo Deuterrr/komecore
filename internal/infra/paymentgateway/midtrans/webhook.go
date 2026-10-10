@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 )
 
 // ErrInvalidSignature is returned when an inbound webhook payload fails HMAC SHA-512 verification.

@@ -135,7 +135,7 @@ func TestDomainPurity(t *testing.T) {
 
 	forbiddenPrefixes := []string{
 		"net/http",
-		"komecore/internal/common/http",
+		"komecore/internal/httpx",
 		"github.com/jackc/pgx",
 	}
 

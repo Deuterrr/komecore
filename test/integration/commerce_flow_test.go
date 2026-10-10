@@ -11,7 +11,7 @@ import (
 
 	"komecore/internal/infra/outbox"
 	"komecore/internal/infra/transactor"
-	"komecore/internal/testutil/testdb"
+	"komecore/test/testutil/testdb"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

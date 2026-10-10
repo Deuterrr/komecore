@@ -10,7 +10,7 @@ import (
 	"time"
 
 	config "komecore/internal/config"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	appclock "komecore/pkg/clock"
 )
 
