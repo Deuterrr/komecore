@@ -31,10 +31,13 @@ type sqlRow struct {
 
 func (r sqlRow) Scan(dest ...any) error {
 	err := r.row.Scan(dest...)
-	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("%w: %w: %w", transactor.ErrNoRows, pgx.ErrNoRows, sql.ErrNoRows)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%w: %w: %w", transactor.ErrNoRows, pgx.ErrNoRows, sql.ErrNoRows)
+		}
+		return transactor.MapDBError(err)
 	}
-	return err
+	return nil
 }
 
 type sqlRows struct {
@@ -49,7 +52,7 @@ func (r sqlRows) Next() bool {
 }
 
 func (r sqlRows) Scan(dest ...any) error {
-	return r.rows.Scan(dest...)
+	return transactor.MapDBError(r.rows.Scan(dest...))
 }
 
 func (r sqlRows) Close() {
@@ -60,7 +63,7 @@ func (r sqlRows) Close() {
 
 func (r sqlRows) Err() error {
 	if r.rows != nil {
-		return r.rows.Err()
+		return transactor.MapDBError(r.rows.Err())
 	}
 	return nil
 }
@@ -92,7 +95,7 @@ func (e *SQLServerExecutor) Exec(ctx context.Context, sqlQuery string, args ...a
 	translated := convertPgParamsToSQLServer(sqlQuery)
 	res, err := e.runner.ExecContext(ctx, translated, args...)
 	if err != nil {
-		return nil, err
+		return nil, transactor.MapDBError(err)
 	}
 	return sqlResult{res: res}, nil
 }
@@ -101,7 +104,7 @@ func (e *SQLServerExecutor) Query(ctx context.Context, sqlQuery string, args ...
 	translated := convertPgParamsToSQLServer(sqlQuery)
 	rows, err := e.runner.QueryContext(ctx, translated, args...)
 	if err != nil {
-		return nil, err
+		return nil, transactor.MapDBError(err)
 	}
 	return sqlRows{rows: rows}, nil
 }

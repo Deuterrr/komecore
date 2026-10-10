@@ -27,10 +27,13 @@ type pgxRow struct {
 
 func (r pgxRow) Scan(dest ...any) error {
 	err := r.row.Scan(dest...)
-	if errors.Is(err, pgxv5.ErrNoRows) {
-		return fmt.Errorf("%w: %w: %w", transactor.ErrNoRows, pgxv5.ErrNoRows, sql.ErrNoRows)
+	if err != nil {
+		if errors.Is(err, pgxv5.ErrNoRows) {
+			return fmt.Errorf("%w: %w: %w", transactor.ErrNoRows, pgxv5.ErrNoRows, sql.ErrNoRows)
+		}
+		return transactor.MapDBError(err)
 	}
-	return err
+	return nil
 }
 
 type pgxRows struct {
@@ -42,7 +45,7 @@ func (r pgxRows) Next() bool {
 }
 
 func (r pgxRows) Scan(dest ...any) error {
-	return r.rows.Scan(dest...)
+	return transactor.MapDBError(r.rows.Scan(dest...))
 }
 
 func (r pgxRows) Close() {
@@ -50,7 +53,7 @@ func (r pgxRows) Close() {
 }
 
 func (r pgxRows) Err() error {
-	return r.rows.Err()
+	return transactor.MapDBError(r.rows.Err())
 }
 
 // PgxRunner is satisfied by both *pgxpool.Pool and pgxv5.Tx.
@@ -72,7 +75,7 @@ func NewPgxExecutor(runner PgxRunner) *PgxExecutor {
 func (e *PgxExecutor) Exec(ctx context.Context, sql string, args ...any) (transactor.Result, error) {
 	tag, err := e.runner.Exec(ctx, sql, args...)
 	if err != nil {
-		return nil, err
+		return nil, transactor.MapDBError(err)
 	}
 	return pgxResult{tag: tag}, nil
 }
@@ -80,7 +83,7 @@ func (e *PgxExecutor) Exec(ctx context.Context, sql string, args ...any) (transa
 func (e *PgxExecutor) Query(ctx context.Context, sql string, args ...any) (transactor.Rows, error) {
 	rows, err := e.runner.Query(ctx, sql, args...)
 	if err != nil {
-		return nil, err
+		return nil, transactor.MapDBError(err)
 	}
 	return pgxRows{rows: rows}, nil
 }
