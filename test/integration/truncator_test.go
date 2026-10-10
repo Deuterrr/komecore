@@ -19,6 +19,7 @@ func TestTruncator_CleanStateIsolation(t *testing.T) {
 	defer cancel()
 
 	tdb, err := testdb.NewTestDB(ctx)
+	skipIfDockerUnavailable(t, err)
 	require.NoError(t, err)
 	defer func() {
 		_ = tdb.Close(ctx)
