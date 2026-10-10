@@ -230,3 +230,36 @@ func TestFindProducts_FiltersInactiveOrUnapprovedShops(t *testing.T) {
 		t.Errorf("expected Active Shop in availability, got %s", res[0].Availability[0].ShopName)
 	}
 }
+
+func TestFindProducts_FullTextSearch(t *testing.T) {
+	ctx := context.Background()
+	productRepo := &mockFindProductRepo{}
+	invRepo := &mockFindInventoryRepo{}
+	imgRepo := &mockFindImgRepo{}
+	shopRepo := &mockFindShopRepo{}
+	fileStore := &mockFileStore{}
+	exec := &mockExecutor{}
+
+	uc := NewFindProductsUsecase(productRepo, invRepo, imgRepo, shopRepo, fileStore, exec)
+
+	searchQuery := "wireless earbuds"
+	_, _, err := uc.Execute(ctx, FindProductsInput{
+		SearchQuery: &searchQuery,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if productRepo.capturedParams.SearchQuery == nil || *productRepo.capturedParams.SearchQuery != searchQuery {
+		t.Errorf("expected captured SearchQuery to be %q, got %v", searchQuery, productRepo.capturedParams.SearchQuery)
+	}
+
+	if len(productRepo.capturedParams.Sorts) == 0 {
+		t.Fatalf("expected sorts to be populated")
+	}
+
+	if productRepo.capturedParams.Sorts[0].By != productrepo.ProductSortRelevance {
+		t.Errorf("expected default sort to be relevance when search query provided, got %v", productRepo.capturedParams.Sorts[0].By)
+	}
+}
+

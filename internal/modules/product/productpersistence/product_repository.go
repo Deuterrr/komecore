@@ -96,6 +96,18 @@ func (r *ProductRepository) FindProducts(
 		argPos++
 	}
 
+	var searchArgPos int
+	if params.SearchQuery != nil && strings.TrimSpace(*params.SearchQuery) != "" {
+		trimmed := strings.TrimSpace(*params.SearchQuery)
+		searchArgPos = argPos
+		conditions = append(
+			conditions,
+			fmt.Sprintf("p.search_vector @@ websearch_to_tsquery('simple', $%d)", argPos),
+		)
+		args = append(args, trimmed)
+		argPos++
+	}
+
 	if params.Status != nil {
 		conditions = append(
 			conditions,
@@ -139,6 +151,18 @@ func (r *ProductRepository) FindProducts(
 
 	var sortClauses []string
 	for _, sort := range params.Sorts {
+		if sort.By == productrepo.ProductSortRelevance && searchArgPos > 0 {
+			dir := "DESC"
+			if sort.Direction == query.SortAsc {
+				dir = "ASC"
+			}
+			sortClauses = append(
+				sortClauses,
+				fmt.Sprintf("ts_rank_cd(p.search_vector, websearch_to_tsquery('simple', $%d)) %s", searchArgPos, dir),
+			)
+			continue
+		}
+
 		colName, exists := productSortKeys[sort.By]
 		if !exists {
 			continue
@@ -158,6 +182,8 @@ func (r *ProductRepository) FindProducts(
 	orderBy := "ORDER BY p.created_at DESC"
 	if len(sortClauses) > 0 {
 		orderBy = "ORDER BY " + strings.Join(sortClauses, ", ")
+	} else if searchArgPos > 0 {
+		orderBy = fmt.Sprintf("ORDER BY ts_rank_cd(p.search_vector, websearch_to_tsquery('simple', $%d)) DESC", searchArgPos)
 	}
 
 	// Apply pagination
@@ -309,6 +335,18 @@ func (r *ProductRepository) FindProductsWithInventory(
 		argPos++
 	}
 
+	var searchArgPos int
+	if params.SearchQuery != nil && strings.TrimSpace(*params.SearchQuery) != "" {
+		trimmed := strings.TrimSpace(*params.SearchQuery)
+		searchArgPos = argPos
+		conditions = append(
+			conditions,
+			fmt.Sprintf("p.search_vector @@ websearch_to_tsquery('simple', $%d)", argPos),
+		)
+		args = append(args, trimmed)
+		argPos++
+	}
+
 	if params.Status != nil {
 		conditions = append(
 			conditions,
@@ -353,6 +391,18 @@ func (r *ProductRepository) FindProductsWithInventory(
 
 	var sortClauses []string
 	for _, sort := range params.Sorts {
+		if sort.By == productrepo.ProductSortRelevance && searchArgPos > 0 {
+			dir := "DESC"
+			if sort.Direction == query.SortAsc {
+				dir = "ASC"
+			}
+			sortClauses = append(
+				sortClauses,
+				fmt.Sprintf("ts_rank_cd(p.search_vector, websearch_to_tsquery('simple', $%d)) %s", searchArgPos, dir),
+			)
+			continue
+		}
+
 		colName, exists := productSortKeys[sort.By]
 		if !exists {
 			continue
@@ -372,6 +422,8 @@ func (r *ProductRepository) FindProductsWithInventory(
 	orderBy := "ORDER BY p.created_at DESC"
 	if len(sortClauses) > 0 {
 		orderBy = "ORDER BY " + strings.Join(sortClauses, ", ")
+	} else if searchArgPos > 0 {
+		orderBy = fmt.Sprintf("ORDER BY ts_rank_cd(p.search_vector, websearch_to_tsquery('simple', $%d)) DESC", searchArgPos)
 	}
 
 	// Apply pagination

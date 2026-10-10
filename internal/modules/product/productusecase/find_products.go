@@ -83,6 +83,7 @@ type FindProductsInput struct {
 	Limit           int
 	ID              *string
 	Name            *string
+	SearchQuery     *string
 	ShopID          *string
 	ShopSlug        *string
 	Status          *string
@@ -100,11 +101,15 @@ func (u *FindProductsUsecase) Execute(
 		if input.Name != nil {
 			nameStr = *input.Name
 		}
+		queryStr := ""
+		if input.SearchQuery != nil {
+			queryStr = *input.SearchQuery
+		}
 		statusStr := ""
 		if input.Status != nil {
 			statusStr = *input.Status
 		}
-		cacheKey = fmt.Sprintf("cache:products:list:%s:%s:%s:%d:%d", nameStr, statusStr, input.Sort, input.Page, input.Limit)
+		cacheKey = fmt.Sprintf("cache:products:list:%s:%s:%s:%s:%d:%d", nameStr, queryStr, statusStr, input.Sort, input.Page, input.Limit)
 		var cached findProductsCacheEntry
 		if err := u.cache.Get(ctx, cacheKey, &cached); err == nil {
 			return cached.Results, cached.Total, nil
@@ -112,15 +117,16 @@ func (u *FindProductsUsecase) Execute(
 	}
 
 	var productSortKeys = map[string]query.SortKey{
-		"latest":   productrepo.ProductSortLatest,
-		"date":     productrepo.ProductSortLatest,
-		"name":     productrepo.ProductSortName,
-		"price":    productrepo.ProductSortPrice,
-		"weight":   productrepo.ProductSortWeight,
-		"status":   productrepo.ProductSortStatus,
-		"modified": productrepo.ProductSortModified,
-		"archived": productrepo.ProductSortArchived,
-		"stock":    productrepo.ProductSortStock,
+		"latest":    productrepo.ProductSortLatest,
+		"date":      productrepo.ProductSortLatest,
+		"name":      productrepo.ProductSortName,
+		"price":     productrepo.ProductSortPrice,
+		"weight":    productrepo.ProductSortWeight,
+		"status":    productrepo.ProductSortStatus,
+		"modified":  productrepo.ProductSortModified,
+		"archived":  productrepo.ProductSortArchived,
+		"stock":     productrepo.ProductSortStock,
+		"relevance": productrepo.ProductSortRelevance,
 	}
 
 	var sorts query.Sorts
@@ -154,11 +160,20 @@ func (u *FindProductsUsecase) Execute(
 	}
 
 	if len(sorts) == 0 {
-		sorts = query.Sorts{
-			{
-				By:        productrepo.ProductSortLatest,
-				Direction: query.SortDesc,
-			},
+		if input.SearchQuery != nil && strings.TrimSpace(*input.SearchQuery) != "" {
+			sorts = query.Sorts{
+				{
+					By:        productrepo.ProductSortRelevance,
+					Direction: query.SortDesc,
+				},
+			}
+		} else {
+			sorts = query.Sorts{
+				{
+					By:        productrepo.ProductSortLatest,
+					Direction: query.SortDesc,
+				},
+			}
 		}
 	}
 
@@ -172,6 +187,7 @@ func (u *FindProductsUsecase) Execute(
 	params := productrepo.FindProductParams{
 		ID:              input.ID,
 		Name:            input.Name,
+		SearchQuery:     input.SearchQuery,
 		ShopID:          shopUUID,
 		ShopSlug:        input.ShopSlug,
 		Status:          input.Status,

@@ -24,6 +24,7 @@ var (
 	ProductSortSales7d     query.SortKey = "sales_velocity_7d"
 	ProductSortRevenue     query.SortKey = "revenue_contribution"
 	ProductSortGrossMargin query.SortKey = "gross_margin_pct"
+	ProductSortRelevance   query.SortKey = "relevance"
 )
 
 type GetProductStatsParams struct {
@@ -37,6 +38,7 @@ type GetProductStatsParams struct {
 type FindProductParams struct {
 	ID              *string
 	Name            *string
+	SearchQuery     *string
 	ShopID          *uuid.UUID
 	ShopSlug        *string
 	Status          *string

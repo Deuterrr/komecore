@@ -51,6 +51,7 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 	}
 
 	name := apphttp.Query(r, "name")
+	q := apphttp.Query(r, "q")
 	id := apphttp.Query(r, "id")
 	sort := apphttp.Query(r, "sort")
 	shopID := apphttp.Query(r, "shop_id")
@@ -66,6 +67,9 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 		Page:  page,
 		Limit: limit,
 		Sort:  sort,
+	}
+	if q != "" {
+		input.SearchQuery = &q
 	}
 	if name != "" {
 		input.Name = &name
