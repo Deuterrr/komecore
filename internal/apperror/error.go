@@ -34,8 +34,11 @@ var (
 
 type AppError struct {
 	Type       ErrorType          `json:"type"`
-	Message    string             `json:"message"`
 	StatusCode int                `json:"status_code"`
+	Message    string             `json:"message"`
+	Code       string             `json:"code"`
+	RequestID  string             `json:"request_id,omitempty"`
+	Details    []string           `json:"details,omitempty"`
 	LogLevel   applogger.LogLevel `json:"-"`
 	Err        error              `json:"-"`
 }
@@ -45,6 +48,10 @@ func (e *AppError) Error() string {
 		return e.Err.Error()
 	}
 	return e.Message
+}
+
+func (e *AppError) Unwrap() error {
+	return e.Err
 }
 
 func IsNotFound(err error) bool {
