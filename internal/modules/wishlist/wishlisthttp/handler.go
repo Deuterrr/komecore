@@ -3,8 +3,8 @@ package wishlisthttp
 import (
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/wishlist/wishlistusecase"
 )
 
@@ -19,7 +19,7 @@ func NewWishlistHandler(service *wishlistusecase.WishlistService) *WishlistHandl
 }
 
 func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, wishlistResponse{
+	httpx.WriteJSON(w, http.StatusOK, wishlistResponse{
 		Items: views,
 		Total: len(views),
 	})
@@ -37,14 +37,14 @@ func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) er
 }
 
 func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
-	productID, err := apphttp.ParamUUID(r, "productId")
+	productID, err := httpx.ParamUUID(r, "productId")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid product id")
+		return apperror.NewBadRequest("invalid product id")
 	}
 
 	err = h.service.AddToWishlist(r.Context(), wishlistusecase.AddToWishlistInput{
@@ -55,7 +55,7 @@ func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	apphttp.WriteJSON(w, http.StatusCreated, map[string]any{
+	httpx.WriteJSON(w, http.StatusCreated, map[string]any{
 		"message":    "product added to wishlist successfully",
 		"product_id": productID,
 	})
@@ -63,14 +63,14 @@ func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *WishlistHandler) RemoveFromWishlist(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
-	productID, err := apphttp.ParamUUID(r, "productId")
+	productID, err := httpx.ParamUUID(r, "productId")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid product id")
+		return apperror.NewBadRequest("invalid product id")
 	}
 
 	err = h.service.RemoveFromWishlist(r.Context(), wishlistusecase.RemoveFromWishlistInput{
@@ -81,7 +81,7 @@ func (h *WishlistHandler) RemoveFromWishlist(w http.ResponseWriter, r *http.Requ
 		return err
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, messageResponse{
+	httpx.WriteJSON(w, http.StatusOK, messageResponse{
 		Message: "product removed from wishlist successfully",
 	})
 	return nil

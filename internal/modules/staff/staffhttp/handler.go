@@ -3,9 +3,9 @@ package staffhttp
 import (
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	"komecore/internal/common/authctx"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/staff/staffusecase"
 
 	"github.com/go-chi/chi/v5"
@@ -30,27 +30,27 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid staff id")
+		return apperror.NewBadRequest("invalid staff id")
 	}
 
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	var req addStaffAccountRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.Email == "" {
-		return apperrors.NewBadRequest("email is required")
+		return apperror.NewBadRequest("email is required")
 	}
 	if req.Password == "" {
-		return apperrors.NewBadRequest("password is required")
+		return apperror.NewBadRequest("password is required")
 	}
 
 	input := staffusecase.AddStaffAccountParams{
@@ -70,21 +70,21 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 		"message": "staff account successfully created",
 	}
 
-	apphttp.WriteJSON(w, http.StatusCreated, response)
+	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
 
 func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error {
 	var req createStaffRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.Name == "" {
-		return apperrors.NewBadRequest("name is required")
+		return apperror.NewBadRequest("name is required")
 	}
 	if req.Username == "" {
-		return apperrors.NewBadRequest("username is required")
+		return apperror.NewBadRequest("username is required")
 	}
 
 	input := staffusecase.CreateStaffInput{
@@ -104,22 +104,22 @@ func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 		"message": "staff successfully created",
 	}
 
-	apphttp.WriteJSON(w, http.StatusCreated, response)
+	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
 
 func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
-	page := apphttp.QueryIntDefault(r, "page", 1)
+	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
 	}
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	idStr := apphttp.Query(r, "id")
-	sort := apphttp.Query(r, "sort")
+	idStr := httpx.Query(r, "id")
+	sort := httpx.Query(r, "sort")
 
 	input := staffusecase.FindStaffInput{
 		Page:  page,
@@ -129,7 +129,7 @@ func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 	if idStr != "" {
 		id, err := uuid.Parse(idStr)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid staff id")
+			return apperror.NewBadRequest("invalid staff id")
 		}
 		input.ID = &id
 	}
@@ -159,7 +159,7 @@ func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 		"total": total,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -167,15 +167,15 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid staff id")
+		return apperror.NewBadRequest("invalid staff id")
 	}
 
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	input := staffusecase.ListStaffAccountsParams{
@@ -215,7 +215,7 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 		Accounts: results,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -223,24 +223,24 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid staff id")
+		return apperror.NewBadRequest("invalid staff id")
 	}
 
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	var req updateStaffRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.Name == "" {
-		return apperrors.NewBadRequest("name is required")
+		return apperror.NewBadRequest("name is required")
 	}
 
 	input := staffusecase.UpdateStaffInput{
@@ -262,7 +262,7 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 		"message": "staff successfully updated",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -270,15 +270,15 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid staff id")
+		return apperror.NewBadRequest("invalid staff id")
 	}
 
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	input := staffusecase.DeleteStaffInput{
@@ -296,7 +296,7 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 		"message": "staff successfully deleted",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -304,21 +304,21 @@ func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid staff id")
+		return apperror.NewBadRequest("invalid staff id")
 	}
 
 	accountIDStr := chi.URLParam(r, "accountID")
 	accountID, err := uuid.Parse(accountIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid account id")
+		return apperror.NewBadRequest("invalid account id")
 	}
 
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.StaffID == nil {
-		return apperrors.NewForbidden(authctx.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
 	input := staffusecase.RemoveStaffAccountInput{
@@ -337,6 +337,6 @@ func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request
 		"message": "staff account successfully removed",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

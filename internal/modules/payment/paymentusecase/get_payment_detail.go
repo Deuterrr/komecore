@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"
-	markdown "komecore/internal/shared/markdown"
+	"komecore/internal/strtpl"
 
 	"github.com/google/uuid"
 )
@@ -64,12 +64,12 @@ func (u *GetPaymentDetailUsecase) Execute(
 		return nil, fmt.Errorf("failed to retrieve order: %w", err)
 	}
 	if order == nil {
-		return nil, apperrors.NewNotFound("order not found")
+		return nil, apperror.NewNotFound("order not found")
 	}
 
 	if input.CustomerID != nil &&
 		order.CustomerID != *input.CustomerID {
-		return nil, apperrors.NewNotFound("order not found")
+		return nil, apperror.NewNotFound("order not found")
 	}
 
 	payment, err := u.paymentRepo.GetByOrderID(ctx, u.executor, order.ID)
@@ -77,7 +77,7 @@ func (u *GetPaymentDetailUsecase) Execute(
 		return nil, fmt.Errorf("failed to retrieve payment: %w", err)
 	}
 	if payment == nil {
-		return nil, apperrors.NewNotFound("payment not found")
+		return nil, apperror.NewNotFound("payment not found")
 	}
 
 	var (
@@ -143,7 +143,7 @@ func (u *GetPaymentDetailUsecase) Execute(
 			"redirect_url":   redirectURL,
 		}
 
-		content, err := markdown.Render(instruction.Content, vars)
+		content, err := strtpl.Render(instruction.Content, vars)
 		if err != nil {
 			return nil, fmt.Errorf("failed to format payment instruction: %w", err)
 		}

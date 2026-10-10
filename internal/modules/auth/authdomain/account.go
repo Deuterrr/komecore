@@ -1,10 +1,10 @@
-﻿package authdomain
+package authdomain
 
 import (
 	"time"
 
-	"komecore/internal/common/authctx"
-	query "komecore/internal/shared/query"
+	"komecore/internal/authctx"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -27,11 +27,11 @@ const (
 )
 
 var (
-	AccountSortLatest    query.SortKey = "latest"
-	AccountSortEmail     query.SortKey = "email"
-	AccountSortStatus    query.SortKey = "status"
-	AccountSortType      query.SortKey = "type"
-	AccountSortLastLogin query.SortKey = "last_login"
+	AccountSortLatest    pagination.SortKey = "latest"
+	AccountSortEmail     pagination.SortKey = "email"
+	AccountSortStatus    pagination.SortKey = "status"
+	AccountSortType      pagination.SortKey = "type"
+	AccountSortLastLogin pagination.SortKey = "last_login"
 )
 
 // Account represents authentication credentials

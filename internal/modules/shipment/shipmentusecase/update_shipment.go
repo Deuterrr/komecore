@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/shipment/shipmentdomain"
 	"komecore/internal/modules/shipment/shipmentrepo"
@@ -51,7 +51,7 @@ func (u *UpdateShipmentUsecase) Execute(
 		return nil, fmt.Errorf("failed to get shipment: %w", err)
 	}
 	if shipment == nil {
-		return nil, apperrors.NewNotFound("shipment not found")
+		return nil, apperror.NewNotFound("shipment not found")
 	}
 
 	updated := false
@@ -75,7 +75,7 @@ func (u *UpdateShipmentUsecase) Execute(
 	}
 
 	if err := shipment.Validate(); err != nil {
-		return nil, apperrors.NewInvalidInput(err.Error())
+		return nil, apperror.NewInvalidInput(err.Error())
 	}
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -102,14 +102,14 @@ func (u *UpdateShipmentUsecase) Dispatch(
 		return nil, fmt.Errorf("failed to get shipment: %w", err)
 	}
 	if shipment == nil {
-		return nil, apperrors.NewNotFound("shipment not found")
+		return nil, apperror.NewNotFound("shipment not found")
 	}
 
 	shipment.TrackingNumber = &trackingNumber
 	now := time.Now()
 	shipment.ShippedAt = &now
 	if err := shipment.UpdateStatus(shipmentdomain.ShipmentStatusShipped); err != nil {
-		return nil, apperrors.NewInvalidInput(err.Error())
+		return nil, apperror.NewInvalidInput(err.Error())
 	}
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {

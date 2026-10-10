@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/staff/staffdomain"
 
 	"github.com/google/uuid"
@@ -126,7 +126,7 @@ func TestListStaffAccounts_UnauthorizedRole(t *testing.T) {
 		t.Fatal("expected error for non-admin actor, got nil")
 	}
 
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != 403 {
 		t.Fatalf("expected 403 Forbidden error, got: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestListStaffAccounts_StaffNotFound(t *testing.T) {
 		t.Fatal("expected error for not found staff, got nil")
 	}
 
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != 404 {
 		t.Fatalf("expected 404 Not Found error, got: %v", err)
 	}

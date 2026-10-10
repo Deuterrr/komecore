@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/address/addressdomain"
 	"komecore/internal/modules/address/addressusecase"
 
@@ -45,7 +45,7 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		err := uc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsNotFound(err))
+		assert.True(t, apperror.IsNotFound(err))
 		assert.Equal(t, 0, repo.deleteCalls)
 	})
 
@@ -62,7 +62,7 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		err := uc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsConflict(err))
+		assert.True(t, apperror.IsConflict(err))
 		assert.Equal(t, 0, repo.deleteCalls)
 	})
 

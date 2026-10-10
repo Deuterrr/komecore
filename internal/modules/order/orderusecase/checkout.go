@@ -3,7 +3,7 @@ package orderusecase
 import (
 	"context"
 
-	"komecore/internal/common/authctx"
+	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/cart/cartdomain"
 	"komecore/internal/modules/order/orderrepo"

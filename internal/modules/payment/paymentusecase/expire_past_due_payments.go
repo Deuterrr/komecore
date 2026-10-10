@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	apperrors "komecore/internal/common/errors"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/apperror"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/inventory/inventoryrepo"
@@ -162,7 +162,7 @@ func (u *ExpirePastDuePaymentsUsecase) expireSinglePayment(
 				item.Quantity,
 			); err != nil {
 				if errors.Is(err, inventorydomain.ErrInsufficientReserved) ||
-					errors.Is(err, apperrors.ErrNotFound) {
+					errors.Is(err, apperror.ErrNotFound) {
 
 					msg := "inventory anomaly during payment expiry: reserved stock insufficient or missing"
 					u.logger.Warn(ctx, msg,

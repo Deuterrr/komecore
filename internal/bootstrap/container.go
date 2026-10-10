@@ -65,10 +65,10 @@ import (
 	"komecore/internal/modules/user/userusecase"
 	"komecore/internal/modules/wishlist/wishlistusecase"
 
-	appmiddleware "komecore/internal/common/middleware"
+	appmiddleware "komecore/internal/httpx/middleware"
 	"komecore/internal/infra/cache"
 	"komecore/internal/infra/outbox"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 )
 
 type Container struct {
@@ -93,7 +93,7 @@ type Container struct {
 	DeleteProduct    productusecase.DeleteProductUsecase
 	AddProductImages productusecase.AddProductImagesUsecase
 	GetProductStats  productusecase.GetProductStatsUsecase
-	Inventory inventoryusecase.InventoryService
+	Inventory        inventoryusecase.InventoryService
 
 	Me                   authusecase.MeUsecase
 	LoginCustomer        authusecase.LoginCustomerUsecase

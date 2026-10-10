@@ -4,35 +4,35 @@ import (
 	"io"
 
 	"komecore/internal/modules/product/productdomain"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 var (
-	ProductSortLatest   query.SortKey = "latest"
-	ProductSortName     query.SortKey = "name"
-	ProductSortPrice    query.SortKey = "price"
-	ProductSortWeight   query.SortKey = "weight"
-	ProductSortStatus   query.SortKey = "status"
-	ProductSortModified query.SortKey = "modified"
-	ProductSortArchived query.SortKey = "archived"
-	ProductSortStock    query.SortKey = "stock"
+	ProductSortLatest   pagination.SortKey = "latest"
+	ProductSortName     pagination.SortKey = "name"
+	ProductSortPrice    pagination.SortKey = "price"
+	ProductSortWeight   pagination.SortKey = "weight"
+	ProductSortStatus   pagination.SortKey = "status"
+	ProductSortModified pagination.SortKey = "modified"
+	ProductSortArchived pagination.SortKey = "archived"
+	ProductSortStock    pagination.SortKey = "stock"
 
-	ProductSortViewCount   query.SortKey = "view_count"
-	ProductSortSales30d    query.SortKey = "sales_velocity_30d"
-	ProductSortSales7d     query.SortKey = "sales_velocity_7d"
-	ProductSortRevenue     query.SortKey = "revenue_contribution"
-	ProductSortGrossMargin query.SortKey = "gross_margin_pct"
-	ProductSortRelevance   query.SortKey = "relevance"
+	ProductSortViewCount   pagination.SortKey = "view_count"
+	ProductSortSales30d    pagination.SortKey = "sales_velocity_30d"
+	ProductSortSales7d     pagination.SortKey = "sales_velocity_7d"
+	ProductSortRevenue     pagination.SortKey = "revenue_contribution"
+	ProductSortGrossMargin pagination.SortKey = "gross_margin_pct"
+	ProductSortRelevance   pagination.SortKey = "relevance"
 )
 
 type GetProductStatsParams struct {
 	ID   *string
 	Name *string
 
-	query.Pagination
-	query.Sorts
+	pagination.Pagination
+	pagination.Sorts
 }
 
 type FindProductParams struct {
@@ -44,8 +44,8 @@ type FindProductParams struct {
 	Status          *string
 	ExcludeArchived bool
 
-	query.Pagination
-	query.Sorts
+	pagination.Pagination
+	pagination.Sorts
 }
 
 type UploadProductImagesParams struct {

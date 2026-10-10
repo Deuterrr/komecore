@@ -1,14 +1,14 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
 	"fmt"
 
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -41,7 +41,7 @@ func (u *SyncPaymentMethodsUsecase) Execute(ctx context.Context) error {
 	allowedMethods := u.gateway.AllowedPaymentMethods()
 	providerName := u.gateway.Name()
 
-	existingMethods, err := u.methodRepo.ListAll(ctx, u.executor, query.Sorts{})
+	existingMethods, err := u.methodRepo.ListAll(ctx, u.executor, pagination.Sorts{})
 	if err != nil {
 		return fmt.Errorf("failed to list existing payment methods: %w", err)
 	}

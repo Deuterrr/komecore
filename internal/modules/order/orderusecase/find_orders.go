@@ -1,4 +1,4 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"komecore/internal/modules/payment/paymentrepo"
 	"komecore/internal/modules/shipment/shipmentdomain"
 	"komecore/internal/modules/shipment/shipmentrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -80,7 +80,7 @@ func (u *FindOrdersUsecase) Execute(
 	ctx context.Context,
 	input FindOrdersInput,
 ) ([]OrderSearchResult, int, error) {
-	var orderSortKeys = map[string]query.SortKey{
+	var orderSortKeys = map[string]pagination.SortKey{
 		"latest":   orderrepo.OrderSortLatest,
 		"date":     orderrepo.OrderSortLatest,
 		"number":   orderrepo.OrderSortNumber,
@@ -89,7 +89,7 @@ func (u *FindOrdersUsecase) Execute(
 		"modified": orderrepo.OrderSortModify,
 	}
 
-	var sorts query.Sorts
+	var sorts pagination.Sorts
 	if input.Sort != "" {
 		parts := strings.SplitSeq(input.Sort, ",")
 		for part := range parts {
@@ -101,17 +101,17 @@ func (u *FindOrdersUsecase) Execute(
 			subparts := strings.Split(part, ":")
 			key := strings.TrimSpace(subparts[0])
 
-			var dir query.SortDirection = query.SortDesc
+			var dir pagination.SortDirection = pagination.SortDesc
 			if len(subparts) > 1 {
 				d := strings.ToLower(strings.TrimSpace(subparts[1]))
 				if d == "asc" {
-					dir = query.SortAsc
+					dir = pagination.SortAsc
 				}
 			}
 
 			sortKey, exists := orderSortKeys[key]
 			if exists {
-				sorts = append(sorts, query.Sort{
+				sorts = append(sorts, pagination.Sort{
 					By:        sortKey,
 					Direction: dir,
 				})
@@ -120,10 +120,10 @@ func (u *FindOrdersUsecase) Execute(
 	}
 
 	if len(sorts) == 0 {
-		sorts = query.Sorts{
+		sorts = pagination.Sorts{
 			{
 				By:        orderrepo.OrderSortLatest,
-				Direction: query.SortDesc,
+				Direction: pagination.SortDesc,
 			},
 		}
 	}
@@ -156,7 +156,7 @@ func (u *FindOrdersUsecase) Execute(
 		Statuses:   statuses,
 		FromDate:   input.FromDate,
 		ToDate:     input.ToDate,
-		Pagination: query.Pagination{
+		Pagination: pagination.Pagination{
 			Page:  input.Page,
 			Limit: input.Limit,
 		},

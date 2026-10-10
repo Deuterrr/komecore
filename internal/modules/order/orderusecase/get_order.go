@@ -1,4 +1,4 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"

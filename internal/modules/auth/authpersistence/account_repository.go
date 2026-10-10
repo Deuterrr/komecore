@@ -1,4 +1,4 @@
-﻿package authpersistence
+package authpersistence
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 
@@ -176,7 +176,7 @@ func (r *AccountRepository) ActivateByUserID(
 	}
 
 	if result.RowsAffected() == 0 {
-		return apperrors.NewNotFound(
+		return apperror.NewNotFound(
 			authdomain.ErrNotFoundAccount.Error(),
 		)
 	}
@@ -238,7 +238,7 @@ func (r *AccountRepository) UpdatePasswordByUserID(
 	}
 
 	if result.RowsAffected() == 0 {
-		return apperrors.NewNotFound(authdomain.ErrNotFoundAccount.Error())
+		return apperror.NewNotFound(authdomain.ErrNotFoundAccount.Error())
 	}
 
 	return nil
@@ -261,7 +261,7 @@ func (r *AccountRepository) DeleteByUserID(
 	}
 
 	if res.RowsAffected() == 0 {
-		return apperrors.NewNotFound("account not found or already deleted")
+		return apperror.NewNotFound("account not found or already deleted")
 	}
 
 	return nil
@@ -287,7 +287,7 @@ func (r *AccountRepository) UpdateLastLoginAt(
 	}
 
 	if res.RowsAffected() == 0 {
-		return apperrors.NewNotFound(authdomain.ErrNotFoundAccount.Error())
+		return apperror.NewNotFound(authdomain.ErrNotFoundAccount.Error())
 	}
 
 	return nil

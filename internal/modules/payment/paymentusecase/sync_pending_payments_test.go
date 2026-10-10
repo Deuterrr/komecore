@@ -1,11 +1,11 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	"komecore/internal/modules/payment/paymentdomain"
 	applogger "komecore/pkg/logger"
 

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	"komecore/internal/common/authctx"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/cart/cartdomain"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/order/orderusecase"
@@ -58,27 +58,27 @@ func NewOrderHandler(
 func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 
 	if actor.Type != authctx.AccountTypeStaff {
-		return apperrors.NewForbidden("forbidden: staff account required")
+		return apperror.NewForbidden("forbidden: staff account required")
 	}
 
-	page := apphttp.QueryIntDefault(r, "page", 1)
+	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
 	}
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	sort := apphttp.Query(r, "sort")
-	idStr := apphttp.Query(r, "id")
-	number := apphttp.Query(r, "number")
-	customerIDStr := apphttp.Query(r, "customer_id")
-	status := apphttp.Query(r, "status")
+	sort := httpx.Query(r, "sort")
+	idStr := httpx.Query(r, "id")
+	number := httpx.Query(r, "number")
+	customerIDStr := httpx.Query(r, "customer_id")
+	status := httpx.Query(r, "status")
 
 	input := orderusecase.FindOrdersInput{
 		Page:  page,
@@ -89,7 +89,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 	if idStr != "" {
 		id, err := uuid.Parse(idStr)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid order id")
+			return apperror.NewBadRequest("invalid order id")
 		}
 		input.ID = &id
 	}
@@ -101,14 +101,14 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 	if customerIDStr != "" {
 		customerID, err := uuid.Parse(customerIDStr)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid customer id")
+			return apperror.NewBadRequest("invalid customer id")
 		}
 		input.CustomerID = &customerID
 	}
 
 	if status != "" {
 		input.Status = &status
-	} else if statusesParam := apphttp.Query(r, "statuses"); statusesParam != "" {
+	} else if statusesParam := httpx.Query(r, "statuses"); statusesParam != "" {
 		var parsedStatuses []string
 		parts := strings.Split(statusesParam, ",")
 		for _, p := range parts {
@@ -120,18 +120,18 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		input.Statuses = parsedStatuses
 	}
 
-	fromDateStr := apphttp.Query(r, "from_date")
+	fromDateStr := httpx.Query(r, "from_date")
 	if fromDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, fromDateStr); err == nil {
 			input.FromDate = &t
 		} else if t, err := time.Parse("2006-01-02", fromDateStr); err == nil {
 			input.FromDate = &t
 		} else {
-			return apperrors.NewBadRequest("invalid from_date format")
+			return apperror.NewBadRequest("invalid from_date format")
 		}
 	}
 
-	toDateStr := apphttp.Query(r, "to_date")
+	toDateStr := httpx.Query(r, "to_date")
 	if toDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, toDateStr); err == nil {
 			input.ToDate = &t
@@ -139,7 +139,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 			endOfDay := t.Add(24*time.Hour - time.Nanosecond)
 			input.ToDate = &endOfDay
 		} else {
-			return apperrors.NewBadRequest("invalid to_date format")
+			return apperror.NewBadRequest("invalid to_date format")
 		}
 	}
 
@@ -149,7 +149,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 	}
 	if shopSpecified {
 		if shopID == nil {
-			apphttp.WriteJSON(w, http.StatusOK, map[string]any{
+			httpx.WriteJSON(w, http.StatusOK, map[string]any{
 				"orders": []orderResponse{},
 				"page":   page,
 				"limit":  limit,
@@ -170,7 +170,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		}
 
 		if len(assignedIDs) == 0 {
-			apphttp.WriteJSON(w, http.StatusOK, map[string]any{
+			httpx.WriteJSON(w, http.StatusOK, map[string]any{
 				"orders": []orderResponse{},
 				"page":   page,
 				"limit":  limit,
@@ -181,7 +181,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 
 		if input.ShopID != nil {
 			if !actor.HasPermission(*input.ShopID, authctx.PermissionOrderRead) {
-				return apperrors.NewForbidden("forbidden: missing order:read permission for this shop")
+				return apperror.NewForbidden("forbidden: missing order:read permission for this shop")
 			}
 		} else {
 			input.ShopIDs = assignedIDs
@@ -198,7 +198,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		results[i] = buildOrderResponse(o)
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"orders": results,
 		"page":   page,
 		"limit":  limit,
@@ -211,16 +211,16 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.Type != authctx.AccountTypeStaff {
-		return apperrors.NewForbidden("forbidden: staff account required")
+		return apperror.NewForbidden("forbidden: staff account required")
 	}
 
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	result, err := h.getOrder.Execute(r.Context(), orderusecase.GetOrderInput{
@@ -230,7 +230,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if result == nil {
-		return apperrors.NewNotFound("order not found")
+		return apperror.NewNotFound("order not found")
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
@@ -241,7 +241,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		if len(permittedItems) == 0 {
-			return apperrors.NewForbidden("forbidden: missing order:read permission for this shop's order")
+			return apperror.NewForbidden("forbidden: missing order:read permission for this shop's order")
 		}
 		result.Items = permittedItems
 
@@ -275,28 +275,28 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 		Shipments:   result.Shipments,
 	})
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
 // ListMyOrders handles GET /users/me/orders â€” customer-only, returns the caller's orders with detail.
 func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
-	page := apphttp.QueryIntDefault(r, "page", 1)
+	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
 	}
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	sort := apphttp.Query(r, "sort")
-	status := apphttp.Query(r, "status")
+	sort := httpx.Query(r, "sort")
+	status := httpx.Query(r, "status")
 
 	input := orderusecase.FindOrdersInput{
 		Page:       page,
@@ -307,7 +307,7 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 
 	if status != "" {
 		input.Status = &status
-	} else if statusesParam := apphttp.Query(r, "statuses"); statusesParam != "" {
+	} else if statusesParam := httpx.Query(r, "statuses"); statusesParam != "" {
 		var parsedStatuses []string
 		parts := strings.Split(statusesParam, ",")
 		for _, p := range parts {
@@ -319,18 +319,18 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 		input.Statuses = parsedStatuses
 	}
 
-	fromDateStr := apphttp.Query(r, "from_date")
+	fromDateStr := httpx.Query(r, "from_date")
 	if fromDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, fromDateStr); err == nil {
 			input.FromDate = &t
 		} else if t, err := time.Parse("2006-01-02", fromDateStr); err == nil {
 			input.FromDate = &t
 		} else {
-			return apperrors.NewBadRequest("invalid from_date format")
+			return apperror.NewBadRequest("invalid from_date format")
 		}
 	}
 
-	toDateStr := apphttp.Query(r, "to_date")
+	toDateStr := httpx.Query(r, "to_date")
 	if toDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, toDateStr); err == nil {
 			input.ToDate = &t
@@ -338,7 +338,7 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 			endOfDay := t.Add(24*time.Hour - time.Nanosecond)
 			input.ToDate = &endOfDay
 		} else {
-			return apperrors.NewBadRequest("invalid to_date format")
+			return apperror.NewBadRequest("invalid to_date format")
 		}
 	}
 
@@ -348,7 +348,7 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 	}
 	if shopSpecified {
 		if shopID == nil {
-			apphttp.WriteJSON(w, http.StatusOK, map[string]any{
+			httpx.WriteJSON(w, http.StatusOK, map[string]any{
 				"orders": []orderResponse{},
 				"page":   page,
 				"limit":  limit,
@@ -369,7 +369,7 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 		results[i] = buildOrderResponse(o)
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"orders": results,
 		"page":   page,
 		"limit":  limit,
@@ -380,7 +380,7 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 
 // GetMyOrder handles GET /users/me/orders/{orderID} â€” customer-only, returns their own order with full detail.
 func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -388,7 +388,7 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	result, err := h.getOrder.Execute(r.Context(), orderusecase.GetOrderInput{
@@ -399,7 +399,7 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	if result == nil {
-		return apperrors.NewNotFound("order not found")
+		return apperror.NewNotFound("order not found")
 	}
 
 	resp := buildOrderResponse(orderusecase.OrderSearchResult{
@@ -410,13 +410,13 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 		Shipment:    result.Shipment,
 		Shipments:   result.Shipments,
 	})
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
 // CreateOrder handles POST /order â€” customer-only.
 func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error {
-	authCtx, customerID, err := apphttp.RequireCustomer(r)
+	authCtx, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -424,44 +424,44 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 	userID := authCtx.UserID
 
 	var req createOrderRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	parsedAddressID, err := uuid.Parse(req.AddressID)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid address id")
+		return apperror.NewBadRequest("invalid address id")
 	}
 
 	parsedPaymentMethodID, err := uuid.Parse(req.SelectedPayment.ID)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid payment method id")
+		return apperror.NewBadRequest("invalid payment method id")
 	}
 
 	var shopsInput []orderusecase.OrderShopInput
 	for _, shopReq := range req.Shops {
 		parsedShopID, err := uuid.Parse(shopReq.ShopID)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid shop id")
+			return apperror.NewBadRequest("invalid shop id")
 		}
 		if shopReq.ShopName == "" {
-			return apperrors.NewBadRequest("invalid shop name")
+			return apperror.NewBadRequest("invalid shop name")
 		}
 
 		var itemsInput []orderusecase.OrderItemInput
 		for _, itemReq := range shopReq.Items {
 			if itemReq.Quantity <= 0 {
-				return apperrors.NewBadRequest("invalid quantity")
+				return apperror.NewBadRequest("invalid quantity")
 			}
 
 			productID, err := uuid.Parse(itemReq.ProductID)
 			if err != nil {
-				return apperrors.NewBadRequest("invalid product id")
+				return apperror.NewBadRequest("invalid product id")
 			}
 
 			productName := itemReq.ProductName
 			if productName == "" {
-				return apperrors.NewBadRequest("invalid product name")
+				return apperror.NewBadRequest("invalid product name")
 			}
 
 			var opt cartdomain.ItemOptions
@@ -533,7 +533,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 		}
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
@@ -546,24 +546,24 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.Type != authctx.AccountTypeStaff {
-		return apperrors.NewForbidden("forbidden: staff account required")
+		return apperror.NewForbidden("forbidden: staff account required")
 	}
 
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	var req updateOrderStatusRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 	if req.Status == "" {
-		return apperrors.NewBadRequest("status is required")
+		return apperror.NewBadRequest("status is required")
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
@@ -571,7 +571,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 			OrderID: orderID,
 		})
 		if err != nil || existingOrder == nil {
-			return apperrors.NewNotFound("order not found")
+			return apperror.NewNotFound("order not found")
 		}
 
 		uniqueShops := make(map[uuid.UUID]bool)
@@ -581,7 +581,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 			}
 		}
 		if len(uniqueShops) == 0 {
-			return apperrors.NewForbidden("forbidden: missing order:update_status permission for this shop's order")
+			return apperror.NewForbidden("forbidden: missing order:update_status permission for this shop's order")
 		}
 	}
 
@@ -592,7 +592,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 			for _, idStr := range sReq.ItemIDs {
 				parsed, err := uuid.Parse(idStr)
 				if err != nil {
-					return apperrors.NewBadRequest("invalid item id in shipments")
+					return apperror.NewBadRequest("invalid item id in shipments")
 				}
 				itemUUIDs = append(itemUUIDs, parsed)
 			}
@@ -623,7 +623,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 		Shipment:  result.Shipment,
 		Shipments: result.Shipments,
 	})
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
@@ -632,44 +632,44 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.Type != authctx.AccountTypeStaff {
-		return apperrors.NewForbidden("forbidden: staff account required")
+		return apperror.NewForbidden("forbidden: staff account required")
 	}
 
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	var req dispatchShopShipmentRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	shopID, err := uuid.Parse(req.ShopID)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shop id")
+		return apperror.NewBadRequest("invalid shop id")
 	}
 
 	if len(req.ItemIDs) == 0 {
-		return apperrors.NewBadRequest("item_ids is required and must not be empty")
+		return apperror.NewBadRequest("item_ids is required and must not be empty")
 	}
 
 	var itemUUIDs []uuid.UUID
 	for _, idStr := range req.ItemIDs {
 		parsed, err := uuid.Parse(idStr)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid item id in item_ids")
+			return apperror.NewBadRequest("invalid item id in item_ids")
 		}
 		itemUUIDs = append(itemUUIDs, parsed)
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
 		if !actor.HasPermission(shopID, authctx.PermissionOrderUpdateStatus) {
-			return apperrors.NewForbidden("forbidden: missing order:update_status permission for this shop")
+			return apperror.NewForbidden("forbidden: missing order:update_status permission for this shop")
 		}
 	}
 
@@ -692,19 +692,19 @@ func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Requ
 		"shipment_id":       res.Shipment.ID.String(),
 		"all_items_shipped": res.AllItemsShipped,
 	}
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
 func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
-	orderID, err := apphttp.ParamUUID(r, "orderID")
+	orderID, err := httpx.ParamUUID(r, "orderID")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	input := orderusecase.GetOrderTrackingInput{
@@ -717,14 +717,14 @@ func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 		return err
 	}
 	if result == nil {
-		return apperrors.NewNotFound("tracking information not found")
+		return apperror.NewNotFound("tracking information not found")
 	}
 
 	if result.Warning != nil {
 		w.Header().Set("X-Warning", *result.Warning)
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 	return nil
 }
 
@@ -732,16 +732,16 @@ func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 	if actor.Type != authctx.AccountTypeStaff {
-		return apperrors.NewForbidden("forbidden: staff account required")
+		return apperror.NewForbidden("forbidden: staff account required")
 	}
 
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
@@ -749,7 +749,7 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 			OrderID: orderID,
 		})
 		if err != nil || existingOrder == nil {
-			return apperrors.NewNotFound("order not found")
+			return apperror.NewNotFound("order not found")
 		}
 
 		hasAccess := false
@@ -760,7 +760,7 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 			}
 		}
 		if !hasAccess {
-			return apperrors.NewForbidden("forbidden: missing order:read permission for this shop's order")
+			return apperror.NewForbidden("forbidden: missing order:read permission for this shop's order")
 		}
 	}
 
@@ -774,13 +774,13 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 		return err
 	}
 	if result == nil {
-		return apperrors.NewNotFound("tracking information not found")
+		return apperror.NewNotFound("tracking information not found")
 	}
 	if result.Warning != nil {
 		w.Header().Set("X-Warning", *result.Warning)
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 	return nil
 }
 
@@ -897,9 +897,9 @@ func mapShipmentDetail(s *shipmentdomain.Shipment) *shipmentDetailResponse {
 }
 
 func (h *orderHandler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, error) {
-	shopIDStr := apphttp.Query(r, "shop_id")
-	shopSlug := apphttp.Query(r, "shop_slug")
-	shopParam := apphttp.Query(r, "shop")
+	shopIDStr := httpx.Query(r, "shop_id")
+	shopSlug := httpx.Query(r, "shop_slug")
+	shopParam := httpx.Query(r, "shop")
 
 	if shopIDStr == "all" || shopSlug == "all" || shopParam == "all" {
 		return nil, false, nil
@@ -922,7 +922,7 @@ func (h *orderHandler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, err
 	if targetIDStr != "" {
 		id, err := uuid.Parse(targetIDStr)
 		if err != nil {
-			return nil, true, apperrors.NewBadRequest("invalid shop id")
+			return nil, true, apperror.NewBadRequest("invalid shop id")
 		}
 		return &id, true, nil
 	}
@@ -932,7 +932,7 @@ func (h *orderHandler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, err
 			return nil, false, nil
 		}
 		if h.shopService == nil {
-			return nil, true, apperrors.NewInternal(errors.New("shop filter service unavailable"))
+			return nil, true, apperror.NewInternal(errors.New("shop filter service unavailable"))
 		}
 		shop, err := h.shopService.GetBySlug(r.Context(), targetSlug)
 		if err != nil {

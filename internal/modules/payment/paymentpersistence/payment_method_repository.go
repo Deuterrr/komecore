@@ -10,7 +10,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -250,9 +250,9 @@ func (r *PaymentMethodRepository) GetByID(
 func (r *PaymentMethodRepository) ListAll(
 	ctx context.Context,
 	exec transaction.Executor,
-	sorts query.Sorts,
+	sorts pagination.Sorts,
 ) ([]paymentdomain.PaymentMethod, error) {
-	var pmSortKeys = map[query.SortKey]string{
+	var pmSortKeys = map[pagination.SortKey]string{
 		paymentrepo.PaymentMethodSortLatest: "pm.created_at",
 		paymentrepo.PaymentMethodSortName:   "pm.name",
 		paymentrepo.PaymentMethodSortCode:   "pm.code",
@@ -267,7 +267,7 @@ func (r *PaymentMethodRepository) ListAll(
 		}
 
 		dir := "DESC"
-		if sort.Direction == query.SortAsc {
+		if sort.Direction == pagination.SortAsc {
 			dir = "ASC"
 		}
 

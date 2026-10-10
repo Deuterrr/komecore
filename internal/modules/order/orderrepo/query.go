@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"komecore/internal/modules/cart/cartdomain"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -97,11 +97,11 @@ type PricingResult struct {
 }
 
 var (
-	OrderSortLatest query.SortKey = "latest"
-	OrderSortNumber query.SortKey = "number"
-	OrderSortTotal  query.SortKey = "total"
-	OrderSortStatus query.SortKey = "status"
-	OrderSortModify query.SortKey = "modify"
+	OrderSortLatest pagination.SortKey = "latest"
+	OrderSortNumber pagination.SortKey = "number"
+	OrderSortTotal  pagination.SortKey = "total"
+	OrderSortStatus pagination.SortKey = "status"
+	OrderSortModify pagination.SortKey = "modify"
 )
 
 type FindOrderParams struct {
@@ -115,6 +115,6 @@ type FindOrderParams struct {
 	FromDate   *time.Time
 	ToDate     *time.Time
 
-	Pagination query.Pagination
-	Sorts      query.Sorts
+	Pagination pagination.Pagination
+	Sorts      pagination.Sorts
 }

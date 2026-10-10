@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	"komecore/internal/modules/payment/paymentdomain"
 
 	"github.com/google/uuid"

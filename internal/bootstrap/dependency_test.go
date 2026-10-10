@@ -10,7 +10,7 @@ import (
 
 	"komecore/internal/bootstrap"
 	"komecore/internal/config"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	"komecore/internal/infra/storage"
 	"komecore/internal/infra/storage/gcs"
 	"komecore/internal/infra/storage/supabase"

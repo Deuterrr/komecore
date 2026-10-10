@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/staff/staffdomain"
 
 	"github.com/google/uuid"
@@ -107,7 +107,7 @@ func TestRemoveStaffAccount_SelfRemovalBlocked(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	var badReq *apperrors.AppError
+	var badReq *apperror.AppError
 	require.ErrorAs(t, err, &badReq)
 	assert.Equal(t, 400, badReq.StatusCode)
 	assert.Contains(t, badReq.Message, "cannot remove own account")
@@ -151,7 +151,7 @@ func TestRemoveStaffAccount_NonAdminForbidden(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	var appErr *apperrors.AppError
+	var appErr *apperror.AppError
 	require.ErrorAs(t, err, &appErr)
 	assert.Equal(t, 403, appErr.StatusCode)
 }
@@ -198,7 +198,7 @@ func TestRemoveStaffAccount_StaffNotFound(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	var notFound *apperrors.AppError
+	var notFound *apperror.AppError
 	require.ErrorAs(t, err, &notFound)
 	assert.Equal(t, 404, notFound.StatusCode)
 }
@@ -249,7 +249,7 @@ func TestRemoveStaffAccount_TargetMembershipNotFound(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	var notFound *apperrors.AppError
+	var notFound *apperror.AppError
 	require.ErrorAs(t, err, &notFound)
 	assert.Equal(t, 404, notFound.StatusCode)
 }

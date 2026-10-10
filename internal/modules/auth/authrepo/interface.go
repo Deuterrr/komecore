@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	appcookie "komecore/internal/common/http/cookie"
-	appmiddleware "komecore/internal/common/middleware"
+	appcookie "komecore/internal/httpx/cookie"
+	appmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 

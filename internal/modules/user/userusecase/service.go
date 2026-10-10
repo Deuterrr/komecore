@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"komecore/internal/common/authctx"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/user/userdomain"
 	"komecore/internal/modules/user/userrepo"
@@ -90,7 +90,7 @@ func (s *UserService) GetCurrentProfile(ctx context.Context, authCtx authctx.Aut
 	}
 
 	if account == nil {
-		return nil, apperrors.NewNotFound(string(apperrors.ErrTypeNotFound))
+		return nil, apperror.NewNotFound(string(apperror.ErrTypeNotFound))
 	}
 
 	var lastActivityAt *time.Time
@@ -110,7 +110,7 @@ func (s *UserService) GetCurrentProfile(ctx context.Context, authCtx authctx.Aut
 			return nil, fmt.Errorf("failed to retrieve user profile: %w", err)
 		}
 		if user == nil {
-			return nil, apperrors.NewNotFound("user not found")
+			return nil, apperror.NewNotFound("user not found")
 		}
 
 		customerID := uuid.Nil
@@ -154,7 +154,7 @@ func (s *UserService) UpdateCurrentProfile(
 	input UpdateProfileInput,
 ) (*ProfileResult, error) {
 	if input.Name != nil && strings.TrimSpace(*input.Name) == "" {
-		return nil, apperrors.NewBadRequest("name is required")
+		return nil, apperror.NewBadRequest("name is required")
 	}
 
 	account, err := s.accountRepo.GetByUserID(ctx, s.executor, authCtx.UserID)
@@ -163,7 +163,7 @@ func (s *UserService) UpdateCurrentProfile(
 	}
 
 	if account == nil {
-		return nil, apperrors.NewNotFound(string(apperrors.ErrTypeNotFound))
+		return nil, apperror.NewNotFound(string(apperror.ErrTypeNotFound))
 	}
 
 	var result ProfileResult
@@ -192,7 +192,7 @@ func (s *UserService) UpdateCurrentProfile(
 					return fmt.Errorf("failed to retrieve user profile: %w", err)
 				}
 				if user == nil {
-					return apperrors.NewNotFound("user not found")
+					return apperror.NewNotFound("user not found")
 				}
 
 				customerID := uuid.Nil
@@ -215,7 +215,7 @@ func (s *UserService) UpdateCurrentProfile(
 				staffProfile, err := s.staffProfileProvider.GetProfileByUserID(ctx, exec, authCtx.UserID)
 				if err != nil {
 					return fmt.Errorf("failed to retrieve staff profile: %w", err)
-					}
+				}
 
 				result.Staff = staffProfile
 			}

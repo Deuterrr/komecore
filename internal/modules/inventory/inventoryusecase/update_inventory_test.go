@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/inventory/inventoryrepo"
@@ -110,8 +110,8 @@ func TestUpdateInventory_NotFound(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeNotFound {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeNotFound {
 		t.Errorf("expected NotFound error, got %v", err)
 	}
 }
@@ -149,8 +149,8 @@ func TestUpdateInventory_InvalidStock(t *testing.T) {
 		t.Fatal("expected validation error, got nil")
 	}
 
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeInvalidInput {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeInvalidInput {
 		t.Errorf("expected InvalidInput error, got %v", err)
 	}
 }

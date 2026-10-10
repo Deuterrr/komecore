@@ -3,12 +3,12 @@ package bootstrap
 import (
 	"net/http"
 
-	apphttp "komecore/internal/common/http"
-	appcookie "komecore/internal/common/http/cookie"
-	appmiddleware "komecore/internal/common/middleware"
+	"komecore/internal/httpx"
+	appcookie "komecore/internal/httpx/cookie"
+	appmiddleware "komecore/internal/httpx/middleware"
 	"komecore/internal/infra/cache"
 
-	"komecore/internal/common/authctx"
+	"komecore/internal/authctx"
 	"komecore/internal/modules/auth/authrepo"
 
 	"komecore/internal/modules/address/addresshttp"
@@ -33,12 +33,12 @@ import (
 // RouteChains encapsulates all pre-built middleware chains for
 // different routing policies.
 type RouteChains struct {
-	Core                    func(apphttp.AppHandler) http.HandlerFunc
-	CoreAuth                func(apphttp.AppHandler) http.HandlerFunc
-	StaffOnly               func(apphttp.AppHandler) http.HandlerFunc
-	StaffAdminOnly          func(apphttp.AppHandler) http.HandlerFunc
-	CustomerOnly            func(apphttp.AppHandler) http.HandlerFunc
-	CustomerWithIdempotency func(apphttp.AppHandler) http.HandlerFunc
+	Core                    func(httpx.AppHandler) http.HandlerFunc
+	CoreAuth                func(httpx.AppHandler) http.HandlerFunc
+	StaffOnly               func(httpx.AppHandler) http.HandlerFunc
+	StaffAdminOnly          func(httpx.AppHandler) http.HandlerFunc
+	CustomerOnly            func(httpx.AppHandler) http.HandlerFunc
+	CustomerWithIdempotency func(httpx.AppHandler) http.HandlerFunc
 }
 
 // NewRouteChains builds and returns the route chains using
@@ -49,7 +49,7 @@ func NewRouteChains(c *Container) *RouteChains {
 		idempotencyMw = appmiddleware.NewIdempotencyMiddleware(cache.NewNoopCache())
 	}
 
-	buildChain := func(extra ...appmiddleware.Middleware) func(apphttp.AppHandler) http.HandlerFunc {
+	buildChain := func(extra ...appmiddleware.Middleware) func(httpx.AppHandler) http.HandlerFunc {
 		base := []appmiddleware.Middleware{
 			appmiddleware.CORS(c.CORSAllowedOrigins),
 			appmiddleware.Recovery(c.Logger),
@@ -60,7 +60,7 @@ func NewRouteChains(c *Container) *RouteChains {
 
 		mws := append(base, extra...)
 
-		return func(h apphttp.AppHandler) http.HandlerFunc {
+		return func(h httpx.AppHandler) http.HandlerFunc {
 			return appmiddleware.Chain(h, mws...)
 		}
 	}
@@ -131,7 +131,7 @@ func NewRouteChains(c *Container) *RouteChains {
 	}
 }
 
-func (rc *RouteChains) StaffWithPerm(authorizer authrepo.Authorizer, permission string, h apphttp.AppHandler) http.HandlerFunc {
+func (rc *RouteChains) StaffWithPerm(authorizer authrepo.Authorizer, permission string, h httpx.AppHandler) http.HandlerFunc {
 	return rc.StaffOnly(authorizer.RequirePermission(permission)(h))
 }
 

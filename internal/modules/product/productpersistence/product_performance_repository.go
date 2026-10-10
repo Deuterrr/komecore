@@ -8,7 +8,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/product/productdomain"
 	"komecore/internal/modules/product/productrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -234,7 +234,7 @@ func (r *ProductPerformanceRepository) GetProductStats(
 	`
 
 	// Build sorting clauses
-	var sortKeys = map[query.SortKey]string{
+	var sortKeys = map[pagination.SortKey]string{
 		productrepo.ProductSortLatest:      "p.created_at",
 		productrepo.ProductSortName:        "p.name",
 		productrepo.ProductSortPrice:       "p.base_price",
@@ -253,7 +253,7 @@ func (r *ProductPerformanceRepository) GetProductStats(
 		}
 
 		direction := "DESC"
-		if sort.Direction == query.SortAsc {
+		if sort.Direction == pagination.SortAsc {
 			direction = "ASC"
 		}
 

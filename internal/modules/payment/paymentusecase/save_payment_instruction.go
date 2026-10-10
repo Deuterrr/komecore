@@ -1,10 +1,10 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"
@@ -46,7 +46,7 @@ func (u *SavePaymentInstructionUsecase) Execute(
 	}
 
 	if method == nil {
-		return apperrors.NewNotFound("payment method not found")
+		return apperror.NewNotFound("payment method not found")
 	}
 
 	existing, err := u.paymentInstructionRepo.GetByPaymentMethodID(ctx, u.executor, input.PaymentMethodID)

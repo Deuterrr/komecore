@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/addressdomain"
@@ -88,7 +88,7 @@ func (s *pricingServiceImpl) Calculate(
 			return nil, fmt.Errorf("failed to retrieve destination address: %w", err)
 		}
 		if addr == nil {
-			return nil, apperrors.NewNotFound(addressdomain.ErrAddressNotFound.Error())
+			return nil, apperror.NewNotFound(addressdomain.ErrAddressNotFound.Error())
 		}
 		destAddress = addr
 	} else {
@@ -97,7 +97,7 @@ func (s *pricingServiceImpl) Calculate(
 			return nil, fmt.Errorf("failed to retrieve default destination address: %w", err)
 		}
 		if addr == nil {
-			return nil, apperrors.NewConflict(addressdomain.ErrNotFoundDefaultAddress.Error())
+			return nil, apperror.NewConflict(addressdomain.ErrNotFoundDefaultAddress.Error())
 		}
 		destAddress = addr
 	}
@@ -178,7 +178,7 @@ func (s *pricingServiceImpl) Calculate(
 			if ok {
 				shopName = sh.Name
 			}
-			return nil, apperrors.NewConflict(fmt.Sprintf("shop '%s' is inactive or not approved for transactions", shopName))
+			return nil, apperror.NewConflict(fmt.Sprintf("shop '%s' is inactive or not approved for transactions", shopName))
 		}
 	}
 
@@ -208,10 +208,10 @@ func (s *pricingServiceImpl) Calculate(
 			pid := shopItem.ProductID
 			product, ok := productMap[pid]
 			if !ok || product.Status == productdomain.ProductStatusArchived {
-				return nil, apperrors.NewNotFound(productdomain.ErrProductNotFound.Error())
+				return nil, apperror.NewNotFound(productdomain.ErrProductNotFound.Error())
 			}
 			if product.Status != productdomain.ProductStatusActive {
-				return nil, apperrors.NewConflict(fmt.Sprintf("product '%s' is currently not available for purchase", product.Name))
+				return nil, apperror.NewConflict(fmt.Sprintf("product '%s' is currently not available for purchase", product.Name))
 			}
 
 			shopInventories := inventoryMap[pid]
@@ -223,7 +223,7 @@ func (s *pricingServiceImpl) Calculate(
 			}
 
 			if shopItem.Quantity > totalAvailableStock {
-				return nil, apperrors.NewConflict(fmt.Sprintf("insufficient stock for product '%s'", product.Name))
+				return nil, apperror.NewConflict(fmt.Sprintf("insufficient stock for product '%s'", product.Name))
 			}
 
 			itemSubtotal := product.Price * int64(shopItem.Quantity)
@@ -263,7 +263,7 @@ func (s *pricingServiceImpl) Calculate(
 				}
 			}
 			if !supported {
-				return nil, apperrors.NewConflict(fmt.Sprintf("courier '%s' is not supported", *shopGroup.CourierCode))
+				return nil, apperror.NewConflict(fmt.Sprintf("courier '%s' is not supported", *shopGroup.CourierCode))
 			}
 			codes = append(codes, *shopGroup.CourierCode)
 		} else {
@@ -322,7 +322,7 @@ func (s *pricingServiceImpl) Calculate(
 			*shopGroup.CourierCode != "" {
 
 			if !hasSelected {
-				return nil, apperrors.NewBadRequest("selected courier service is unavailable")
+				return nil, apperror.NewBadRequest("selected courier service is unavailable")
 			}
 
 			shippingFee = selectedFee
@@ -384,7 +384,7 @@ func (s *pricingServiceImpl) Calculate(
 			return nil, fmt.Errorf("failed to retrieve payment method: %w", err)
 		}
 		if pm == nil {
-			return nil, apperrors.NewNotFound("selected payment method is not available")
+			return nil, apperror.NewNotFound("selected payment method is not available")
 		}
 
 		fee := pm.CalculateFee(totalAll)
@@ -403,7 +403,7 @@ func (s *pricingServiceImpl) Calculate(
 			return nil, fmt.Errorf("failed to load payment methods: %w", err)
 		}
 		if len(pms) == 0 {
-			return nil, apperrors.NewNotFound("payment method is not available")
+			return nil, apperror.NewNotFound("payment method is not available")
 		}
 
 		paymentMethods = make([]orderrepo.PaymentMethodPricingResult, 0, len(pms))

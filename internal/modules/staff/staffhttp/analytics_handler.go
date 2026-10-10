@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/httpx"
 )
 
 func (h *staffHandler) GetRevenueAnalytics(w http.ResponseWriter, r *http.Request) error {
@@ -40,7 +40,7 @@ func (h *staffHandler) GetRevenueAnalytics(w http.ResponseWriter, r *http.Reques
 		Buckets:      buckets,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
@@ -65,7 +65,7 @@ func (h *staffHandler) GetOrderPipelineAnalytics(w http.ResponseWriter, r *http.
 		Breakdown:   breakdown,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
@@ -93,6 +93,6 @@ func (h *staffHandler) GetTopProductsAnalytics(w http.ResponseWriter, r *http.Re
 		})
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }

@@ -1,11 +1,11 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/order/orderrepo"
 	"komecore/internal/modules/shipment/shipmentdomain"
@@ -63,11 +63,11 @@ func (u *GetOrderTrackingUsecase) Execute(
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 	if order == nil {
-		return nil, apperrors.NewNotFound("order not found")
+		return nil, apperror.NewNotFound("order not found")
 	}
 
 	if input.CustomerID != uuid.Nil && order.CustomerID != input.CustomerID {
-		return nil, apperrors.NewUnauthorized("not authorized")
+		return nil, apperror.NewUnauthorized("not authorized")
 	}
 
 	var shipment *shipmentdomain.Shipment
@@ -92,7 +92,7 @@ func (u *GetOrderTrackingUsecase) Execute(
 	}
 
 	if shipment == nil {
-		return nil, apperrors.NewNotFound("shipment not found")
+		return nil, apperror.NewNotFound("shipment not found")
 	}
 
 	var timeline []TrackingTimelineEvent

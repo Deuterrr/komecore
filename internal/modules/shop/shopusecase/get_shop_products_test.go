@@ -23,7 +23,6 @@ func (m *mockShopProductProvider) GetShopProducts(
 	return m.results, m.err
 }
 
-
 func TestGetShopProducts_Success(t *testing.T) {
 	shopID := uuid.New()
 	prodID := uuid.New()

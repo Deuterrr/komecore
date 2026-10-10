@@ -1,9 +1,9 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"
 	"fmt"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/addressrepo"
@@ -147,7 +147,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 	if order == nil {
-		return nil, apperrors.NewNotFound("order not found")
+		return nil, apperror.NewNotFound("order not found")
 	}
 
 	oldStatus = string(order.Status)
@@ -159,11 +159,11 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 	// (HandlingExpiresAt).
 	if input.Status == orderdomain.OrderStatusConfirmed && order.ConfirmedAt == nil {
 		if errStatus := order.Confirm(appclock.Now(), orderdomain.DefaultHandlingSLAWindow); errStatus != nil {
-			return nil, apperrors.NewInvalidInput(errStatus.Error())
+			return nil, apperror.NewInvalidInput(errStatus.Error())
 		}
 	} else {
 		if errStatus := order.UpdateStatus(input.Status); errStatus != nil {
-			return nil, apperrors.NewInvalidInput(errStatus.Error())
+			return nil, apperror.NewInvalidInput(errStatus.Error())
 		}
 	}
 
@@ -174,7 +174,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 			return nil, fmt.Errorf("failed to get payment: %w", err)
 		}
 		if payment == nil || payment.Status != paymentdomain.PaymentStatusPaid {
-			return nil, apperrors.NewInvalidInput("cannot confirm order without confirmed payment")
+			return nil, apperror.NewInvalidInput("cannot confirm order without confirmed payment")
 		}
 
 		items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, order.ID)
@@ -206,7 +206,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 			return nil, fmt.Errorf("failed to get payment: %w", err)
 		}
 		if payment == nil || payment.Status != paymentdomain.PaymentStatusPaid {
-			return nil, apperrors.NewInvalidInput("cannot move order to processing without confirmed payment")
+			return nil, apperror.NewInvalidInput("cannot move order to processing without confirmed payment")
 		}
 
 		err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -280,7 +280,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		return nil, fmt.Errorf("failed to list order items: %w", err)
 	}
 	if len(items) == 0 {
-		return nil, apperrors.NewInvalidInput("order has no items")
+		return nil, apperror.NewInvalidInput("order has no items")
 	}
 
 	itemMap := make(map[uuid.UUID]orderdomain.OrderItem, len(items))
@@ -294,7 +294,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		return nil, fmt.Errorf("failed to get customer address: %w", err)
 	}
 	if customerAddr == nil {
-		return nil, apperrors.NewNotFound("customer address not found")
+		return nil, apperror.NewNotFound("customer address not found")
 	}
 
 	var productIDs []uuid.UUID
@@ -326,14 +326,14 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		// Staff explicitly configured shipment grouping (split / multi shipment)
 		for idx, sInput := range input.Shipments {
 			if len(sInput.ItemIDs) == 0 {
-				return nil, apperrors.NewInvalidInput("each shipment must contain at least one order item")
+				return nil, apperror.NewInvalidInput("each shipment must contain at least one order item")
 			}
 
 			var shipmentItems []orderdomain.OrderItem
 			for _, itemID := range sInput.ItemIDs {
 				item, ok := itemMap[itemID]
 				if !ok {
-					return nil, apperrors.NewInvalidInput(fmt.Sprintf("order item %s does not belong to this order", itemID))
+					return nil, apperror.NewInvalidInput(fmt.Sprintf("order item %s does not belong to this order", itemID))
 				}
 				shipmentItems = append(shipmentItems, item)
 			}
@@ -355,7 +355,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 					courierService = *first.CourierService
 				}
 				if courierCode == "" || courierService == "" {
-					return nil, apperrors.NewInvalidInput("shipment is missing courier information")
+					return nil, apperror.NewInvalidInput("shipment is missing courier information")
 				}
 			} else {
 				courierCode = string(shipmentdomain.FulfillmentMethodSelfDelivery)
@@ -367,7 +367,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 				return nil, fmt.Errorf("failed to get shop address: %w", err)
 			}
 			if shopAddr == nil {
-				return nil, apperrors.NewNotFound("shop address not found")
+				return nil, apperror.NewNotFound("shop address not found")
 			}
 
 			var (
@@ -456,7 +456,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 
 			if err := shipment.Validate(); err != nil {
 				rollbackLogistics()
-				return nil, apperrors.NewInvalidInput(err.Error())
+				return nil, apperror.NewInvalidInput(err.Error())
 			}
 
 			preparedShipments = append(preparedShipments, preparedShipment{
@@ -502,7 +502,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 					courierService = *first.CourierService
 				}
 				if courierCode == "" || courierService == "" {
-					return nil, apperrors.NewInvalidInput("order items have no courier information")
+					return nil, apperror.NewInvalidInput("order items have no courier information")
 				}
 			} else {
 				courierCode = string(shipmentdomain.FulfillmentMethodSelfDelivery)
@@ -514,7 +514,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 				return nil, fmt.Errorf("failed to get shop address: %w", err)
 			}
 			if shopAddr == nil {
-				return nil, apperrors.NewNotFound("shop address not found")
+				return nil, apperror.NewNotFound("shop address not found")
 			}
 
 			var (
@@ -604,7 +604,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 
 			if err := shipment.Validate(); err != nil {
 				rollbackLogistics()
-				return nil, apperrors.NewInvalidInput(err.Error())
+				return nil, apperror.NewInvalidInput(err.Error())
 			}
 
 			preparedShipments = append(preparedShipments, preparedShipment{

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/address/addressusecase"
 
 	"github.com/google/uuid"
@@ -24,7 +24,7 @@ func NewAddressHandler(
 }
 
 func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -61,36 +61,36 @@ func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Reques
 		"addresses": result,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request) error {
 	var req saveCustomerAddressRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	prov := req.GetProvince()
 	if prov == "" {
-		return apperrors.NewBadRequest("invalid province")
+		return apperror.NewBadRequest("invalid province")
 	}
 	city := req.GetCity()
 	if city == "" {
-		return apperrors.NewBadRequest("invalid city")
+		return apperror.NewBadRequest("invalid city")
 	}
 	dist := req.GetDistrict()
 	if dist == "" {
-		return apperrors.NewBadRequest("invalid district")
+		return apperror.NewBadRequest("invalid district")
 	}
 	if req.FullAddress == "" {
-		return apperrors.NewBadRequest("invalid full address")
+		return apperror.NewBadRequest("invalid full address")
 	}
 	if req.PostalCode == "" {
-		return apperrors.NewBadRequest("invalid postal code")
+		return apperror.NewBadRequest("invalid postal code")
 	}
 
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 	if req.AddressID != nil {
 		parsed, err := uuid.Parse(*req.AddressID)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid address id")
+			return apperror.NewBadRequest("invalid address id")
 		}
 		addressID = &parsed
 	}
@@ -108,7 +108,7 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 	if req.IsDefault != nil && *req.IsDefault != "" {
 		parsed, err := strconv.ParseBool(*req.IsDefault)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid default status")
+			return apperror.NewBadRequest("invalid default status")
 		}
 		parsedIsDefault = parsed
 	}
@@ -137,19 +137,19 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 		"message": "address saved successfully",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *AddressHandler) DeleteUserAddress(w http.ResponseWriter, r *http.Request) error {
-	_, _, err := apphttp.RequireCustomer(r)
+	_, _, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
-	addressID, err := apphttp.ParamUUID(r, "addressID")
+	addressID, err := httpx.ParamUUID(r, "addressID")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid address id")
+		return apperror.NewBadRequest("invalid address id")
 	}
 
 	err = h.service.DeleteCustomerAddress(r.Context(), addressID)
@@ -161,14 +161,14 @@ func (h *AddressHandler) DeleteUserAddress(w http.ResponseWriter, r *http.Reques
 		"message": "address deleted successfully",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *AddressHandler) ListShopAddresses(w http.ResponseWriter, r *http.Request) error {
-	shopID, err := apphttp.ParamUUID(r, "id")
+	shopID, err := httpx.ParamUUID(r, "id")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shop id")
+		return apperror.NewBadRequest("invalid shop id")
 	}
 
 	result, err := h.service.ListShopAddresses(r.Context(), shopID)
@@ -203,45 +203,45 @@ func (h *AddressHandler) ListShopAddresses(w http.ResponseWriter, r *http.Reques
 		"addresses": addresses,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Request) error {
 	var req createShopAddressRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	prov := req.GetProvince()
 	if prov == "" {
-		return apperrors.NewBadRequest("invalid province")
+		return apperror.NewBadRequest("invalid province")
 	}
 	city := req.GetCity()
 	if city == "" {
-		return apperrors.NewBadRequest("invalid city")
+		return apperror.NewBadRequest("invalid city")
 	}
 	dist := req.GetDistrict()
 	if dist == "" {
-		return apperrors.NewBadRequest("invalid district")
+		return apperror.NewBadRequest("invalid district")
 	}
 
 	if req.FullAddress == "" {
-		return apperrors.NewBadRequest("invalid full address")
+		return apperror.NewBadRequest("invalid full address")
 	}
 	if req.PostalCode == "" {
-		return apperrors.NewBadRequest("invalid postal code")
+		return apperror.NewBadRequest("invalid postal code")
 	}
 
-	parsedShopID, err := apphttp.ParamUUID(r, "shopID")
+	parsedShopID, err := httpx.ParamUUID(r, "shopID")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shop id")
+		return apperror.NewBadRequest("invalid shop id")
 	}
 
 	var parsedIsActive bool
 	parsedIsActive, err = strconv.ParseBool(req.IsActive)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid active status")
+		return apperror.NewBadRequest("invalid active status")
 	}
 
 	input := addressusecase.CreateShopAddressInput{
@@ -267,49 +267,49 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 		"message": "address successfully created",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Request) error {
 	var req createShopAddressRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	prov := req.GetProvince()
 	if prov == "" {
-		return apperrors.NewBadRequest("invalid province")
+		return apperror.NewBadRequest("invalid province")
 	}
 	city := req.GetCity()
 	if city == "" {
-		return apperrors.NewBadRequest("invalid city")
+		return apperror.NewBadRequest("invalid city")
 	}
 	dist := req.GetDistrict()
 	if dist == "" {
-		return apperrors.NewBadRequest("invalid district")
+		return apperror.NewBadRequest("invalid district")
 	}
 	if req.FullAddress == "" {
-		return apperrors.NewBadRequest("invalid full address")
+		return apperror.NewBadRequest("invalid full address")
 	}
 	if req.PostalCode == "" {
-		return apperrors.NewBadRequest("invalid postal code")
+		return apperror.NewBadRequest("invalid postal code")
 	}
 
-	parsedShopID, err := apphttp.ParamUUID(r, "shopID")
+	parsedShopID, err := httpx.ParamUUID(r, "shopID")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shop id")
+		return apperror.NewBadRequest("invalid shop id")
 	}
 
-	addressID, err := apphttp.ParamUUID(r, "addressID")
+	addressID, err := httpx.ParamUUID(r, "addressID")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid address id")
+		return apperror.NewBadRequest("invalid address id")
 	}
 
 	var parsedIsActive bool
 	parsedIsActive, err = strconv.ParseBool(req.IsActive)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid active status")
+		return apperror.NewBadRequest("invalid active status")
 	}
 
 	input := addressusecase.UpdateShopAddressInput{
@@ -336,19 +336,19 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 		"message": "address updated successfully",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *AddressHandler) DeleteShopAddress(w http.ResponseWriter, r *http.Request) error {
-	addressID, err := apphttp.ParamUUID(r, "addressID")
+	addressID, err := httpx.ParamUUID(r, "addressID")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid address id")
+		return apperror.NewBadRequest("invalid address id")
 	}
 
-	shopID, err := apphttp.ParamUUID(r, "shopID")
+	shopID, err := httpx.ParamUUID(r, "shopID")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shop id")
+		return apperror.NewBadRequest("invalid shop id")
 	}
 
 	err = h.service.DeleteShopAddress(r.Context(), shopID, addressID)
@@ -360,6 +360,6 @@ func (h *AddressHandler) DeleteShopAddress(w http.ResponseWriter, r *http.Reques
 		"message": "address deleted successfully",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

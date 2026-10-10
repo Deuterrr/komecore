@@ -9,7 +9,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/product/productdomain"
 	"komecore/internal/modules/product/productrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -139,7 +139,7 @@ func (r *ProductRepository) FindProducts(
 
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
-	var productSortKeys = map[query.SortKey]string{
+	var productSortKeys = map[pagination.SortKey]string{
 		productrepo.ProductSortLatest:   "created_at",
 		productrepo.ProductSortName:     "name",
 		productrepo.ProductSortPrice:    "base_price",
@@ -153,7 +153,7 @@ func (r *ProductRepository) FindProducts(
 	for _, sort := range params.Sorts {
 		if sort.By == productrepo.ProductSortRelevance && searchArgPos > 0 {
 			dir := "DESC"
-			if sort.Direction == query.SortAsc {
+			if sort.Direction == pagination.SortAsc {
 				dir = "ASC"
 			}
 			sortClauses = append(
@@ -169,7 +169,7 @@ func (r *ProductRepository) FindProducts(
 		}
 
 		direction := "DESC"
-		if sort.Direction == query.SortAsc {
+		if sort.Direction == pagination.SortAsc {
 			direction = "ASC"
 		}
 
@@ -378,7 +378,7 @@ func (r *ProductRepository) FindProductsWithInventory(
 
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
-	var productSortKeys = map[query.SortKey]string{
+	var productSortKeys = map[pagination.SortKey]string{
 		productrepo.ProductSortLatest:   "p.created_at",
 		productrepo.ProductSortName:     "p.name",
 		productrepo.ProductSortPrice:    "p.base_price",
@@ -393,7 +393,7 @@ func (r *ProductRepository) FindProductsWithInventory(
 	for _, sort := range params.Sorts {
 		if sort.By == productrepo.ProductSortRelevance && searchArgPos > 0 {
 			dir := "DESC"
-			if sort.Direction == query.SortAsc {
+			if sort.Direction == pagination.SortAsc {
 				dir = "ASC"
 			}
 			sortClauses = append(
@@ -409,7 +409,7 @@ func (r *ProductRepository) FindProductsWithInventory(
 		}
 
 		direction := "DESC"
-		if sort.Direction == query.SortAsc {
+		if sort.Direction == pagination.SortAsc {
 			direction = "ASC"
 		}
 

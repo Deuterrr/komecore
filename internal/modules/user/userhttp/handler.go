@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/user/userusecase"
 )
 
@@ -22,9 +22,9 @@ func NewUserHandler(
 }
 
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error {
-	id, err := apphttp.ParamUUID(r, "id")
+	id, err := httpx.ParamUUID(r, "id")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid user id")
+		return apperror.NewBadRequest("invalid user id")
 	}
 
 	result, err := h.service.GetUserByID(r.Context(), id)
@@ -32,7 +32,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	if result == nil {
-		return apperrors.NewNotFound("user not found")
+		return apperror.NewNotFound("user not found")
 	}
 
 	response := userResponse{
@@ -44,12 +44,12 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error 
 		LastLoginAt: result.LastLoginAt,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 	if result == nil {
-		return apperrors.NewNotFound("user not found")
+		return apperror.NewNotFound("user not found")
 	}
 
 	response := map[string]userResponse{
@@ -73,12 +73,12 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) err
 		},
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
@@ -128,19 +128,19 @@ func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
 
 	var req updateProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	result, err := h.service.UpdateCurrentProfile(
@@ -191,6 +191,6 @@ func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

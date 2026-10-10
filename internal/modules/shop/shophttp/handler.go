@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	"komecore/internal/common/authctx"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/shop/shopdomain"
 	"komecore/internal/modules/shop/shopusecase"
 
@@ -32,7 +32,7 @@ func (h *ShopHandler) resolveShopID(r *http.Request) (uuid.UUID, error) {
 		param = chi.URLParam(r, "id")
 	}
 	if param == "" {
-		return uuid.Nil, apperrors.NewBadRequest("invalid shop id")
+		return uuid.Nil, apperror.NewBadRequest("invalid shop id")
 	}
 
 	if parsed, err := uuid.Parse(param); err == nil {
@@ -40,7 +40,7 @@ func (h *ShopHandler) resolveShopID(r *http.Request) (uuid.UUID, error) {
 	}
 
 	if h.service == nil {
-		return uuid.Nil, apperrors.NewNotFound("shop not found")
+		return uuid.Nil, apperror.NewNotFound("shop not found")
 	}
 
 	shop, err := h.service.GetBySlug(r.Context(), param)
@@ -48,27 +48,27 @@ func (h *ShopHandler) resolveShopID(r *http.Request) (uuid.UUID, error) {
 		return uuid.Nil, err
 	}
 	if shop == nil {
-		return uuid.Nil, apperrors.NewNotFound("shop not found")
+		return uuid.Nil, apperror.NewNotFound("shop not found")
 	}
 
 	return shop.ID, nil
 }
 
 func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
-	page := apphttp.QueryIntDefault(r, "page", 1)
+	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
 	}
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	name := apphttp.Query(r, "name")
-	id := apphttp.Query(r, "id")
-	sort := apphttp.Query(r, "sort")
-	activeParam := apphttp.Query(r, "active")
-	approvalParam := apphttp.Query(r, "approval_status")
+	name := httpx.Query(r, "name")
+	id := httpx.Query(r, "id")
+	sort := httpx.Query(r, "sort")
+	activeParam := httpx.Query(r, "active")
+	approvalParam := httpx.Query(r, "approval_status")
 
 	input := shopusecase.FindShopsInput{
 		Page:  page,
@@ -107,7 +107,7 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 				Total: 0,
 				Shops: []getShopResponse{},
 			}
-			apphttp.WriteJSON(w, http.StatusOK, res)
+			httpx.WriteJSON(w, http.StatusOK, res)
 			return nil
 		}
 		input.ShopIDs = assignedIDs
@@ -141,7 +141,7 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 		"total": total,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -151,7 +151,7 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 		param = chi.URLParam(r, "id")
 	}
 	if param == "" {
-		return apperrors.NewBadRequest("invalid shop id")
+		return apperror.NewBadRequest("invalid shop id")
 	}
 
 	var result *shopdomain.Shop
@@ -170,7 +170,7 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	if result == nil {
-		return apperrors.NewNotFound("shop not found")
+		return apperror.NewNotFound("shop not found")
 	}
 
 	response := map[string]getShopResponse{
@@ -186,30 +186,30 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 		},
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 
 	var req saveShopRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	if req.Name == "" {
-		return apperrors.NewBadRequest("invalid name")
+		return apperror.NewBadRequest("invalid name")
 	}
 
 	var shopID *uuid.UUID
 	if req.ShopID != nil && *req.ShopID != "" {
 		parsed, err := uuid.Parse(*req.ShopID)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid shop id")
+			return apperror.NewBadRequest("invalid shop id")
 		}
 
 		shopID = &parsed
@@ -219,7 +219,7 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 	if req.IsActive != nil && *req.IsActive != "" {
 		parsedIsActive, err := strconv.ParseBool(*req.IsActive)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid active status")
+			return apperror.NewBadRequest("invalid active status")
 		}
 		isActivePtr = &parsedIsActive
 	}
@@ -245,7 +245,7 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 		"message": "shop successfully saved",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -279,7 +279,7 @@ func (h *ShopHandler) GetShopAddresses(w http.ResponseWriter, r *http.Request) e
 		})
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"shop_id":   shopID,
 		"addresses": addresses,
 	})
@@ -318,7 +318,7 @@ func (h *ShopHandler) GetShopProducts(w http.ResponseWriter, r *http.Request) er
 		})
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"shop_id":  shopID,
 		"products": products,
 	})
@@ -328,7 +328,7 @@ func (h *ShopHandler) GetShopProducts(w http.ResponseWriter, r *http.Request) er
 func (h *ShopHandler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 
 	shopID, err := h.resolveShopID(r)
@@ -344,6 +344,6 @@ func (h *ShopHandler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
 		"message": "shop successfully deleted",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

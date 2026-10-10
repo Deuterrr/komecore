@@ -1,4 +1,4 @@
-﻿package orderhttp
+package orderhttp
 
 import (
 	"bytes"
@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
-	"komecore/internal/common/authctx"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/order/orderrepo"
@@ -158,7 +158,7 @@ func TestResolveShopFilter_NilGetShopDependency_ReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected internal server error when getShop dependency is nil, got nil")
 	}
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected HTTP status 500, got %v", err)
 	}
@@ -209,7 +209,7 @@ func TestGetOrderTrackingForStaff_CustomerActor_ReturnsForbidden(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected forbidden error for non-staff, got nil")
 	}
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != http.StatusForbidden {
 		t.Errorf("expected status 403 Forbidden, got %v", err)
 	}
@@ -244,7 +244,7 @@ func TestUpdateOrderStatus_CustomerActor_ReturnsForbidden(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected forbidden error for non-staff, got nil")
 	}
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != http.StatusForbidden {
 		t.Errorf("expected status 403 Forbidden, got %v", err)
 	}

@@ -3,8 +3,8 @@ package shipmenthttp
 import (
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/shipment/shipmentdomain"
 	"komecore/internal/modules/shipment/shipmentusecase"
 
@@ -33,8 +33,8 @@ func NewShipmentHandler(
 func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http.Request) error {
 	var req estimateShippingOptionsRequest
 
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	var shopID uuid.UUID
@@ -46,7 +46,7 @@ func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http
 	}
 
 	if req.Weight <= 0 {
-		return apperrors.NewBadRequest("invalid weight")
+		return apperror.NewBadRequest("invalid weight")
 	}
 
 	input := shipmentusecase.EstimateShippingOptionsInput{
@@ -83,7 +83,7 @@ func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http
 		"couriers": couriers,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -91,16 +91,16 @@ func (h *ShipmentHandler) UpdateShipmentStatus(w http.ResponseWriter, r *http.Re
 	shipmentIDStr := chi.URLParam(r, "shipmentID")
 	shipmentID, err := uuid.Parse(shipmentIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shipment id")
+		return apperror.NewBadRequest("invalid shipment id")
 	}
 
 	var req updateShipmentStatusRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	if req.Status == "" {
-		return apperrors.NewBadRequest("status is required")
+		return apperror.NewBadRequest("status is required")
 	}
 
 	input := shipmentusecase.UpdateShipmentStatusInput{
@@ -117,7 +117,7 @@ func (h *ShipmentHandler) UpdateShipmentStatus(w http.ResponseWriter, r *http.Re
 
 	resp := buildShipmentResponse(res.Shipment)
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
@@ -125,12 +125,12 @@ func (h *ShipmentHandler) UpdateShipment(w http.ResponseWriter, r *http.Request)
 	shipmentIDStr := chi.URLParam(r, "shipmentID")
 	shipmentID, err := uuid.Parse(shipmentIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shipment id")
+		return apperror.NewBadRequest("invalid shipment id")
 	}
 
 	var req updateShipmentRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	input := shipmentusecase.UpdateShipmentInput{
@@ -146,7 +146,7 @@ func (h *ShipmentHandler) UpdateShipment(w http.ResponseWriter, r *http.Request)
 	}
 
 	resp := buildShipmentResponse(res.Shipment)
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 
 	return nil
 }
@@ -155,15 +155,15 @@ func (h *ShipmentHandler) DispatchShipment(w http.ResponseWriter, r *http.Reques
 	shipmentIDStr := chi.URLParam(r, "shipmentID")
 	shipmentID, err := uuid.Parse(shipmentIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid shipment id")
+		return apperror.NewBadRequest("invalid shipment id")
 	}
 
 	var req dispatchShipmentRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 	if req.TrackingNumber == "" {
-		return apperrors.NewBadRequest("tracking_number is required")
+		return apperror.NewBadRequest("tracking_number is required")
 	}
 
 	shipment, err := h.updateShipment.Dispatch(r.Context(), shipmentID, req.TrackingNumber)
@@ -172,7 +172,7 @@ func (h *ShipmentHandler) DispatchShipment(w http.ResponseWriter, r *http.Reques
 	}
 
 	resp := buildShipmentResponse(shipment)
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 

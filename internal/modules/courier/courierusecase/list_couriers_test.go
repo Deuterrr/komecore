@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/courier/courierrepo"
 	"komecore/internal/modules/courier/courierusecase"
@@ -51,7 +51,7 @@ func TestListCouriers_Execute(t *testing.T) {
 		result, err := svc.ListAllCouriers(context.Background())
 
 		assert.Nil(t, result)
-		assert.True(t, apperrors.IsNotFound(err))
+		assert.True(t, apperror.IsNotFound(err))
 	})
 
 	t.Run("returns error on repository failure", func(t *testing.T) {

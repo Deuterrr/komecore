@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/discount/discountdomain"
 	"komecore/internal/modules/discount/discountusecase"
 )
@@ -22,12 +22,12 @@ func NewDiscountHandler(service *discountusecase.DiscountService) *DiscountHandl
 
 func (h *DiscountHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request) error {
 	var req ValidateCouponRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	if req.Code == "" {
-		return apperrors.NewBadRequest("coupon code is required")
+		return apperror.NewBadRequest("coupon code is required")
 	}
 
 	result, err := h.service.ValidateCoupon(r.Context(), discountusecase.ValidateCouponInput{
@@ -49,18 +49,18 @@ func (h *DiscountHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request)
 		FinalTotal:     result.FinalTotal,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
 func (h *DiscountHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) error {
 	var req CreateCouponRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	if req.Code == "" {
-		return apperrors.NewBadRequest("coupon code is required")
+		return apperror.NewBadRequest("coupon code is required")
 	}
 
 	coupon, err := h.service.CreateCoupon(r.Context(), discountusecase.CreateCouponInput{
@@ -80,21 +80,21 @@ func (h *DiscountHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) e
 	}
 
 	resp := toCouponResponse(*coupon)
-	apphttp.WriteJSON(w, http.StatusCreated, resp)
+	httpx.WriteJSON(w, http.StatusCreated, resp)
 	return nil
 }
 
 func (h *DiscountHandler) ListCoupons(w http.ResponseWriter, r *http.Request) error {
-	page := apphttp.QueryIntDefault(r, "page", 1)
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	page := httpx.QueryIntDefault(r, "page", 1)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 
 	var codePtr *string
-	if code := apphttp.Query(r, "code"); code != "" {
+	if code := httpx.Query(r, "code"); code != "" {
 		codePtr = &code
 	}
 
 	var isActivePtr *bool
-	if active := apphttp.Query(r, "is_active"); active != "" {
+	if active := httpx.Query(r, "is_active"); active != "" {
 		val := active == "true"
 		isActivePtr = &val
 	}
@@ -114,7 +114,7 @@ func (h *DiscountHandler) ListCoupons(w http.ResponseWriter, r *http.Request) er
 		items = append(items, toCouponResponse(c))
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, ListCouponsResponse{
+	httpx.WriteJSON(w, http.StatusOK, ListCouponsResponse{
 		Items: items,
 		Total: total,
 	})
@@ -143,26 +143,26 @@ func toCouponResponse(c discountdomain.Coupon) CouponResponse {
 func mapDomainError(err error) error {
 	switch {
 	case errors.Is(err, discountdomain.ErrCouponNotFound):
-		return apperrors.NewNotFound(err.Error())
+		return apperror.NewNotFound(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponInactive):
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponExpired):
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponNotStarted):
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponQuotaExceeded):
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponMinSpendNotMet):
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	case errors.Is(err, discountdomain.ErrCouponAlreadyRedeemed):
-		return apperrors.NewConflict(err.Error())
+		return apperror.NewConflict(err.Error())
 	case errors.Is(err, discountdomain.ErrDuplicateCouponCode):
-		return apperrors.NewConflict(err.Error())
+		return apperror.NewConflict(err.Error())
 	case errors.Is(err, discountdomain.ErrInvalidCouponType),
 		errors.Is(err, discountdomain.ErrInvalidDiscountValue),
 		errors.Is(err, discountdomain.ErrInvalidDates),
 		errors.Is(err, discountdomain.ErrInvalidQuota):
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	default:
 		return err
 	}

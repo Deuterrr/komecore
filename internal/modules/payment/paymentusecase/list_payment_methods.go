@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 )
 
 type ListPaymentMethodUsecase struct {
@@ -34,14 +34,14 @@ func (u *ListPaymentMethodUsecase) ListAll(
 	ctx context.Context,
 	input ListPaymentMethodInput,
 ) ([]paymentdomain.PaymentMethod, error) {
-	var pmSortKeys = map[string]query.SortKey{
+	var pmSortKeys = map[string]pagination.SortKey{
 		"latest": paymentrepo.PaymentMethodSortLatest,
 		"name":   paymentrepo.PaymentMethodSortName,
 		"code":   paymentrepo.PaymentMethodSortCode,
 		"type":   paymentrepo.PaymentMethodSortType,
 	}
 
-	var sorts query.Sorts
+	var sorts pagination.Sorts
 	if input.Sort != "" {
 		parts := strings.SplitSeq(input.Sort, ",")
 		for part := range parts {
@@ -53,17 +53,17 @@ func (u *ListPaymentMethodUsecase) ListAll(
 			subparts := strings.Split(part, ":")
 			key := strings.TrimSpace(subparts[0])
 
-			var dir query.SortDirection = query.SortDesc
+			var dir pagination.SortDirection = pagination.SortDesc
 			if len(subparts) > 1 {
 				d := strings.ToLower(strings.TrimSpace(subparts[1]))
 				if d == "asc" {
-					dir = query.SortAsc
+					dir = pagination.SortAsc
 				}
 			}
 
 			sortKey, exists := pmSortKeys[key]
 			if exists {
-				sorts = append(sorts, query.Sort{
+				sorts = append(sorts, pagination.Sort{
 					By:        sortKey,
 					Direction: dir,
 				})
@@ -72,10 +72,10 @@ func (u *ListPaymentMethodUsecase) ListAll(
 	}
 
 	if len(sorts) == 0 {
-		sorts = query.Sorts{
+		sorts = pagination.Sorts{
 			{
 				By:        paymentrepo.PaymentMethodSortLatest,
-				Direction: query.SortDesc,
+				Direction: pagination.SortDesc,
 			},
 		}
 	}

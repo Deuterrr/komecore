@@ -1,16 +1,16 @@
 package shoprepo
 
 import (
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 var (
-	ShopSortLatest query.SortKey = "latest"
-	ShopSortName   query.SortKey = "name"
-	ShopSortActive query.SortKey = "active"
-	ShopSortModify query.SortKey = "modify"
+	ShopSortLatest pagination.SortKey = "latest"
+	ShopSortName   pagination.SortKey = "name"
+	ShopSortActive pagination.SortKey = "active"
+	ShopSortModify pagination.SortKey = "modify"
 )
 
 type FindShopsParams struct {
@@ -21,6 +21,6 @@ type FindShopsParams struct {
 	IsActive       *bool
 	ApprovalStatus *string
 
-	Pagination query.Pagination
-	Sorts      query.Sorts
+	Pagination pagination.Pagination
+	Sorts      pagination.Sorts
 }

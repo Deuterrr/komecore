@@ -1,21 +1,21 @@
 package staffrepo
 
 import (
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 var (
-	StaffSortLatest query.SortKey = "latest"
-	// StaffSortName   query.SortKey = "name"
-	StaffSortModify query.SortKey = "modified"
+	StaffSortLatest pagination.SortKey = "latest"
+	// StaffSortName   pagination.SortKey = "name"
+	StaffSortModify pagination.SortKey = "modified"
 )
 
 type FindStaffParams struct {
 	ID *uuid.UUID
 	// Name *string
 
-	query.Pagination
-	query.Sorts
+	pagination.Pagination
+	pagination.Sorts
 }

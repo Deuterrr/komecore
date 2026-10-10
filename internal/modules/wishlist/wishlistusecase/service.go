@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
@@ -74,7 +74,7 @@ func NewWishlistService(
 
 func (s *WishlistService) GetWishlist(ctx context.Context, customerID uuid.UUID) ([]wishlistdomain.WishlistProductView, error) {
 	if customerID == uuid.Nil {
-		return nil, apperrors.NewBadRequest(wishlistdomain.ErrInvalidCustomerID.Error())
+		return nil, apperror.NewBadRequest(wishlistdomain.ErrInvalidCustomerID.Error())
 	}
 
 	items, err := s.wishlistRepo.ListByCustomerID(ctx, s.executor, customerID)
@@ -158,10 +158,10 @@ func (s *WishlistService) GetWishlist(ctx context.Context, customerID uuid.UUID)
 
 func (s *WishlistService) AddToWishlist(ctx context.Context, input AddToWishlistInput) error {
 	if input.CustomerID == uuid.Nil {
-		return apperrors.NewBadRequest(wishlistdomain.ErrInvalidCustomerID.Error())
+		return apperror.NewBadRequest(wishlistdomain.ErrInvalidCustomerID.Error())
 	}
 	if input.ProductID == uuid.Nil {
-		return apperrors.NewBadRequest(wishlistdomain.ErrInvalidProductID.Error())
+		return apperror.NewBadRequest(wishlistdomain.ErrInvalidProductID.Error())
 	}
 
 	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
@@ -169,7 +169,7 @@ func (s *WishlistService) AddToWishlist(ctx context.Context, input AddToWishlist
 		return fmt.Errorf("failed to check product existence: %w", err)
 	}
 	if product == nil {
-		return apperrors.NewNotFound(wishlistdomain.ErrProductNotFound.Error())
+		return apperror.NewNotFound(wishlistdomain.ErrProductNotFound.Error())
 	}
 
 	exists, err := s.wishlistRepo.Exists(ctx, s.executor, input.CustomerID, input.ProductID)
@@ -177,7 +177,7 @@ func (s *WishlistService) AddToWishlist(ctx context.Context, input AddToWishlist
 		return fmt.Errorf("failed to check existing wishlist item: %w", err)
 	}
 	if exists {
-		return apperrors.NewConflict(wishlistdomain.ErrWishlistItemAlreadyExists.Error())
+		return apperror.NewConflict(wishlistdomain.ErrWishlistItemAlreadyExists.Error())
 	}
 
 	item := wishlistdomain.WishlistItem{
@@ -195,10 +195,10 @@ func (s *WishlistService) AddToWishlist(ctx context.Context, input AddToWishlist
 
 func (s *WishlistService) RemoveFromWishlist(ctx context.Context, input RemoveFromWishlistInput) error {
 	if input.CustomerID == uuid.Nil {
-		return apperrors.NewBadRequest(wishlistdomain.ErrInvalidCustomerID.Error())
+		return apperror.NewBadRequest(wishlistdomain.ErrInvalidCustomerID.Error())
 	}
 	if input.ProductID == uuid.Nil {
-		return apperrors.NewBadRequest(wishlistdomain.ErrInvalidProductID.Error())
+		return apperror.NewBadRequest(wishlistdomain.ErrInvalidProductID.Error())
 	}
 
 	exists, err := s.wishlistRepo.Exists(ctx, s.executor, input.CustomerID, input.ProductID)
@@ -206,7 +206,7 @@ func (s *WishlistService) RemoveFromWishlist(ctx context.Context, input RemoveFr
 		return fmt.Errorf("failed to check existing wishlist item: %w", err)
 	}
 	if !exists {
-		return apperrors.NewNotFound(wishlistdomain.ErrWishlistItemNotFound.Error())
+		return apperror.NewNotFound(wishlistdomain.ErrWishlistItemNotFound.Error())
 	}
 
 	if err := s.wishlistRepo.Remove(ctx, s.executor, input.CustomerID, input.ProductID); err != nil {

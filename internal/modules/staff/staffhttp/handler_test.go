@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/common/authctx"
 	"komecore/internal/modules/staff/staffdomain"
 	"komecore/internal/modules/staff/staffrepo"
 	"komecore/internal/modules/staff/staffusecase"
@@ -151,7 +151,6 @@ type testUserDeletionService struct{}
 func (s *testUserDeletionService) DeleteUserRecord(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
 	return nil
 }
-
 
 type testRoleRepo struct {
 	role *staffdomain.Role

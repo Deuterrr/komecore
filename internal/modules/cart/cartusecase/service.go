@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/cart/cartdomain"
@@ -222,13 +222,13 @@ func (s *CartService) GetCart(ctx context.Context, customerID uuid.UUID) (*GetCa
 // AddItem adds an item to the customer's cart.
 func (s *CartService) AddItem(ctx context.Context, input AddItemInput) error {
 	if input.ShopID == uuid.Nil {
-		return apperrors.NewInvalidInput(cartdomain.ErrInvalidShopID.Error())
+		return apperror.NewInvalidInput(cartdomain.ErrInvalidShopID.Error())
 	}
 	if input.Quantity <= 0 {
-		return apperrors.NewInvalidInput(cartdomain.ErrInvalidQuantity.Error())
+		return apperror.NewInvalidInput(cartdomain.ErrInvalidQuantity.Error())
 	}
 	if input.Quantity >= MaxCartItemQuantity {
-		return apperrors.NewBadRequest(fmt.Sprintf("quantity cannot exceed %d", MaxCartItemQuantity))
+		return apperror.NewBadRequest(fmt.Sprintf("quantity cannot exceed %d", MaxCartItemQuantity))
 	}
 
 	shop, err := s.shopRepo.GetByID(ctx, s.executor, input.ShopID)
@@ -236,7 +236,7 @@ func (s *CartService) AddItem(ctx context.Context, input AddItemInput) error {
 		return fmt.Errorf("failed to retrieve shop: %w", err)
 	}
 	if shop == nil || !shop.IsOperable() {
-		return apperrors.NewConflict("shop is currently inactive or not approved for transactions")
+		return apperror.NewConflict("shop is currently inactive or not approved for transactions")
 	}
 
 	inventory, err := s.inventoryRepo.GetByProductIDAndShopID(ctx, s.executor, input.ProductID, input.ShopID)
@@ -244,7 +244,7 @@ func (s *CartService) AddItem(ctx context.Context, input AddItemInput) error {
 		return fmt.Errorf("failed to load inventory by product and shop: %w", err)
 	}
 	if inventory == nil {
-		return apperrors.NewNotFound(cartdomain.ErrProductNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrProductNotFound.Error())
 	}
 
 	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
@@ -252,10 +252,10 @@ func (s *CartService) AddItem(ctx context.Context, input AddItemInput) error {
 		return fmt.Errorf("failed to load product with inventory: %w", err)
 	}
 	if product == nil || product.Status == productdomain.ProductStatusArchived {
-		return apperrors.NewNotFound(cartdomain.ErrProductNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrProductNotFound.Error())
 	}
 	if product.Status != productdomain.ProductStatusActive {
-		return apperrors.NewConflict(fmt.Sprintf("product %q is currently not available for purchase", product.Name))
+		return apperror.NewConflict(fmt.Sprintf("product %q is currently not available for purchase", product.Name))
 	}
 
 	cart, err := s.cartRepo.GetWithItemsByCustomerID(ctx, s.executor, input.CustomerID)
@@ -269,16 +269,16 @@ func (s *CartService) AddItem(ctx context.Context, input AddItemInput) error {
 		}
 	}
 	if cart.HasProductInAnotherShop(input.ProductID, input.ShopID) {
-		return apperrors.NewConflict(cartdomain.ErrProductAlreadyAssignedToShop.Error())
+		return apperror.NewConflict(cartdomain.ErrProductAlreadyAssignedToShop.Error())
 	}
 
 	targetQuantity := cart.TotalProductQuantity(input.ProductID, input.ShopID) + input.Quantity
 	if targetQuantity > inventory.Available() {
-		return apperrors.NewConflict(cartdomain.ErrInsufficientStock.Error())
+		return apperror.NewConflict(cartdomain.ErrInsufficientStock.Error())
 	}
 
 	if err := cart.AddItem(input.ProductID, input.ShopID, input.Quantity, input.ItemOptions); err != nil {
-		return apperrors.NewInvalidInput(err.Error())
+		return apperror.NewInvalidInput(err.Error())
 	}
 
 	if err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -296,10 +296,10 @@ func (s *CartService) AddItem(ctx context.Context, input AddItemInput) error {
 // UpdateItem updates an item quantity in the cart identified by product and shop.
 func (s *CartService) UpdateItem(ctx context.Context, input UpdateItemInput) error {
 	if input.ShopID == uuid.Nil {
-		return apperrors.NewInvalidInput(cartdomain.ErrInvalidShopID.Error())
+		return apperror.NewInvalidInput(cartdomain.ErrInvalidShopID.Error())
 	}
 	if input.Quantity <= 0 {
-		return apperrors.NewInvalidInput(cartdomain.ErrInvalidQuantity.Error())
+		return apperror.NewInvalidInput(cartdomain.ErrInvalidQuantity.Error())
 	}
 
 	inventory, err := s.inventoryRepo.GetByProductIDAndShopID(ctx, s.executor, input.ProductID, input.ShopID)
@@ -307,7 +307,7 @@ func (s *CartService) UpdateItem(ctx context.Context, input UpdateItemInput) err
 		return fmt.Errorf("failed to load inventory by product and shop: %w", err)
 	}
 	if inventory == nil {
-		return apperrors.NewNotFound(cartdomain.ErrProductNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrProductNotFound.Error())
 	}
 
 	cart, err := s.cartRepo.GetWithItemsByCustomerID(ctx, s.executor, input.CustomerID)
@@ -315,7 +315,7 @@ func (s *CartService) UpdateItem(ctx context.Context, input UpdateItemInput) err
 		return fmt.Errorf("failed to load cart with items: %w", err)
 	}
 	if cart == nil {
-		return apperrors.NewNotFound(cartdomain.ErrCartNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartNotFound.Error())
 	}
 
 	var opts []cartdomain.ItemOptions
@@ -324,7 +324,7 @@ func (s *CartService) UpdateItem(ctx context.Context, input UpdateItemInput) err
 	}
 
 	if !cart.HasItem(input.ProductID, input.ShopID, opts...) {
-		return apperrors.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
 	}
 
 	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
@@ -332,7 +332,7 @@ func (s *CartService) UpdateItem(ctx context.Context, input UpdateItemInput) err
 		return fmt.Errorf("failed to retrieve product: %w", err)
 	}
 	if product == nil {
-		return apperrors.NewNotFound(cartdomain.ErrProductNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrProductNotFound.Error())
 	}
 
 	totalProductQty := cart.TotalProductQuantity(input.ProductID, input.ShopID)
@@ -342,11 +342,11 @@ func (s *CartService) UpdateItem(ctx context.Context, input UpdateItemInput) err
 		totalProductQty = totalProductQty + input.Quantity
 	}
 	if totalProductQty > inventory.Available() {
-		return apperrors.NewConflict(cartdomain.ErrInsufficientStock.Error())
+		return apperror.NewConflict(cartdomain.ErrInsufficientStock.Error())
 	}
 
 	if err := cart.SetItem(input.ProductID, input.ShopID, input.Quantity, opts...); err != nil {
-		return apperrors.NewInvalidInput(err.Error())
+		return apperror.NewInvalidInput(err.Error())
 	}
 
 	if err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -364,7 +364,7 @@ func (s *CartService) UpdateItem(ctx context.Context, input UpdateItemInput) err
 // UpdateItemByID updates an item in the cart by its CartItemID.
 func (s *CartService) UpdateItemByID(ctx context.Context, input UpdateItemByIDInput) error {
 	if input.Quantity <= 0 {
-		return apperrors.NewInvalidInput(cartdomain.ErrInvalidQuantity.Error())
+		return apperror.NewInvalidInput(cartdomain.ErrInvalidQuantity.Error())
 	}
 
 	cart, err := s.cartRepo.GetWithItemsByCustomerID(ctx, s.executor, input.CustomerID)
@@ -372,7 +372,7 @@ func (s *CartService) UpdateItemByID(ctx context.Context, input UpdateItemByIDIn
 		return fmt.Errorf("failed to load cart with items: %w", err)
 	}
 	if cart == nil {
-		return apperrors.NewNotFound(cartdomain.ErrCartNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartNotFound.Error())
 	}
 
 	var targetItem *cartdomain.CartItem
@@ -384,7 +384,7 @@ func (s *CartService) UpdateItemByID(ctx context.Context, input UpdateItemByIDIn
 		}
 	}
 	if targetItem == nil {
-		return apperrors.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
 	}
 
 	if targetItem.ProductID != uuid.Nil {
@@ -393,7 +393,7 @@ func (s *CartService) UpdateItemByID(ctx context.Context, input UpdateItemByIDIn
 			return fmt.Errorf("failed to load inventory by product and shop: %w", err)
 		}
 		if inventory == nil {
-			return apperrors.NewNotFound(cartdomain.ErrProductNotFound.Error())
+			return apperror.NewNotFound(cartdomain.ErrProductNotFound.Error())
 		}
 
 		product, err := s.productRepo.GetByID(ctx, s.executor, targetItem.ProductID)
@@ -401,12 +401,12 @@ func (s *CartService) UpdateItemByID(ctx context.Context, input UpdateItemByIDIn
 			return fmt.Errorf("failed to retrieve product: %w", err)
 		}
 		if product == nil {
-			return apperrors.NewNotFound(cartdomain.ErrProductNotFound.Error())
+			return apperror.NewNotFound(cartdomain.ErrProductNotFound.Error())
 		}
 
 		totalProductQty := cart.TotalProductQuantity(targetItem.ProductID, targetItem.ShopID, targetItem.ID) + input.Quantity
 		if totalProductQty > inventory.Available() {
-			return apperrors.NewConflict(cartdomain.ErrInsufficientStock.Error())
+			return apperror.NewConflict(cartdomain.ErrInsufficientStock.Error())
 		}
 	}
 
@@ -416,7 +416,7 @@ func (s *CartService) UpdateItemByID(ctx context.Context, input UpdateItemByIDIn
 	}
 
 	if err := cart.UpdateItemByID(input.CartItemID, input.Quantity, opts...); err != nil {
-		return apperrors.NewInvalidInput(err.Error())
+		return apperror.NewInvalidInput(err.Error())
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -435,7 +435,7 @@ func (s *CartService) UpdateItemByID(ctx context.Context, input UpdateItemByIDIn
 // RemoveItem removes an item from the cart matching product and shop.
 func (s *CartService) RemoveItem(ctx context.Context, input RemoveItemInput) error {
 	if input.ShopID == uuid.Nil {
-		return apperrors.NewInvalidInput(cartdomain.ErrInvalidShopID.Error())
+		return apperror.NewInvalidInput(cartdomain.ErrInvalidShopID.Error())
 	}
 
 	cart, err := s.cartRepo.GetWithItemsByCustomerID(ctx, s.executor, input.CustomerID)
@@ -443,7 +443,7 @@ func (s *CartService) RemoveItem(ctx context.Context, input RemoveItemInput) err
 		return fmt.Errorf("failed to load cart with items: %w", err)
 	}
 	if cart == nil {
-		return apperrors.NewNotFound(cartdomain.ErrCartNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartNotFound.Error())
 	}
 
 	var opts []cartdomain.ItemOptions
@@ -452,7 +452,7 @@ func (s *CartService) RemoveItem(ctx context.Context, input RemoveItemInput) err
 	}
 
 	if cart.FindItem(input.ProductID, input.ShopID, opts...) == nil {
-		return apperrors.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
 	}
 	cart.RemoveItem(input.ProductID, input.ShopID, opts...)
 
@@ -471,7 +471,7 @@ func (s *CartService) RemoveItem(ctx context.Context, input RemoveItemInput) err
 // RemoveItemByID removes an item from the cart by its CartItemID.
 func (s *CartService) RemoveItemByID(ctx context.Context, input RemoveItemByIDInput) error {
 	if input.CartItemID == uuid.Nil {
-		return apperrors.NewInvalidInput("invalid cart item id")
+		return apperror.NewInvalidInput("invalid cart item id")
 	}
 
 	cart, err := s.cartRepo.GetWithItemsByCustomerID(ctx, s.executor, input.CustomerID)
@@ -479,10 +479,10 @@ func (s *CartService) RemoveItemByID(ctx context.Context, input RemoveItemByIDIn
 		return fmt.Errorf("failed to load cart with items: %w", err)
 	}
 	if cart == nil {
-		return apperrors.NewNotFound(cartdomain.ErrCartNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartNotFound.Error())
 	}
 	if !cart.RemoveItemByID(input.CartItemID) {
-		return apperrors.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
+		return apperror.NewNotFound(cartdomain.ErrCartItemNotFound.Error())
 	}
 
 	if err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {

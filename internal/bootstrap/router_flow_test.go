@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	appcookie "komecore/internal/common/http/cookie"
-	appmiddleware "komecore/internal/common/middleware"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
+	"komecore/internal/httpx"
+	appcookie "komecore/internal/httpx/cookie"
+	appmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/common/authctx"
 	"komecore/internal/modules/auth/authrepo"
 	applogger "komecore/pkg/logger"
 	applimiter "komecore/pkg/ratelimit"
@@ -32,10 +32,10 @@ func (m *mockRouterAuthenticator) RequireAuth(
 	_ transaction.Transactor,
 	_ appcookie.CookieName,
 ) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			if !m.authenticated {
-				return apperrors.NewUnauthorized("unauthorized")
+				return apperror.NewUnauthorized("unauthorized")
 			}
 			if m.authCtx != nil {
 				ctx := authctx.WithAuthContext(r.Context(), m.authCtx)
@@ -67,7 +67,7 @@ func (m *mockRouterAuthenticator) OptionalAuth(
 	_ transaction.Transactor,
 	_ ...appcookie.CookieName,
 ) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			if m.authenticated && m.authCtx != nil {
 				ctx := authctx.WithAuthContext(r.Context(), m.authCtx)
@@ -82,11 +82,11 @@ func (m *mockRouterAuthenticator) OptionalAuth(
 type mockRouterAuthorizer struct{}
 
 func (m *mockRouterAuthorizer) RequireAccountType(allowedTypes ...authctx.AccountType) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			authCtx, ok := authctx.GetAuthContext(r.Context())
 			if !ok || authCtx == nil {
-				return apperrors.NewUnauthorized("unauthorized")
+				return apperror.NewUnauthorized("unauthorized")
 			}
 			matched := false
 			for _, t := range allowedTypes {
@@ -96,7 +96,7 @@ func (m *mockRouterAuthorizer) RequireAccountType(allowedTypes ...authctx.Accoun
 				}
 			}
 			if !matched {
-				return apperrors.NewForbidden("forbidden")
+				return apperror.NewForbidden("forbidden")
 			}
 			return next(w, r)
 		}
@@ -104,7 +104,7 @@ func (m *mockRouterAuthorizer) RequireAccountType(allowedTypes ...authctx.Accoun
 }
 
 func (m *mockRouterAuthorizer) RequireStaffRole(allowedRoles ...authctx.RoleCode) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			return next(w, r)
 		}
@@ -112,7 +112,7 @@ func (m *mockRouterAuthorizer) RequireStaffRole(allowedRoles ...authctx.RoleCode
 }
 
 func (m *mockRouterAuthorizer) RequirePermission(permission string) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			return next(w, r)
 		}
@@ -120,7 +120,7 @@ func (m *mockRouterAuthorizer) RequirePermission(permission string) appmiddlewar
 }
 
 func (m *mockRouterAuthorizer) LoadActor(_ transaction.Executor) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			return next(w, r)
 		}
@@ -128,7 +128,7 @@ func (m *mockRouterAuthorizer) LoadActor(_ transaction.Executor) appmiddleware.M
 }
 
 func (m *mockRouterAuthorizer) OptionalLoadActor(_ transaction.Executor) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			return next(w, r)
 		}
@@ -185,40 +185,40 @@ func TestRouter_RouteChains_UnauthenticatedGuards(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		chain        func(h apphttp.AppHandler) http.HandlerFunc
+		chain        func(h httpx.AppHandler) http.HandlerFunc
 		expectedCode int
 	}{
 		{
 			name: "CustomerOnly chain blocks unauthenticated requests",
-			chain: func(h apphttp.AppHandler) http.HandlerFunc {
+			chain: func(h httpx.AppHandler) http.HandlerFunc {
 				return chains.CustomerOnly(h)
 			},
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
 			name: "StaffOnly chain blocks unauthenticated requests",
-			chain: func(h apphttp.AppHandler) http.HandlerFunc {
+			chain: func(h httpx.AppHandler) http.HandlerFunc {
 				return chains.StaffOnly(h)
 			},
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
 			name: "StaffAdminOnly chain blocks unauthenticated requests",
-			chain: func(h apphttp.AppHandler) http.HandlerFunc {
+			chain: func(h httpx.AppHandler) http.HandlerFunc {
 				return chains.StaffAdminOnly(h)
 			},
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
 			name: "CoreAuth chain blocks unauthenticated requests",
-			chain: func(h apphttp.AppHandler) http.HandlerFunc {
+			chain: func(h httpx.AppHandler) http.HandlerFunc {
 				return chains.CoreAuth(h)
 			},
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
 			name: "Core chain permits unauthenticated requests",
-			chain: func(h apphttp.AppHandler) http.HandlerFunc {
+			chain: func(h httpx.AppHandler) http.HandlerFunc {
 				return chains.Core(h)
 			},
 			expectedCode: http.StatusOK,

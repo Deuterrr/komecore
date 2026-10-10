@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	appmultipart "komecore/internal/common/http/multipart"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
+	appmultipart "komecore/internal/httpx/multipart"
 	"komecore/internal/modules/product/productusecase"
 
 	"github.com/google/uuid"
@@ -41,23 +41,23 @@ func NewProductHandler(
 }
 
 func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) error {
-	page := apphttp.QueryIntDefault(r, "page", 1)
+	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
 	}
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	name := apphttp.Query(r, "name")
-	q := apphttp.Query(r, "q")
-	id := apphttp.Query(r, "id")
-	sort := apphttp.Query(r, "sort")
-	shopID := apphttp.Query(r, "shop_id")
-	shopSlug := apphttp.Query(r, "shop_slug")
-	status := apphttp.Query(r, "status")
-	includeArchived := apphttp.Query(r, "include_archived") == "true"
+	name := httpx.Query(r, "name")
+	q := httpx.Query(r, "q")
+	id := httpx.Query(r, "id")
+	sort := httpx.Query(r, "sort")
+	shopID := httpx.Query(r, "shop_id")
+	shopSlug := httpx.Query(r, "shop_slug")
+	status := httpx.Query(r, "status")
+	includeArchived := httpx.Query(r, "include_archived") == "true"
 
 	if shopID == "" && shopSlug == "" {
 		shopID = r.Header.Get("X-Shop-ID")
@@ -145,19 +145,19 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 		"total":    total,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) error {
-	productSlug := apphttp.Param(r, "slug")
+	productSlug := httpx.Param(r, "slug")
 
 	productDetail, err := h.getProduct.Execute(r.Context(), productSlug)
 	if err != nil {
 		return err
 	}
 	if productDetail == nil {
-		return apperrors.NewNotFound("product not found")
+		return apperror.NewNotFound("product not found")
 	}
 
 	var available int
@@ -235,35 +235,35 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) erro
 		productStatusDTO(productDetail.Product.Status) == ProductStatusActive &&
 			available > 0
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) error {
 	var req saveProductRequest
 
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	if req.Name == "" {
-		return apperrors.NewBadRequest("invalid name")
+		return apperror.NewBadRequest("invalid name")
 	}
 	if req.SKU == "" {
-		return apperrors.NewBadRequest("invalid sku")
+		return apperror.NewBadRequest("invalid sku")
 	}
 	if req.Price < 0 {
-		return apperrors.NewBadRequest("invalid price")
+		return apperror.NewBadRequest("invalid price")
 	}
 	if !req.Status.isStatusValid() {
-		return apperrors.NewBadRequest("invalid status")
+		return apperror.NewBadRequest("invalid status")
 	}
 
 	var productID *uuid.UUID
 	if req.ID != nil && *req.ID != "" {
 		parsed, err := uuid.Parse(*req.ID)
 		if err != nil {
-			return apperrors.NewBadRequest("invalid product id")
+			return apperror.NewBadRequest("invalid product id")
 		}
 		productID = &parsed
 	}
@@ -289,7 +289,7 @@ func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) err
 		"message": "product successfully saved",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -303,12 +303,12 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 	for i, file := range files {
 		data, err := io.ReadAll(file.File)
 		if err != nil {
-			return apperrors.NewInternal(errors.New("failed to read uploaded file"))
+			return apperror.NewInternal(errors.New("failed to read uploaded file"))
 		}
 
 		err = file.File.Close()
 		if err != nil {
-			return apperrors.NewInternal(errors.New("failed to close uploaded file"))
+			return apperror.NewInternal(errors.New("failed to close uploaded file"))
 		}
 
 		images = append(images, productusecase.ProductImageInput{
@@ -321,9 +321,9 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 		})
 	}
 
-	productID, err := apphttp.ParamUUID(r, "id")
+	productID, err := httpx.ParamUUID(r, "id")
 	if err != nil {
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	}
 
 	input := productusecase.AddProductImageInput{
@@ -340,14 +340,14 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 		"message": "product image successfully added",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) error {
-	productID, err := apphttp.ParamUUID(r, "id")
+	productID, err := httpx.ParamUUID(r, "id")
 	if err != nil {
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	}
 
 	err = h.deleteProduct.Execute(r.Context(), productID)
@@ -359,7 +359,7 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) e
 		"message": "product successfully deleted",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -375,18 +375,18 @@ func (s productStatusDTO) isStatusValid() bool {
 }
 
 func (h *ProductHandler) GetProductStats(w http.ResponseWriter, r *http.Request) error {
-	page := apphttp.QueryIntDefault(r, "page", 1)
+	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
 	}
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 	if limit <= 0 {
 		limit = 10
 	}
 
-	name := apphttp.Query(r, "name")
-	id := apphttp.Query(r, "id")
-	sort := apphttp.Query(r, "sort")
+	name := httpx.Query(r, "name")
+	id := httpx.Query(r, "id")
+	sort := httpx.Query(r, "sort")
 
 	input := productusecase.GetProductStatsInput{
 		Page:  page,
@@ -444,6 +444,6 @@ func (h *ProductHandler) GetProductStats(w http.ResponseWriter, r *http.Request)
 		"total": total,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

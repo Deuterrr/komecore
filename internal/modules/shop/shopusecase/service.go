@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
-	"komecore/internal/common/authctx"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/addressdomain"
 	"komecore/internal/modules/address/addressrepo"
 	"komecore/internal/modules/shop/shopdomain"
 	"komecore/internal/modules/shop/shoprepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 	appclock "komecore/pkg/clock"
 	slug "komecore/pkg/slug"
 
@@ -101,14 +101,14 @@ func NewShopService(
 
 // FindShops queries shops with filtering, sorting, and pagination.
 func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]shopdomain.Shop, int, error) {
-	var shopSortKeys = map[string]query.SortKey{
+	var shopSortKeys = map[string]pagination.SortKey{
 		"name":     shoprepo.ShopSortName,
 		"active":   shoprepo.ShopSortActive,
 		"date":     shoprepo.ShopSortLatest,
 		"modified": shoprepo.ShopSortModify,
 	}
 
-	var sorts query.Sorts
+	var sorts pagination.Sorts
 	if input.Sort != "" {
 		parts := strings.SplitSeq(input.Sort, ",")
 		for part := range parts {
@@ -120,17 +120,17 @@ func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]sh
 			subparts := strings.Split(part, ":")
 			key := strings.TrimSpace(subparts[0])
 
-			var dir query.SortDirection = query.SortDesc
+			var dir pagination.SortDirection = pagination.SortDesc
 			if len(subparts) > 1 {
 				d := strings.ToLower(strings.TrimSpace(subparts[1]))
 				if d == "asc" {
-					dir = query.SortAsc
+					dir = pagination.SortAsc
 				}
 			}
 
 			sortKey, exists := shopSortKeys[key]
 			if exists {
-				sorts = append(sorts, query.Sort{
+				sorts = append(sorts, pagination.Sort{
 					By:        sortKey,
 					Direction: dir,
 				})
@@ -139,10 +139,10 @@ func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]sh
 	}
 
 	if len(sorts) == 0 {
-		sorts = query.Sorts{
+		sorts = pagination.Sorts{
 			{
 				By:        shoprepo.ShopSortLatest,
-				Direction: query.SortDesc,
+				Direction: pagination.SortDesc,
 			},
 		}
 	}
@@ -160,7 +160,7 @@ func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]sh
 		Slug:           input.Slug,
 		IsActive:       input.IsActive,
 		ApprovalStatus: approvalStatus,
-		Pagination: query.Pagination{
+		Pagination: pagination.Pagination{
 			Page:  input.Page,
 			Limit: input.Limit,
 		},
@@ -238,7 +238,7 @@ func (s *ShopService) SaveShop(ctx context.Context, actor authctx.Actor, input S
 			return fmt.Errorf("failed to retrieve existing shop: %w", err)
 		}
 		if existing == nil {
-			return apperrors.NewNotFound("shop not found")
+			return apperror.NewNotFound("shop not found")
 		}
 
 		shop = *existing
@@ -275,7 +275,7 @@ func (s *ShopService) DeleteShop(ctx context.Context, actor authctx.Actor, shopI
 		}
 	}
 	if !isAdmin {
-		return apperrors.NewForbidden("insufficient permissions to delete shop")
+		return apperror.NewForbidden("insufficient permissions to delete shop")
 	}
 
 	shop, err := s.shopRepo.GetByID(ctx, s.executor, shopID)
@@ -283,7 +283,7 @@ func (s *ShopService) DeleteShop(ctx context.Context, actor authctx.Actor, shopI
 		return fmt.Errorf("failed to retrieve shop: %w", err)
 	}
 	if shop == nil {
-		return apperrors.NewNotFound("shop not found")
+		return apperror.NewNotFound("shop not found")
 	}
 
 	if err := s.shopRepo.Delete(ctx, s.executor, shop.ID); err != nil {

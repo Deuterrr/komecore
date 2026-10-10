@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/apperror"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/payment/paymentdomain"
@@ -942,8 +942,8 @@ func TestProcessPaymentWebhook_InvalidSignatureReturnsBadRequest(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid signature, got nil")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeBadRequest {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeBadRequest {
 		t.Errorf("expected BadRequest for invalid signature, got %v", err)
 	}
 }

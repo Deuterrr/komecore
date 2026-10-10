@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/addressdomain"
 	"komecore/internal/modules/address/addressusecase"
@@ -102,7 +102,7 @@ func TestCreateShopAddressUsecase_Execute(t *testing.T) {
 
 		err := uc.CreateShopAddress(ctx, input)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsBadRequest(err))
+		assert.True(t, apperror.IsBadRequest(err))
 		assert.Equal(t, 0, repo.createCalls)
 	})
 

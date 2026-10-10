@@ -1,11 +1,11 @@
-﻿package reviewusecase_test
+package reviewusecase_test
 
 import (
 	"context"
 	"testing"
 
-	"komecore/internal/common/authctx"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	"komecore/internal/modules/product/productdomain"
 	"komecore/internal/modules/review/reviewdomain"
 	"komecore/internal/modules/review/reviewusecase"
@@ -75,7 +75,7 @@ func TestDeleteReview_CustomerNotOwner_Forbidden(t *testing.T) {
 		Actor:    actor,
 	})
 	require.Error(t, err)
-	assert.True(t, apperrors.IsForbidden(err))
+	assert.True(t, apperror.IsForbidden(err))
 }
 
 func TestDeleteReview_StaffAdmin_Success(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/inventory/inventoryrepo"
@@ -62,7 +62,7 @@ func (s *InventoryService) CreateInventory(ctx context.Context, input CreateInve
 		return fmt.Errorf("failed to check product existence: %w", err)
 	}
 	if !productExists {
-		return apperrors.NewNotFound("product not found")
+		return apperror.NewNotFound("product not found")
 	}
 
 	shopExists, err := s.shopChecker.ShopExists(ctx, s.executor, input.ShopID)
@@ -70,7 +70,7 @@ func (s *InventoryService) CreateInventory(ctx context.Context, input CreateInve
 		return fmt.Errorf("failed to check shop existence: %w", err)
 	}
 	if !shopExists {
-		return apperrors.NewNotFound("shop not found")
+		return apperror.NewNotFound("shop not found")
 	}
 
 	existing, err := s.inventoryRepo.GetByProductIDAndShopID(ctx, s.executor, input.ProductID, input.ShopID)
@@ -78,7 +78,7 @@ func (s *InventoryService) CreateInventory(ctx context.Context, input CreateInve
 		return fmt.Errorf("failed to load inventory: %w", err)
 	}
 	if existing != nil {
-		return apperrors.NewConflict("inventory already exists for product and shop")
+		return apperror.NewConflict("inventory already exists for product and shop")
 	}
 
 	inventory := &inventorydomain.Inventory{
@@ -91,7 +91,7 @@ func (s *InventoryService) CreateInventory(ctx context.Context, input CreateInve
 	}
 	if err := inventory.Validate(); err != nil {
 		if errors.Is(err, inventorydomain.ErrInvalidStock) || errors.Is(err, inventorydomain.ErrInvalidReserved) {
-			return apperrors.NewInvalidInput(err.Error())
+			return apperror.NewInvalidInput(err.Error())
 		}
 		return err
 	}
@@ -120,7 +120,7 @@ func (s *InventoryService) UpdateInventory(ctx context.Context, input UpdateInve
 		return fmt.Errorf("failed to load inventory: %w", err)
 	}
 	if existing == nil {
-		return apperrors.NewNotFound("inventory not found")
+		return apperror.NewNotFound("inventory not found")
 	}
 
 	existing.TotalStock = input.Stock
@@ -129,7 +129,7 @@ func (s *InventoryService) UpdateInventory(ctx context.Context, input UpdateInve
 		if errors.Is(err, inventorydomain.ErrInvalidStock) ||
 			errors.Is(err, inventorydomain.ErrInvalidReserved) ||
 			errors.Is(err, inventorydomain.ErrReservedExceedsStock) {
-			return apperrors.NewInvalidInput(err.Error())
+			return apperror.NewInvalidInput(err.Error())
 		}
 		return err
 	}
@@ -158,10 +158,10 @@ func (s *InventoryService) DeleteInventory(ctx context.Context, input DeleteInve
 		return fmt.Errorf("failed to load inventory: %w", err)
 	}
 	if existing == nil {
-		return apperrors.NewNotFound("inventory not found")
+		return apperror.NewNotFound("inventory not found")
 	}
 	if existing.ReservedStock > 0 {
-		return apperrors.NewConflict("cannot delete inventory with active reservations")
+		return apperror.NewConflict("cannot delete inventory with active reservations")
 	}
 
 	if err := s.inventoryRepo.Delete(ctx, s.executor, input.ProductID, input.ShopID); err != nil {

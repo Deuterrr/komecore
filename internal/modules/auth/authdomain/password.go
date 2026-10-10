@@ -1,4 +1,4 @@
-﻿package authdomain
+package authdomain
 
 type PasswordHasher interface {
 	Hash(password string) (string, error)

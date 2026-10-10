@@ -1,4 +1,4 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 	"komecore/internal/modules/cart/cartdomain"
@@ -18,7 +18,7 @@ import (
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/user/userdomain"
 	"komecore/internal/modules/user/userrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -128,7 +128,7 @@ func (m *coMockPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Ex
 func (m *coMockPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.PaymentMethod, error) {
 	return m.method, m.err
 }
-func (m *coMockPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ query.Sorts) ([]paymentdomain.PaymentMethod, error) {
+func (m *coMockPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
 	return nil, nil
 }
 

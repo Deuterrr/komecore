@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/infra/outbox"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/inventory/inventoryrepo"
@@ -141,10 +141,10 @@ func (u *ProcessPaymentWebhookUsecase) Execute(
 	}
 
 	if orderIDStr == "" {
-		return apperrors.NewBadRequest("missing order_id in webhook payload")
+		return apperror.NewBadRequest("missing order_id in webhook payload")
 	}
 	if txStatus == "" {
-		return apperrors.NewBadRequest("missing transaction_status in webhook payload")
+		return apperror.NewBadRequest("missing transaction_status in webhook payload")
 	}
 
 	var payloadBytes []byte
@@ -247,7 +247,7 @@ func (u *ProcessPaymentWebhookUsecase) process(
 		notifResult, err = u.paymentGateway.ParseNotification(ctx, input.Payload)
 		if err != nil {
 			if errors.Is(err, paymentgateway.ErrInvalidSignature) {
-				return apperrors.NewBadRequest("invalid webhook signature")
+				return apperror.NewBadRequest("invalid webhook signature")
 			}
 			return fmt.Errorf("failed to parse gateway notification: %w", err)
 		}
@@ -255,7 +255,7 @@ func (u *ProcessPaymentWebhookUsecase) process(
 
 	orderID, err := uuid.Parse(notifResult.GatewayOrderID)
 	if err != nil {
-		return apperrors.NewBadRequest(fmt.Sprintf("invalid order ID in gateway response: %s", notifResult.GatewayOrderID))
+		return apperror.NewBadRequest(fmt.Sprintf("invalid order ID in gateway response: %s", notifResult.GatewayOrderID))
 	}
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -266,7 +266,7 @@ func (u *ProcessPaymentWebhookUsecase) process(
 			return fmt.Errorf("failed to retrieve payment: %w", err)
 		}
 		if payment == nil {
-			return apperrors.NewNotFound("payment not found for order")
+			return apperror.NewNotFound("payment not found for order")
 		}
 		if payment.Status != paymentdomain.PaymentStatusPending {
 			return nil
@@ -346,7 +346,7 @@ func (u *ProcessPaymentWebhookUsecase) process(
 					item.Quantity,
 				); err != nil {
 					if errors.Is(err, inventorydomain.ErrInsufficientReserved) ||
-						errors.Is(err, apperrors.ErrNotFound) {
+						errors.Is(err, apperror.ErrNotFound) {
 
 						if u.auditLogger != nil {
 							u.auditLogger.Log(ctx, applogger.AuditEvent{

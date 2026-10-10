@@ -1,15 +1,15 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/user/userdomain"
 	"komecore/internal/modules/user/userrepo"
 	appclock "komecore/pkg/clock"
@@ -62,11 +62,11 @@ func (u *MeUsecase) Execute(ctx context.Context, authCtx authdomain.AuthContext)
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if account == nil {
-		return nil, apperrors.NewNotFound("account not found")
+		return nil, apperror.NewNotFound("account not found")
 	}
 
 	if account.Status != authdomain.AccountActive {
-		return nil, apperrors.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
 	}
 
 	now := appclock.Now()

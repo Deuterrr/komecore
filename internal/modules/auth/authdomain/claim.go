@@ -1,9 +1,9 @@
-﻿package authdomain
+package authdomain
 
 import (
 	"time"
 
-	"komecore/internal/common/authctx"
+	"komecore/internal/authctx"
 
 	"github.com/google/uuid"
 )

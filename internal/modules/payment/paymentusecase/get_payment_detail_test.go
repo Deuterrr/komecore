@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -92,7 +92,7 @@ func (m *mockOrderDetailPaymentMethodRepo) GetByID(_ context.Context, _ transact
 	}
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ query.Sorts) ([]paymentdomain.PaymentMethod, error) {
+func (m *mockOrderDetailPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
 	return nil, nil
 }
 
@@ -316,7 +316,7 @@ func TestGetPaymentDetail_OrderNotFound(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	var appErr *apperrors.AppError
+	var appErr *apperror.AppError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("expected AppError, got %v", err)
 	}
@@ -355,7 +355,7 @@ func TestGetPaymentDetail_WrongCustomer(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	var appErr *apperrors.AppError
+	var appErr *apperror.AppError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("expected AppError, got %v", err)
 	}

@@ -1,9 +1,9 @@
-﻿package authdomain
+package authdomain
 
 import (
 	"errors"
 
-	"komecore/internal/common/authctx"
+	"komecore/internal/authctx"
 )
 
 var (

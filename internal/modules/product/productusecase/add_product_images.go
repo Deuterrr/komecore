@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/product/productdomain"
@@ -82,7 +82,7 @@ func (u *AddProductImagesUsecase) Execute(
 	}
 
 	if product == nil {
-		return apperrors.NewNotFound("product not found")
+		return apperror.NewNotFound("product not found")
 	}
 
 	var (

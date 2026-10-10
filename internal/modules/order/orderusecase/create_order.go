@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
-	paymentgateway "komecore/internal/infra/payment-gateway"
-	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/apperror"
 	"komecore/internal/infra/outbox"
+	"komecore/internal/infra/paymentgateway"
+	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authrepo"
 	"komecore/internal/modules/cart/cartdomain"
 	"komecore/internal/modules/cart/cartrepo"
@@ -23,7 +23,7 @@ import (
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"
 	"komecore/internal/modules/user/userrepo"
-	markdown "komecore/internal/shared/markdown"
+	"komecore/internal/strtpl"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -570,7 +570,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 			effectiveExpiresAt = expiresAt
 		}
 
-		content, err := markdown.Render(
+		content, err := strtpl.Render(
 			instruction.Content,
 			map[string]string{
 				"invoice_number": invoice.Number,
@@ -608,10 +608,10 @@ func (u *CreateOrderUsecase) validateAndCalculatePricing(
 		return nil, nil, fmt.Errorf("failed to retrieve payment method: %w", err)
 	}
 	if method == nil {
-		return nil, nil, apperrors.NewNotFound("payment method not found")
+		return nil, nil, apperror.NewNotFound("payment method not found")
 	}
 	if !u.paymentGateway.Supports(method.Code) {
-		return nil, nil, apperrors.NewBadRequest(fmt.Sprintf("payment method %q is not supported by the payment gateway", method.Code))
+		return nil, nil, apperror.NewBadRequest(fmt.Sprintf("payment method %q is not supported by the payment gateway", method.Code))
 	}
 
 	pricingInput := orderrepo.PricingInput{
@@ -638,7 +638,7 @@ func (u *CreateOrderUsecase) validateAndCalculatePricing(
 
 		for _, item := range shop.Items {
 			if item.ProductID == uuid.Nil {
-				return nil, nil, apperrors.NewInvalidInput("product_id is required")
+				return nil, nil, apperror.NewInvalidInput("product_id is required")
 			}
 			shopInput.Items = append(
 				shopInput.Items,
@@ -672,7 +672,7 @@ func (u *CreateOrderUsecase) fetchCustomerDetails(
 		return "", "", "", fmt.Errorf("failed to retrieve user: %w", err)
 	}
 	if user == nil {
-		return "", "", "", apperrors.NewNotFound("user not found")
+		return "", "", "", apperror.NewNotFound("user not found")
 	}
 
 	account, err := u.accountRepo.GetByUserID(ctx, u.executor, user.ID)
@@ -680,7 +680,7 @@ func (u *CreateOrderUsecase) fetchCustomerDetails(
 		return "", "", "", fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if account == nil {
-		return "", "", "", apperrors.NewNotFound("account not found")
+		return "", "", "", apperror.NewNotFound("account not found")
 	}
 
 	var customerPhone string

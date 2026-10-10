@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/shipment/shipmentdomain"
 
@@ -83,8 +83,8 @@ func TestUpdateShipmentStatus_ShipmentNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when shipment not found")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeNotFound {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeNotFound {
 		t.Errorf("expected NotFound AppError, got: %v", err)
 	}
 }
@@ -106,8 +106,8 @@ func TestUpdateShipmentStatus_InvalidTransition(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when status transition is invalid")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeInvalidInput {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeInvalidInput {
 		t.Errorf("expected InvalidInput AppError, got: %v", err)
 	}
 }

@@ -1,11 +1,11 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
 	"fmt"
 	"strings"
 
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"

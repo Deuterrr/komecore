@@ -1,4 +1,4 @@
-﻿package authsvc
+package authsvc
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	appcookie "komecore/internal/common/http/cookie"
-	commonmiddleware "komecore/internal/common/middleware"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
+	appcookie "komecore/internal/httpx/cookie"
+	commonmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 	"komecore/internal/modules/auth/authrepo"
@@ -75,20 +75,20 @@ func (aM *jwtAuthenticator) RequireAuth(
 	tran transaction.Transactor,
 	cookie appcookie.CookieName,
 ) commonmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			token := extractToken(r, cookie)
 			if token == "" {
-				return apperrors.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+				return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
 			}
 
 			authCtx, err := aM.authenticate(r.Context(), exec, token)
 			if err != nil {
-				return apperrors.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+				return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
 			}
 
 			if !isValidCookieForAuth(cookie, authCtx) {
-				return apperrors.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+				return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
 			}
 
 			ctx := authdomain.WithAuthContext(r.Context(), authCtx)
@@ -104,7 +104,7 @@ func (aM *jwtAuthenticator) RequireAnyAuth(
 	tran transaction.Transactor,
 	cookies ...appcookie.CookieName,
 ) commonmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			for _, cookie := range cookies {
 				token := extractToken(r, cookie)
@@ -127,7 +127,7 @@ func (aM *jwtAuthenticator) RequireAnyAuth(
 				return next(w, r.WithContext(ctx))
 			}
 
-			return apperrors.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+			return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
 		}
 	}
 }
@@ -147,7 +147,7 @@ func (aM *jwtAuthenticator) OptionalAuth(
 	tran transaction.Transactor,
 	cookies ...appcookie.CookieName,
 ) commonmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			for _, cookie := range cookies {
 				token := extractToken(r, cookie)
@@ -182,10 +182,10 @@ func (aM *jwtAuthenticator) authenticate(
 ) (*authdomain.AuthContext, error) {
 	claims, err := aM.tokenSvc.Validate(token)
 	if err != nil {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidToken.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidToken.Error())
 	}
 	if claims.Type != authdomain.TokenTypeAccess {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidToken.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidToken.Error())
 	}
 
 	session, err := aM.sessionRepo.GetByID(ctx, exec, claims.SessionID)
@@ -196,7 +196,7 @@ func (aM *jwtAuthenticator) authenticate(
 		session.UserID != claims.UserID ||
 		session.RevokedAt != nil ||
 		session.ExpiresAt.Before(appclock.Now()) {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidSession.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidSession.Error())
 	}
 
 	accType := authdomain.AccountTypeCustomer

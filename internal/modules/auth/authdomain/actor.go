@@ -1,6 +1,6 @@
-﻿package authdomain
+package authdomain
 
-import "komecore/internal/common/authctx"
+import "komecore/internal/authctx"
 
 type RoleCode = authctx.RoleCode
 

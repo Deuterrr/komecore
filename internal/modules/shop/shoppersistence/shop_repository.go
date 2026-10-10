@@ -9,7 +9,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/shop/shopdomain"
 	"komecore/internal/modules/shop/shoprepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -115,7 +115,7 @@ func (r *ShopRepository) FindByParams(
 
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
-	var shopSortKeys = map[query.SortKey]string{
+	var shopSortKeys = map[pagination.SortKey]string{
 		shoprepo.ShopSortName:   "name",
 		shoprepo.ShopSortActive: "is_active",
 		shoprepo.ShopSortLatest: "created_at",
@@ -130,7 +130,7 @@ func (r *ShopRepository) FindByParams(
 		}
 
 		dir := "DESC"
-		if sort.Direction == query.SortAsc {
+		if sort.Direction == pagination.SortAsc {
 			dir = "ASC"
 		}
 

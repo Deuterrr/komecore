@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/courier/courierrepo"
 )
@@ -30,7 +30,7 @@ func (s *CourierService) ListAllCouriers(ctx context.Context) ([]string, error) 
 		return nil, fmt.Errorf("failed to load couriers: %w", err)
 	}
 	if len(codes) == 0 {
-		return nil, apperrors.NewNotFound("no courier service available at the moment")
+		return nil, apperror.NewNotFound("no courier service available at the moment")
 	}
 
 	return codes, nil

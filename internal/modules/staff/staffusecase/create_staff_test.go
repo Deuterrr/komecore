@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/user/userdomain"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +48,7 @@ func TestCreateStaffUsecase_ValidationErrors(t *testing.T) {
 		Username: "floral-logistics",
 	})
 	assert.Error(t, err)
-	var badReq *apperrors.AppError
+	var badReq *apperror.AppError
 	assert.ErrorAs(t, err, &badReq)
 	assert.Equal(t, 400, badReq.StatusCode)
 
@@ -82,7 +82,7 @@ func TestCreateStaffUsecase_DuplicateUsername(t *testing.T) {
 
 	err := uc.CreateStaff(context.Background(), input)
 	assert.Error(t, err)
-	var appErr *apperrors.AppError
+	var appErr *apperror.AppError
 	assert.ErrorAs(t, err, &appErr)
 	assert.Equal(t, 409, appErr.StatusCode)
 }

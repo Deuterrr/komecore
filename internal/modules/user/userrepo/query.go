@@ -3,7 +3,7 @@ package userrepo
 import (
 	"time"
 
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -14,8 +14,8 @@ type FindUserParams struct {
 	Username *string
 	Email    *string
 
-	query.Pagination
-	query.Sorts
+	pagination.Pagination
+	pagination.Sorts
 }
 
 type CreateUserProps struct {

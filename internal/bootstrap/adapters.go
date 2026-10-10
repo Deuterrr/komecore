@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"komecore/internal/common/authctx"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 	"komecore/internal/modules/auth/authrepo"
@@ -186,7 +186,7 @@ func (a *orderDeliveryAdapter) MarkOrderDelivered(ctx context.Context, exec tran
 		return fmt.Errorf("failed to fetch order: %w", err)
 	}
 	if order == nil {
-		return apperrors.NewNotFound("order not found")
+		return apperror.NewNotFound("order not found")
 	}
 	if err := order.UpdateStatus(orderdomain.OrderStatusDelivered); err != nil {
 		return fmt.Errorf("failed to update order status: %w", err)

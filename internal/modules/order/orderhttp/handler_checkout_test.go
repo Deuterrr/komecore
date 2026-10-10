@@ -1,4 +1,4 @@
-﻿package orderhttp
+package orderhttp
 
 import (
 	"testing"

@@ -1,12 +1,12 @@
-﻿package reviewusecase
+package reviewusecase
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"komecore/internal/common/authctx"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/order/orderdomain"
@@ -14,7 +14,7 @@ import (
 	"komecore/internal/modules/product/productdomain"
 	"komecore/internal/modules/review/reviewdomain"
 	"komecore/internal/modules/review/reviewrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -105,13 +105,13 @@ func NewReviewService(
 
 func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInput) (*reviewdomain.Review, error) {
 	if input.Rating < 1 || input.Rating > 5 {
-		return nil, apperrors.NewBadRequest(reviewdomain.ErrInvalidRating.Error())
+		return nil, apperror.NewBadRequest(reviewdomain.ErrInvalidRating.Error())
 	}
 	if input.CustomerID == uuid.Nil {
-		return nil, apperrors.NewBadRequest("invalid customer id")
+		return nil, apperror.NewBadRequest("invalid customer id")
 	}
 	if input.ProductID == uuid.Nil {
-		return nil, apperrors.NewBadRequest("invalid product id")
+		return nil, apperror.NewBadRequest("invalid product id")
 	}
 
 	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
@@ -119,7 +119,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 		return nil, fmt.Errorf("failed to retrieve product: %w", err)
 	}
 	if product == nil {
-		return nil, apperrors.NewNotFound("product not found")
+		return nil, apperror.NewNotFound("product not found")
 	}
 
 	var targetOrderID uuid.UUID
@@ -130,10 +130,10 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			return nil, fmt.Errorf("failed to retrieve order: %w", err)
 		}
 		if order == nil || order.CustomerID != input.CustomerID {
-			return nil, apperrors.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 		if order.Status != orderdomain.OrderStatusDelivered && string(order.Status) != "completed" {
-			return nil, apperrors.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 
 		items, err := s.orderItemRepo.ListByOrderID(ctx, s.executor, order.ID)
@@ -148,7 +148,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			}
 		}
 		if !hasProduct {
-			return nil, apperrors.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 
 		hasReviewed, err := s.reviewRepo.HasReviewedOrder(ctx, s.executor, input.CustomerID, input.ProductID, order.ID)
@@ -156,7 +156,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			return nil, fmt.Errorf("failed to check order review status: %w", err)
 		}
 		if hasReviewed {
-			return nil, apperrors.NewConflict(reviewdomain.ErrDuplicateReview.Error())
+			return nil, apperror.NewConflict(reviewdomain.ErrDuplicateReview.Error())
 		}
 
 		targetOrderID = order.ID
@@ -164,13 +164,13 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 		orders, _, err := s.orderRepo.FindOrders(ctx, s.executor, orderrepo.FindOrderParams{
 			CustomerID: &input.CustomerID,
 			Statuses:   []string{"delivered", "completed"},
-			Pagination: query.Pagination{Limit: 100},
+			Pagination: pagination.Pagination{Limit: 100},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to find eligible customer orders: %w", err)
 		}
 		if len(orders) == 0 {
-			return nil, apperrors.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 
 		orderIDs := make([]uuid.UUID, len(orders))
@@ -190,7 +190,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			}
 		}
 		if len(eligibleOrderIDsMap) == 0 {
-			return nil, apperrors.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
 		}
 
 		reviewedIDs, err := s.reviewRepo.GetReviewedOrderIDs(ctx, s.executor, input.CustomerID, input.ProductID)
@@ -211,7 +211,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 		}
 
 		if chosenID == nil {
-			return nil, apperrors.NewConflict(reviewdomain.ErrDuplicateReview.Error())
+			return nil, apperror.NewConflict(reviewdomain.ErrDuplicateReview.Error())
 		}
 
 		targetOrderID = *chosenID
@@ -229,7 +229,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 	}
 
 	if err := review.Validate(); err != nil {
-		return nil, apperrors.NewBadRequest(err.Error())
+		return nil, apperror.NewBadRequest(err.Error())
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(tx transaction.Executor) error {
@@ -262,7 +262,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 
 func (s *ReviewService) ListReviews(ctx context.Context, input ListReviewsInput) (*ListReviewsResult, error) {
 	if input.ProductID == uuid.Nil {
-		return nil, apperrors.NewBadRequest("invalid product id")
+		return nil, apperror.NewBadRequest("invalid product id")
 	}
 
 	product, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
@@ -270,7 +270,7 @@ func (s *ReviewService) ListReviews(ctx context.Context, input ListReviewsInput)
 		return nil, fmt.Errorf("failed to retrieve product: %w", err)
 	}
 	if product == nil {
-		return nil, apperrors.NewNotFound("product not found")
+		return nil, apperror.NewNotFound("product not found")
 	}
 
 	page := input.Page
@@ -308,7 +308,7 @@ func (s *ReviewService) ListReviews(ctx context.Context, input ListReviewsInput)
 
 func (s *ReviewService) DeleteReview(ctx context.Context, input DeleteReviewInput) error {
 	if input.ReviewID == uuid.Nil {
-		return apperrors.NewBadRequest("invalid review id")
+		return apperror.NewBadRequest("invalid review id")
 	}
 
 	review, err := s.reviewRepo.GetByID(ctx, s.executor, input.ReviewID)
@@ -316,22 +316,22 @@ func (s *ReviewService) DeleteReview(ctx context.Context, input DeleteReviewInpu
 		return fmt.Errorf("failed to retrieve review: %w", err)
 	}
 	if review == nil {
-		return apperrors.NewNotFound("review not found")
+		return apperror.NewNotFound("review not found")
 	}
 
 	if input.Actor == nil {
-		return apperrors.NewUnauthorized("authentication required")
+		return apperror.NewUnauthorized("authentication required")
 	}
 
 	switch input.Actor.Type {
 	case authctx.AccountTypeCustomer:
 		if input.Actor.CustomerID == nil || *input.Actor.CustomerID != review.CustomerID {
-			return apperrors.NewForbidden("forbidden: cannot delete review belonging to another customer")
+			return apperror.NewForbidden("forbidden: cannot delete review belonging to another customer")
 		}
 	case authctx.AccountTypeStaff:
 		// Staff is authorized to delete/moderate reviews
 	default:
-		return apperrors.NewForbidden("forbidden: unauthorized to delete reviews")
+		return apperror.NewForbidden("forbidden: unauthorized to delete reviews")
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(tx transaction.Executor) error {

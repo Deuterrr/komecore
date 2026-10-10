@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/product/productdomain"
@@ -87,7 +87,7 @@ func (u *SaveProductUsecase) Execute(
 	if err := product.Validate(); err != nil {
 		if errors.Is(err, productdomain.ErrInvalidProductName) ||
 			errors.Is(err, productdomain.ErrInvalidProductPrice) {
-			return apperrors.NewInvalidInput(err.Error())
+			return apperror.NewInvalidInput(err.Error())
 		}
 
 		return err

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/product/productrepo"
@@ -42,7 +42,7 @@ func (u *DeleteProductUsecase) Execute(
 		return fmt.Errorf("failed to retrieve product: %w", err)
 	}
 	if product == nil {
-		return apperrors.NewNotFound("product not found")
+		return apperror.NewNotFound("product not found")
 	}
 
 	if err := u.productRepo.Delete(ctx, u.executor, product.ID); err != nil {

@@ -1,14 +1,14 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
 	applogger "komecore/pkg/logger"
 
 	"github.com/google/uuid"
@@ -82,17 +82,17 @@ func (u *LoginCustomerUsecase) Execute(ctx context.Context, input LoginCustomerP
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if existing == nil {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Type != authdomain.AccountTypeCustomer {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Status != authdomain.AccountActive {
-		return nil, apperrors.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
 	}
 
 	if err := u.pwHasher.Compare(existing.Password, input.Password); err != nil {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
 	}
 
 	var customerID *uuid.UUID

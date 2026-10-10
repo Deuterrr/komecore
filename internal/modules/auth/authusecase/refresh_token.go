@@ -1,11 +1,11 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 	"komecore/internal/modules/auth/authrepo"
@@ -54,22 +54,22 @@ func (u *RefreshTokenUsecase) Execute(
 	params RefreshTokenParams,
 ) (*RefreshTokenResult, error) {
 	if params.RefreshToken == "" {
-		return nil, apperrors.NewUnauthorized("refresh token is required")
+		return nil, apperror.NewUnauthorized("refresh token is required")
 	}
 
 	claims, err := u.tokenSvc.Validate(params.RefreshToken)
 	if err != nil {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidToken.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidToken.Error())
 	}
 	if claims.Type != authdomain.TokenTypeRefresh {
-		return nil, apperrors.NewUnauthorized("invalid token type for refresh")
+		return nil, apperror.NewUnauthorized("invalid token type for refresh")
 	}
 
 	if params.AccountType == authdomain.AccountTypeStaff && claims.StaffID == nil {
-		return nil, apperrors.NewForbidden("staff account required")
+		return nil, apperror.NewForbidden("staff account required")
 	}
 	if params.AccountType == authdomain.AccountTypeCustomer && claims.StaffID != nil {
-		return nil, apperrors.NewForbidden("customer account required")
+		return nil, apperror.NewForbidden("customer account required")
 	}
 
 	session, err := u.sessionRepo.GetByID(ctx, u.executor, claims.SessionID)
@@ -77,7 +77,7 @@ func (u *RefreshTokenUsecase) Execute(
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 	if session == nil || session.RevokedAt != nil || session.ExpiresAt.Before(appclock.Now()) {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidSession.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidSession.Error())
 	}
 
 	dbRefreshToken, err := u.refreshTokenRepo.GetBySessionID(ctx, u.executor, claims.SessionID)
@@ -85,11 +85,11 @@ func (u *RefreshTokenUsecase) Execute(
 		return nil, fmt.Errorf("failed to get refresh token: %w", err)
 	}
 	if dbRefreshToken == nil || dbRefreshToken.RevokedAt != nil || dbRefreshToken.ExpiresAt.Before(appclock.Now()) {
-		return nil, apperrors.NewUnauthorized("refresh token is invalid or expired")
+		return nil, apperror.NewUnauthorized("refresh token is invalid or expired")
 	}
 
 	if !u.tokenHasher.Compare(dbRefreshToken.TokenHash, params.RefreshToken) {
-		return nil, apperrors.NewUnauthorized("refresh token mismatch")
+		return nil, apperror.NewUnauthorized("refresh token mismatch")
 	}
 
 	roleCodes := make([]authdomain.RoleCode, len(claims.Roles))

@@ -3,7 +3,7 @@ package courierhttp
 import (
 	"net/http"
 
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/courier/courierusecase"
 )
 
@@ -28,6 +28,6 @@ func (h *CourierHandler) ListAllCouriers(w http.ResponseWriter, r *http.Request)
 	response := map[string][]string{
 		"couriers": codes,
 	}
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

@@ -1,15 +1,15 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 	"strings"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/user/userrepo"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
@@ -123,12 +123,12 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 			return nil, fmt.Errorf("failed to get account: %w", err)
 		}
 		if account == nil {
-			return nil, apperrors.NewNotFound("account not found")
+			return nil, apperror.NewNotFound("account not found")
 		}
 
 		if account.Status != authdomain.AccountActive &&
 			account.Status != authdomain.AccountPending {
-			return nil, apperrors.NewForbidden("account is suspended or locked")
+			return nil, apperror.NewForbidden("account is suspended or locked")
 		}
 
 		if account.Status == authdomain.AccountPending {
@@ -155,7 +155,7 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 			return nil, fmt.Errorf("failed to check existing connection by user id: %w", err)
 		}
 		if existingConn != nil {
-			return nil, apperrors.NewConflict("this email is already linked with another OAuth account")
+			return nil, apperror.NewConflict("this email is already linked with another OAuth account")
 		}
 
 		userID = account.UserID

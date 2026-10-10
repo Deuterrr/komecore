@@ -1,13 +1,13 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
 	"testing"
 
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -32,7 +32,7 @@ func (m *mockSyncPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Exe
 	return nil, nil
 }
 
-func (m *mockSyncPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ query.Sorts) ([]paymentdomain.PaymentMethod, error) {
+func (m *mockSyncPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
 	result := make([]paymentdomain.PaymentMethod, 0, len(m.methods))
 	for _, val := range m.methods {
 		result = append(result, val)

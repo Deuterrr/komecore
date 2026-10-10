@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"komecore/internal/common/authctx"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	"komecore/internal/modules/user/userdomain"
 	"komecore/internal/modules/user/userusecase"
 
@@ -117,7 +117,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsNotFound(err))
+		assert.True(t, apperror.IsNotFound(err))
 	})
 
 	t.Run("returns error when account repository fails", func(t *testing.T) {
@@ -167,7 +167,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		result, err := svc.GetCurrentProfile(ctx, authCtx)
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsNotFound(err))
+		assert.True(t, apperror.IsNotFound(err))
 	})
 
 	t.Run("returns error when customer user repo fails", func(t *testing.T) {

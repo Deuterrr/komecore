@@ -1,4 +1,4 @@
-﻿package authsvc
+package authsvc
 
 import (
 	"context"

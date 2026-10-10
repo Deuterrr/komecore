@@ -6,7 +6,7 @@ import (
 
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -76,10 +76,10 @@ type PaymentRepository interface {
 }
 
 var (
-	PaymentMethodSortLatest query.SortKey = "latest"
-	PaymentMethodSortName   query.SortKey = "name"
-	PaymentMethodSortCode   query.SortKey = "code"
-	PaymentMethodSortType   query.SortKey = "type"
+	PaymentMethodSortLatest pagination.SortKey = "latest"
+	PaymentMethodSortName   pagination.SortKey = "name"
+	PaymentMethodSortCode   pagination.SortKey = "code"
+	PaymentMethodSortType   pagination.SortKey = "type"
 )
 
 type PaymentMethodRepository interface {
@@ -104,7 +104,7 @@ type PaymentMethodRepository interface {
 	ListAll(
 		ctx context.Context,
 		exec transaction.Executor,
-		sorts query.Sorts,
+		sorts pagination.Sorts,
 	) ([]paymentdomain.PaymentMethod, error)
 }
 

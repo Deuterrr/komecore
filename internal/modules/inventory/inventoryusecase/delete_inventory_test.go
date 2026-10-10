@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/inventory/inventoryrepo"
@@ -120,8 +120,8 @@ func TestDeleteInventory_NotFound(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeNotFound {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeNotFound {
 		t.Errorf("expected NotFound error, got %v", err)
 	}
 }
@@ -157,8 +157,8 @@ func TestDeleteInventory_ConflictWithReservations(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeConflict {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeConflict {
 		t.Errorf("expected Conflict error, got %v", err)
 	}
 

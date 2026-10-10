@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	appcookie "komecore/internal/common/http/cookie"
+	"komecore/internal/apperror"
 	appconfig "komecore/internal/config"
+	"komecore/internal/httpx"
+	appcookie "komecore/internal/httpx/cookie"
 	"komecore/internal/modules/auth/authdomain"
 	"komecore/internal/modules/auth/authusecase"
 	appclock "komecore/pkg/clock"
@@ -76,7 +76,7 @@ func NewAuthHandler(
 }
 
 func (h *authHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (h *authHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if acc == nil {
-		return apperrors.NewNotFound("account not found")
+		return apperror.NewNotFound("account not found")
 	}
 
 	response := map[string]any{
@@ -95,12 +95,12 @@ func (h *authHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 		"last_login_at": acc.LastLoginAt,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) Me(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
@@ -148,21 +148,21 @@ func (h *authHandler) Me(w http.ResponseWriter, r *http.Request) error {
 		LastLoginAt:     me.Account.LastLoginAt,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error {
 	var req signInEmailRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.Email == "" {
-		return apperrors.NewBadRequest("invalid email")
+		return apperror.NewBadRequest("invalid email")
 	}
 	if req.Password == "" {
-		return apperrors.NewBadRequest("invalid password")
+		return apperror.NewBadRequest("invalid password")
 	}
 
 	input := authusecase.LoginCustomerParams{
@@ -206,24 +206,24 @@ func (h *authHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error 
 		"message": "login success",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) SignUpAccount(w http.ResponseWriter, r *http.Request) error {
 	var req signUpRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.Email == "" {
-		return apperrors.NewBadRequest("invalid email")
+		return apperror.NewBadRequest("invalid email")
 	}
 	if req.Password == "" {
-		return apperrors.NewBadRequest("invalid password")
+		return apperror.NewBadRequest("invalid password")
 	}
 	if req.Username == "" {
-		return apperrors.NewBadRequest("invalid user name")
+		return apperror.NewBadRequest("invalid user name")
 	}
 
 	input := authusecase.RegisterCustomerParams{
@@ -244,25 +244,25 @@ func (h *authHandler) SignUpAccount(w http.ResponseWriter, r *http.Request) erro
 		ChallengeID: *challengeID,
 	}
 
-	apphttp.WriteJSON(w, http.StatusCreated, response)
+	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
 
 func (h *authHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) error {
 	var req verifyAccountRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.ChallengeID == "" {
-		return apperrors.NewBadRequest("invalid challenge id")
+		return apperror.NewBadRequest("invalid challenge id")
 	}
 	challengeID, err := uuid.Parse(req.ChallengeID)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid challenge id")
+		return apperror.NewBadRequest("invalid challenge id")
 	}
 	if len(req.OTP) != 6 {
-		return apperrors.NewBadRequest("invalid otp")
+		return apperror.NewBadRequest("invalid otp")
 	}
 
 	input := authusecase.VerifyAccountParams{
@@ -299,21 +299,21 @@ func (h *authHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) erro
 		"message": "verify success",
 	}
 
-	apphttp.WriteJSON(w, http.StatusCreated, response)
+	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
 
 func (h *authHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) error {
 	var req signInEmailRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.Email == "" {
-		return apperrors.NewBadRequest("invalid email")
+		return apperror.NewBadRequest("invalid email")
 	}
 	if req.Password == "" {
-		return apperrors.NewBadRequest("invalid password")
+		return apperror.NewBadRequest("invalid password")
 	}
 
 	input := authusecase.LoginStaffParams{
@@ -360,12 +360,12 @@ func (h *authHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) e
 		"message": "login success",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) Logout(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
@@ -382,12 +382,12 @@ func (h *authHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 		"message": "logout success",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
@@ -404,7 +404,7 @@ func (h *authHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error 
 		"message": "logout success",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -422,7 +422,7 @@ func (h *authHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) error 
 
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		return apperrors.NewInternal(fmt.Errorf("failed to generate state: %w", err))
+		return apperror.NewInternal(fmt.Errorf("failed to generate state: %w", err))
 	}
 	state := base64.URLEncoding.EncodeToString(b)
 
@@ -441,19 +441,19 @@ func (h *authHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) error 
 func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) error {
 	cookie, err := appcookie.Extract(r, appcookie.CookieOAuthState)
 	if err != nil {
-		return apperrors.NewBadRequest("missing oauth state cookie")
+		return apperror.NewBadRequest("missing oauth state cookie")
 	}
 
-	stateParam := apphttp.Query(r, "state")
+	stateParam := httpx.Query(r, "state")
 	if stateParam == "" || stateParam != cookie {
-		return apperrors.NewBadRequest("invalid oauth state")
+		return apperror.NewBadRequest("invalid oauth state")
 	}
 
 	appcookie.Clear(w, appcookie.CookieOAuthState)
 
-	code := apphttp.Query(r, "code")
+	code := httpx.Query(r, "code")
 	if code == "" {
-		return apperrors.NewBadRequest("missing oauth code")
+		return apperror.NewBadRequest("missing oauth code")
 	}
 
 	oauth2Config := &oauth2.Config{
@@ -469,23 +469,23 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 
 	token, err := oauth2Config.Exchange(r.Context(), code)
 	if err != nil {
-		return apperrors.NewUnauthorized(fmt.Sprintf("failed to exchange code: %v", err))
+		return apperror.NewUnauthorized(fmt.Sprintf("failed to exchange code: %v", err))
 	}
 
 	client := oauth2Config.Client(r.Context(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		return apperrors.NewInternal(err)
+		return apperror.NewInternal(err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return apperrors.NewInternal(fmt.Errorf("google userinfo returned status code %d", resp.StatusCode))
+		return apperror.NewInternal(fmt.Errorf("google userinfo returned status code %d", resp.StatusCode))
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return apperrors.NewInternal(err)
+		return apperror.NewInternal(err)
 	}
 
 	var googleUser struct {
@@ -495,11 +495,11 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 		Picture *string `json:"picture"`
 	}
 	if err := json.Unmarshal(body, &googleUser); err != nil {
-		return apperrors.NewInternal(err)
+		return apperror.NewInternal(err)
 	}
 
 	if googleUser.Email == "" {
-		return apperrors.NewBadRequest("google did not provide email address")
+		return apperror.NewBadRequest("google did not provide email address")
 	}
 
 	userAgent := r.UserAgent()
@@ -548,11 +548,11 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 
 func (h *authHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Request) error {
 	var req forgotPasswordCustomerRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 	if req.Email == "" {
-		return apperrors.NewBadRequest("email is required")
+		return apperror.NewBadRequest("email is required")
 	}
 
 	input := authusecase.RequestPasswordResetParams{
@@ -569,17 +569,17 @@ func (h *authHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Requ
 		ChallengeID: challengeID,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request) error {
 	var req forgotPasswordCustomerRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 	if req.Email == "" {
-		return apperrors.NewBadRequest("email is required")
+		return apperror.NewBadRequest("email is required")
 	}
 
 	input := authusecase.RequestPasswordResetParams{
@@ -595,24 +595,24 @@ func (h *authHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request
 		Message:     "if the email is registered you will receive a reset code shortly",
 		ChallengeID: challengeID,
 	}
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request) error {
 	var req verifyPasswordResetRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 	if req.ChallengeID == "" {
-		return apperrors.NewBadRequest("challenge_id is required")
+		return apperror.NewBadRequest("challenge_id is required")
 	}
 	challengeID, err := uuid.Parse(req.ChallengeID)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid challenge_id")
+		return apperror.NewBadRequest("invalid challenge_id")
 	}
 	if len(req.OTP) != 6 {
-		return apperrors.NewBadRequest("invalid otp")
+		return apperror.NewBadRequest("invalid otp")
 	}
 
 	input := authusecase.VerifyPasswordResetParams{
@@ -628,24 +628,24 @@ func (h *authHandler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request
 		Message:     "otp verified",
 		ChallengeID: *verifiedID,
 	}
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) ResetPassword(w http.ResponseWriter, r *http.Request) error {
 	var req resetPasswordRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 	if req.ChallengeID == "" {
-		return apperrors.NewBadRequest("challenge_id is required")
+		return apperror.NewBadRequest("challenge_id is required")
 	}
 	challengeID, err := uuid.Parse(req.ChallengeID)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid challenge_id")
+		return apperror.NewBadRequest("invalid challenge_id")
 	}
 	if req.NewPassword == "" {
-		return apperrors.NewBadRequest("new_password is required")
+		return apperror.NewBadRequest("new_password is required")
 	}
 
 	input := authusecase.ResetPasswordParams{
@@ -659,13 +659,13 @@ func (h *authHandler) ResetPassword(w http.ResponseWriter, r *http.Request) erro
 	response := map[string]string{
 		"message": "password reset successful",
 	}
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) error {
 	var req refreshTokenRequest
-	_ = apphttp.DecodeJSON(r, &req)
+	_ = httpx.DecodeJSON(r, &req)
 
 	refreshToken := req.RefreshToken
 	if refreshToken == "" {
@@ -674,7 +674,7 @@ func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) er
 		}
 	}
 	if refreshToken == "" {
-		return apperrors.NewUnauthorized("refresh token is required")
+		return apperror.NewUnauthorized("refresh token is required")
 	}
 
 	res, err := h.refreshToken.Execute(r.Context(), authusecase.RefreshTokenParams{
@@ -688,7 +688,7 @@ func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) er
 	appcookie.Bind(w, appcookie.CookieAccessToken, res.AccessToken.Token, res.AccessToken.ExpiresAt)
 	appcookie.Bind(w, appcookie.CookieRefreshToken, res.RefreshToken.Token, res.RefreshToken.ExpiresAt)
 
-	apphttp.WriteJSON(w, http.StatusOK, refreshTokenResponse{
+	httpx.WriteJSON(w, http.StatusOK, refreshTokenResponse{
 		AccessToken: res.AccessToken.Token,
 	})
 	return nil
@@ -696,7 +696,7 @@ func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) er
 
 func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error {
 	var req refreshTokenRequest
-	_ = apphttp.DecodeJSON(r, &req)
+	_ = httpx.DecodeJSON(r, &req)
 
 	refreshToken := req.RefreshToken
 	if refreshToken == "" {
@@ -705,7 +705,7 @@ func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error
 		}
 	}
 	if refreshToken == "" {
-		return apperrors.NewUnauthorized("refresh token is required")
+		return apperror.NewUnauthorized("refresh token is required")
 	}
 
 	res, err := h.refreshToken.Execute(r.Context(), authusecase.RefreshTokenParams{
@@ -719,14 +719,14 @@ func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error
 	appcookie.Bind(w, appcookie.CookieStaffAccessToken, res.AccessToken.Token, res.AccessToken.ExpiresAt)
 	appcookie.Bind(w, appcookie.CookieStaffRefreshToken, res.RefreshToken.Token, res.RefreshToken.ExpiresAt)
 
-	apphttp.WriteJSON(w, http.StatusOK, refreshTokenResponse{
+	httpx.WriteJSON(w, http.StatusOK, refreshTokenResponse{
 		AccessToken: res.AccessToken.Token,
 	})
 	return nil
 }
 
 func (h *authHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
-	authCtx, err := apphttp.RequireAuth(r)
+	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
@@ -741,6 +741,6 @@ func (h *authHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) erro
 	response := map[string]string{
 		"message": "account deleted successfully",
 	}
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

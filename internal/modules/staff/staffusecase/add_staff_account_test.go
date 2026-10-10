@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/staff/staffdomain"
 
@@ -105,7 +105,7 @@ func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
 		Password: "password123",
 	})
 	assert.Error(t, err)
-	var badReq *apperrors.AppError
+	var badReq *apperror.AppError
 	assert.ErrorAs(t, err, &badReq)
 	assert.Equal(t, 400, badReq.StatusCode)
 
@@ -159,7 +159,7 @@ func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
 		Password:       "password123",
 	})
 	assert.Error(t, err)
-	var appErr *apperrors.AppError
+	var appErr *apperror.AppError
 	assert.ErrorAs(t, err, &appErr)
 	assert.Equal(t, 403, appErr.StatusCode)
 }
@@ -207,7 +207,7 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 		Password:       "password123",
 	})
 	assert.Error(t, err)
-	var appErr *apperrors.AppError
+	var appErr *apperror.AppError
 	assert.ErrorAs(t, err, &appErr)
 	assert.Equal(t, 409, appErr.StatusCode)
 }
@@ -260,7 +260,7 @@ func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
 		Password:       "password123",
 	})
 	assert.Error(t, err)
-	var appErr *apperrors.AppError
+	var appErr *apperror.AppError
 	assert.ErrorAs(t, err, &appErr)
 	assert.Equal(t, 409, appErr.StatusCode)
 	assert.Contains(t, appErr.Message, "1 account per user limit")

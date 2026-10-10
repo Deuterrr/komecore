@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/courier/courierrepo"
@@ -44,7 +44,7 @@ func (u *EstimateShippingOptionsUsecase) Execute(
 	input EstimateShippingOptionsInput,
 ) ([]shipping.RateOption, error) {
 	if input.Weight <= 0 {
-		return nil, apperrors.NewInvalidInput(shipmentdomain.ErrInvalidWeight.Error())
+		return nil, apperror.NewInvalidInput(shipmentdomain.ErrInvalidWeight.Error())
 	}
 
 	var courierCodes []string

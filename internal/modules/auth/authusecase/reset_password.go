@@ -1,10 +1,10 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 	"komecore/internal/modules/auth/authrepo"
@@ -62,22 +62,22 @@ func (u *ResetPasswordUsecase) Execute(ctx context.Context, params ResetPassword
 		return fmt.Errorf("failed to get challenge: %w", err)
 	}
 	if challenge == nil {
-		return apperrors.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+		return apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
 	}
 	if challenge.Purpose != authdomain.OTPPurposePasswordReset {
-		return apperrors.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+		return apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
 	}
 	if challenge.ConsumedAt != nil {
-		return apperrors.NewConflict(authdomain.ErrConsumedChallenge.Error())
+		return apperror.NewConflict(authdomain.ErrConsumedChallenge.Error())
 	}
 	if challenge.VerifiedAt == nil {
-		return apperrors.NewConflict("challenge is not verified")
+		return apperror.NewConflict("challenge is not verified")
 	}
 	if challenge.ExpiresAt.Before(now) {
-		return apperrors.NewConflict(authdomain.ErrExpiredChallenge.Error())
+		return apperror.NewConflict(authdomain.ErrExpiredChallenge.Error())
 	}
 	if challenge.UserID == nil {
-		return apperrors.NewInternal(fmt.Errorf("challenge has no user_id bound"))
+		return apperror.NewInternal(fmt.Errorf("challenge has no user_id bound"))
 	}
 
 	hashedPassword, err := u.pwHasher.Hash(params.NewPassword)

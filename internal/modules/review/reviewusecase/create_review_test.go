@@ -1,10 +1,10 @@
-﻿package reviewusecase_test
+package reviewusecase_test
 
 import (
 	"context"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/product/productdomain"
 	"komecore/internal/modules/review/reviewusecase"
@@ -63,14 +63,14 @@ func TestCreateReview_InvalidRating(t *testing.T) {
 		ProductID:  uuid.New(),
 		Rating:     0,
 	})
-	assert.True(t, apperrors.IsBadRequest(err))
+	assert.True(t, apperror.IsBadRequest(err))
 
 	_, err = svc.CreateReview(ctx, reviewusecase.CreateReviewInput{
 		CustomerID: uuid.New(),
 		ProductID:  uuid.New(),
 		Rating:     6,
 	})
-	assert.True(t, apperrors.IsBadRequest(err))
+	assert.True(t, apperror.IsBadRequest(err))
 }
 
 func TestCreateReview_UnverifiedPurchase_NoOrders(t *testing.T) {
@@ -91,7 +91,7 @@ func TestCreateReview_UnverifiedPurchase_NoOrders(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	assert.True(t, apperrors.IsForbidden(err))
+	assert.True(t, apperror.IsForbidden(err))
 	assert.Contains(t, err.Error(), "Customer has not purchased this product")
 }
 
@@ -125,7 +125,7 @@ func TestCreateReview_UnverifiedPurchase_OrderNotDelivered(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	assert.True(t, apperrors.IsForbidden(err))
+	assert.True(t, apperror.IsForbidden(err))
 }
 
 func TestCreateReview_DuplicateReviewPrevented(t *testing.T) {
@@ -166,5 +166,5 @@ func TestCreateReview_DuplicateReviewPrevented(t *testing.T) {
 		Rating:     4,
 	})
 	require.Error(t, err)
-	assert.True(t, apperrors.IsConflict(err))
+	assert.True(t, apperror.IsConflict(err))
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/staff/staffdomain"
 
 	"github.com/google/uuid"
@@ -98,7 +98,7 @@ func TestUpdateStaff_EmptyName(t *testing.T) {
 		t.Fatal("expected error for empty name, got nil")
 	}
 
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != 400 {
 		t.Fatalf("expected 400 Bad Request error, got: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestUpdateStaff_UnauthorizedRole(t *testing.T) {
 		t.Fatal("expected error for non-admin, got nil")
 	}
 
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != 403 {
 		t.Fatalf("expected 403 Forbidden error, got: %v", err)
 	}

@@ -14,7 +14,7 @@ import (
 	"komecore/internal/modules/product/productrepo"
 	"komecore/internal/modules/shop/shopdomain"
 	"komecore/internal/modules/shop/shoprepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 	"time"
 
 	"github.com/google/uuid"
@@ -116,7 +116,7 @@ func (u *FindProductsUsecase) Execute(
 		}
 	}
 
-	var productSortKeys = map[string]query.SortKey{
+	var productSortKeys = map[string]pagination.SortKey{
 		"latest":    productrepo.ProductSortLatest,
 		"date":      productrepo.ProductSortLatest,
 		"name":      productrepo.ProductSortName,
@@ -129,7 +129,7 @@ func (u *FindProductsUsecase) Execute(
 		"relevance": productrepo.ProductSortRelevance,
 	}
 
-	var sorts query.Sorts
+	var sorts pagination.Sorts
 	if input.Sort != "" {
 		parts := strings.SplitSeq(input.Sort, ",")
 		for part := range parts {
@@ -141,17 +141,17 @@ func (u *FindProductsUsecase) Execute(
 			subparts := strings.Split(part, ":")
 			key := strings.TrimSpace(subparts[0])
 
-			var dir query.SortDirection = query.SortDesc
+			var dir pagination.SortDirection = pagination.SortDesc
 			if len(subparts) > 1 {
 				d := strings.ToLower(strings.TrimSpace(subparts[1]))
 				if d == "asc" {
-					dir = query.SortAsc
+					dir = pagination.SortAsc
 				}
 			}
 
 			sortKey, exists := productSortKeys[key]
 			if exists {
-				sorts = append(sorts, query.Sort{
+				sorts = append(sorts, pagination.Sort{
 					By:        sortKey,
 					Direction: dir,
 				})
@@ -161,17 +161,17 @@ func (u *FindProductsUsecase) Execute(
 
 	if len(sorts) == 0 {
 		if input.SearchQuery != nil && strings.TrimSpace(*input.SearchQuery) != "" {
-			sorts = query.Sorts{
+			sorts = pagination.Sorts{
 				{
 					By:        productrepo.ProductSortRelevance,
-					Direction: query.SortDesc,
+					Direction: pagination.SortDesc,
 				},
 			}
 		} else {
-			sorts = query.Sorts{
+			sorts = pagination.Sorts{
 				{
 					By:        productrepo.ProductSortLatest,
-					Direction: query.SortDesc,
+					Direction: pagination.SortDesc,
 				},
 			}
 		}
@@ -192,7 +192,7 @@ func (u *FindProductsUsecase) Execute(
 		ShopSlug:        input.ShopSlug,
 		Status:          input.Status,
 		ExcludeArchived: input.ExcludeArchived,
-		Pagination: query.Pagination{
+		Pagination: pagination.Pagination{
 			Page:  input.Page,
 			Limit: input.Limit,
 		},

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/address/addressdomain"
 	appclock "komecore/pkg/clock"
@@ -142,7 +142,7 @@ func (s *AddressService) SaveCustomerAddress(ctx context.Context, input SaveCust
 	}
 
 	if err := detail.ValidateCoordinates(); err != nil {
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	}
 
 	var addressID uuid.UUID
@@ -158,7 +158,7 @@ func (s *AddressService) SaveCustomerAddress(ctx context.Context, input SaveCust
 
 		if count != nil {
 			if *count >= 10 {
-				return apperrors.NewConflict(addressdomain.ErrAddressLimitReached.Error())
+				return apperror.NewConflict(addressdomain.ErrAddressLimitReached.Error())
 			}
 			if *count == 0 {
 				isDefault = true
@@ -202,10 +202,10 @@ func (s *AddressService) DeleteCustomerAddress(ctx context.Context, addressID uu
 		return fmt.Errorf("failed to retrieve address: %w", err)
 	}
 	if address == nil {
-		return apperrors.NewNotFound(addressdomain.ErrAddressNotFound.Error())
+		return apperror.NewNotFound(addressdomain.ErrAddressNotFound.Error())
 	}
 	if address.IsDefault {
-		return apperrors.NewConflict(addressdomain.ErrCannotDeleteDefaultAddress.Error())
+		return apperror.NewConflict(addressdomain.ErrCannotDeleteDefaultAddress.Error())
 	}
 
 	if err := s.customerAddressRepo.Delete(ctx, s.executor, addressID); err != nil {
@@ -250,7 +250,7 @@ func (s *AddressService) CreateShopAddress(ctx context.Context, input CreateShop
 	}
 
 	if err := detail.ValidateCoordinates(); err != nil {
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	}
 
 	var isDefault bool
@@ -303,7 +303,7 @@ func (s *AddressService) UpdateShopAddress(ctx context.Context, input UpdateShop
 		Longitude:   input.Longitude,
 	}
 	if err := detail.ValidateCoordinates(); err != nil {
-		return apperrors.NewBadRequest(err.Error())
+		return apperror.NewBadRequest(err.Error())
 	}
 
 	existing, err := s.shopAddressRepo.GetByID(ctx, s.executor, input.ID)
@@ -311,7 +311,7 @@ func (s *AddressService) UpdateShopAddress(ctx context.Context, input UpdateShop
 		return fmt.Errorf("failed to retrieve address: %w", err)
 	}
 	if existing == nil || existing.ShopID != input.ShopID {
-		return apperrors.NewNotFound(addressdomain.ErrAddressNotFound.Error())
+		return apperror.NewNotFound(addressdomain.ErrAddressNotFound.Error())
 	}
 
 	isDefault := existing.IsActive
@@ -354,10 +354,10 @@ func (s *AddressService) DeleteShopAddress(ctx context.Context, shopID uuid.UUID
 		return fmt.Errorf("failed to retrieve address: %w", err)
 	}
 	if address == nil || address.ShopID != shopID {
-		return apperrors.NewNotFound(addressdomain.ErrAddressNotFound.Error())
+		return apperror.NewNotFound(addressdomain.ErrAddressNotFound.Error())
 	}
 	if address.IsActive {
-		return apperrors.NewConflict(addressdomain.ErrCannotDeleteDefaultAddress.Error())
+		return apperror.NewConflict(addressdomain.ErrCannotDeleteDefaultAddress.Error())
 	}
 
 	if err := s.shopAddressRepo.Delete(ctx, s.executor, addressID); err != nil {

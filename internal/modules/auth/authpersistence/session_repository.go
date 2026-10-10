@@ -1,11 +1,11 @@
-﻿package authpersistence
+package authpersistence
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	errorCommon "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
 
@@ -82,7 +82,7 @@ func (r *SessionRepository) RevokeByID(
 		return fmt.Errorf("query to revoke session: %w", err)
 	}
 	if result.RowsAffected() == 0 {
-		return errorCommon.ErrNotFound
+		return apperror.ErrNotFound
 	}
 
 	return nil

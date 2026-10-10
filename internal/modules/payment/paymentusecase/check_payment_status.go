@@ -1,11 +1,11 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/apperror"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentrepo"
@@ -79,10 +79,10 @@ func (u *CheckPaymentStatusUsecase) Execute(
 		return nil, fmt.Errorf("check payment status: retrieve order: %w", err)
 	}
 	if order == nil {
-		return nil, apperrors.NewNotFound("order not found")
+		return nil, apperror.NewNotFound("order not found")
 	}
 	if order.CustomerID != input.CustomerID {
-		return nil, apperrors.NewNotFound("order not found")
+		return nil, apperror.NewNotFound("order not found")
 	}
 
 	payment, err := u.repository.GetByOrderID(ctx, u.executor, input.OrderID)
@@ -90,7 +90,7 @@ func (u *CheckPaymentStatusUsecase) Execute(
 		return nil, fmt.Errorf("check payment status: retrieve payment: %w", err)
 	}
 	if payment == nil {
-		return nil, apperrors.NewNotFound("payment not found for order")
+		return nil, apperror.NewNotFound("payment not found for order")
 	}
 	// Only gateway payments with a ProviderOrderID can be synced.
 	if payment.ProviderOrderID == nil {

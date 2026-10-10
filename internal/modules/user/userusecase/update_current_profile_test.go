@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"komecore/internal/common/authctx"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
 	"komecore/internal/modules/user/userdomain"
 	"komecore/internal/modules/user/userusecase"
 
@@ -42,7 +42,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsBadRequest(err))
+		assert.True(t, apperror.IsBadRequest(err))
 	})
 
 	t.Run("returns not found when account does not exist", func(t *testing.T) {
@@ -59,7 +59,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsNotFound(err))
+		assert.True(t, apperror.IsNotFound(err))
 	})
 
 	t.Run("returns error when account repository fails", func(t *testing.T) {
@@ -206,7 +206,7 @@ func TestUpdateCurrentProfileUsecase_Execute(t *testing.T) {
 		result, err := svc.UpdateCurrentProfile(ctx, authCtx, input)
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsNotFound(err))
+		assert.True(t, apperror.IsNotFound(err))
 	})
 
 	t.Run("returns error when staff profile retrieval fails", func(t *testing.T) {

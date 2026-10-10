@@ -1,4 +1,4 @@
-﻿package authpersistence
+package authpersistence
 
 import (
 	"context"

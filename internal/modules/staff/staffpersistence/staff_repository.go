@@ -9,7 +9,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/staff/staffdomain"
 	"komecore/internal/modules/staff/staffrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -183,7 +183,7 @@ func (r *StaffRepository) FindStaff(
 
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
-	var staffSortKeys = map[query.SortKey]string{
+	var staffSortKeys = map[pagination.SortKey]string{
 		staffrepo.StaffSortLatest: "m.created_at",
 		staffrepo.StaffSortModify: "m.updated_at",
 	}
@@ -196,7 +196,7 @@ func (r *StaffRepository) FindStaff(
 		}
 
 		dir := "DESC"
-		if sort.Direction == query.SortAsc {
+		if sort.Direction == pagination.SortAsc {
 			dir = "ASC"
 		}
 

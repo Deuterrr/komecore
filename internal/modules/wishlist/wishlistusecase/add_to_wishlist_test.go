@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/product/productdomain"
 	"komecore/internal/modules/wishlist/wishlistusecase"
 
@@ -55,7 +55,7 @@ func TestAddToWishlist_DuplicateRejected(t *testing.T) {
 	// Second attempt should fail with conflict
 	err = svc.AddToWishlist(ctx, wishlistusecase.AddToWishlistInput{CustomerID: custID, ProductID: prodID})
 	require.Error(t, err)
-	assert.True(t, apperrors.IsConflict(err))
+	assert.True(t, apperror.IsConflict(err))
 }
 
 func TestAddToWishlist_ProductNotFound(t *testing.T) {
@@ -71,7 +71,7 @@ func TestAddToWishlist_ProductNotFound(t *testing.T) {
 		ProductID:  uuid.New(),
 	})
 	require.Error(t, err)
-	assert.True(t, apperrors.IsNotFound(err))
+	assert.True(t, apperror.IsNotFound(err))
 }
 
 func TestAddToWishlist_InvalidInput(t *testing.T) {

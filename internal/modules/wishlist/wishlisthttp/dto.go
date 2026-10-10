@@ -6,7 +6,7 @@ import (
 
 type wishlistResponse struct {
 	Items []wishlistdomain.WishlistProductView `json:"items"`
-	Total int                          `json:"total"`
+	Total int                                  `json:"total"`
 }
 
 type messageResponse struct {

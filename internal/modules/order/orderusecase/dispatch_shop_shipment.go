@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
+	"komecore/internal/infra/outbox"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/infra/outbox"
 	"komecore/internal/modules/address/addressrepo"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/order/orderrepo"
@@ -107,10 +107,10 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
 	if order == nil {
-		return nil, apperrors.NewNotFound("order not found")
+		return nil, apperror.NewNotFound("order not found")
 	}
 	if order.Status != orderdomain.OrderStatusProcessing {
-		return nil, apperrors.NewConflict(
+		return nil, apperror.NewConflict(
 			fmt.Sprintf("cannot dispatch shipment for order in '%s' status", order.Status),
 		)
 	}
@@ -121,7 +121,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	}
 
 	if len(input.ItemIDs) == 0 {
-		return nil, apperrors.NewInvalidInput("item_ids cannot be empty")
+		return nil, apperror.NewInvalidInput("item_ids cannot be empty")
 	}
 
 	itemMap := make(map[uuid.UUID]orderdomain.OrderItem)
@@ -133,17 +133,17 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	for _, itemID := range input.ItemIDs {
 		item, exists := itemMap[itemID]
 		if !exists {
-			return nil, apperrors.NewNotFound(
+			return nil, apperror.NewNotFound(
 				fmt.Sprintf("item %s not found in order", itemID),
 			)
 		}
 		if item.ShopID != input.ShopID {
-			return nil, apperrors.NewConflict(
+			return nil, apperror.NewConflict(
 				fmt.Sprintf("item %s does not belong to shop %s", itemID, input.ShopID),
 			)
 		}
 		if item.ShipmentID != nil {
-			return nil, apperrors.NewConflict(
+			return nil, apperror.NewConflict(
 				fmt.Sprintf("item %s has already been shipped", itemID),
 			)
 		}
@@ -170,7 +170,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		return nil, fmt.Errorf("failed to get customer address: %w", err)
 	}
 	if customerAddr == nil {
-		return nil, apperrors.NewNotFound("customer address not found")
+		return nil, apperror.NewNotFound("customer address not found")
 	}
 
 	shopAddr, err := u.shopAddressRepo.GetDefaultByShopID(ctx, u.executor, input.ShopID)
@@ -178,7 +178,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		return nil, fmt.Errorf("failed to get shop address: %w", err)
 	}
 	if shopAddr == nil {
-		return nil, apperrors.NewNotFound("shop address not found")
+		return nil, apperror.NewNotFound("shop address not found")
 	}
 
 	var productIDs []uuid.UUID
@@ -278,7 +278,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 
 	if err := shipment.Validate(); err != nil {
 		rollbackLogistics()
-		return nil, apperrors.NewInvalidInput(err.Error())
+		return nil, apperror.NewInvalidInput(err.Error())
 	}
 
 	unshippedCount := 0

@@ -1,14 +1,14 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/staff/staffrepo"
 	applogger "komecore/pkg/logger"
 )
@@ -80,17 +80,17 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if existing == nil {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Type != authdomain.AccountTypeStaff {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
 	}
 	if existing.Status != authdomain.AccountActive {
-		return nil, apperrors.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
 	}
 
 	if err := u.pwHasher.Compare(existing.Password, input.Password); err != nil {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
 	}
 
 	memberStaff, err := u.membershipRepo.GetByAccountID(ctx, u.executor, existing.ID)
@@ -98,7 +98,7 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, fmt.Errorf("failed to retrieve membership: %w", err)
 	}
 	if memberStaff == nil {
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidCredentials.Error())
 	}
 
 	roles, err := u.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, u.executor,
@@ -109,7 +109,7 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, fmt.Errorf("failed to retrieve roles: %w", err)
 	}
 	if roles == nil {
-		return nil, apperrors.NewForbidden("no role associated with this account")
+		return nil, apperror.NewForbidden("no role associated with this account")
 	}
 
 	roleCodes := make([]authdomain.RoleCode, len(roles))

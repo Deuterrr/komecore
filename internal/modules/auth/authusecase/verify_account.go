@@ -1,14 +1,14 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/staff/staffrepo"
 	"komecore/internal/modules/user/userrepo"
 	appclock "komecore/pkg/clock"
@@ -96,19 +96,19 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 		return nil, fmt.Errorf("failed to get challenge: %w", err)
 	}
 	if challenge == nil {
-		return nil, apperrors.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+		return nil, apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
 	}
 	if challenge.ConsumedAt != nil {
-		return nil, apperrors.NewConflict(authdomain.ErrConsumedChallenge.Error())
+		return nil, apperror.NewConflict(authdomain.ErrConsumedChallenge.Error())
 	}
 	if challenge.VerifiedAt != nil {
-		return nil, apperrors.NewConflict(authdomain.ErrVerifiedChallenge.Error())
+		return nil, apperror.NewConflict(authdomain.ErrVerifiedChallenge.Error())
 	}
 	if challenge.ExpiresAt.Before(now) {
-		return nil, apperrors.NewConflict(authdomain.ErrExpiredChallenge.Error())
+		return nil, apperror.NewConflict(authdomain.ErrExpiredChallenge.Error())
 	}
 	if challenge.AttemptCount >= 5 {
-		return nil, apperrors.NewConflict(authdomain.ErrMaxAttemptReached.Error())
+		return nil, apperror.NewConflict(authdomain.ErrMaxAttemptReached.Error())
 	}
 
 	if err := u.pwHasher.Compare(challenge.CodeHash, input.OTP); err != nil {
@@ -116,7 +116,7 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 		if err := u.challengeRepo.Save(ctx, u.executor, *challenge); err != nil {
 			return nil, fmt.Errorf("failed to update challenge attempts: %w", err)
 		}
-		return nil, apperrors.NewUnauthorized(authdomain.ErrInvalidOTP.Error())
+		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidOTP.Error())
 	}
 
 	challenge.VerifiedAt = &now

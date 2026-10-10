@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
 	"komecore/internal/modules/inventory/inventoryrepo"
@@ -15,10 +15,10 @@ import (
 
 type mockCreateInventoryRepository struct {
 	inventoryrepo.InventoryRepository
-	existing    *inventorydomain.Inventory
-	created     *inventorydomain.Inventory
-	getErr      error
-	createErr   error
+	existing  *inventorydomain.Inventory
+	created   *inventorydomain.Inventory
+	getErr    error
+	createErr error
 }
 
 func (m *mockCreateInventoryRepository) GetByProductIDAndShopID(
@@ -109,8 +109,8 @@ func TestCreateInventory_ProductNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeNotFound {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeNotFound {
 		t.Errorf("expected NotFound error, got %v", err)
 	}
 }
@@ -134,8 +134,8 @@ func TestCreateInventory_ShopNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeNotFound {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeNotFound {
 		t.Errorf("expected NotFound error, got %v", err)
 	}
 }
@@ -168,8 +168,8 @@ func TestCreateInventory_AlreadyExists(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeConflict {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeConflict {
 		t.Errorf("expected Conflict error, got %v", err)
 	}
 }

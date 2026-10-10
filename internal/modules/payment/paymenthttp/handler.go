@@ -3,8 +3,8 @@ package paymenthttp
 import (
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/payment/paymentusecase"
 
@@ -43,12 +43,12 @@ func (h *PaymentHandler) UpdatePaymentMethodActive(w http.ResponseWriter, r *htt
 	idStr := chi.URLParam(r, "methodID")
 	methodID, err := uuid.Parse(idStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid payment method ID")
+		return apperror.NewBadRequest("invalid payment method ID")
 	}
 
 	var req updatePaymentMethodActiveRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	input := paymentusecase.SavePaymentMethodInput{
@@ -65,12 +65,12 @@ func (h *PaymentHandler) UpdatePaymentMethodActive(w http.ResponseWriter, r *htt
 		"message": "payment method successfully updated",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *PaymentHandler) ListPaymentMethod(w http.ResponseWriter, r *http.Request) error {
-	sortParam := apphttp.Query(r, "sort")
+	sortParam := httpx.Query(r, "sort")
 	input := paymentusecase.ListPaymentMethodInput{
 		Sort: sortParam,
 	}
@@ -111,14 +111,14 @@ func (h *PaymentHandler) ListPaymentMethod(w http.ResponseWriter, r *http.Reques
 		"methods": paymentMthds,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *PaymentHandler) HandleMidtransWebhook(w http.ResponseWriter, r *http.Request) error {
 	var payload map[string]any
-	if err := apphttp.DecodeJSON(r, &payload); err != nil {
-		return apperrors.NewBadRequest("invalid payload")
+	if err := httpx.DecodeJSON(r, &payload); err != nil {
+		return apperror.NewBadRequest("invalid payload")
 	}
 
 	input := paymentusecase.ProcessPaymentWebhookInput{
@@ -133,7 +133,7 @@ func (h *PaymentHandler) HandleMidtransWebhook(w http.ResponseWriter, r *http.Re
 		"message": "webhook processed successfully",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
@@ -141,16 +141,16 @@ func (h *PaymentHandler) SavePaymentInstruction(w http.ResponseWriter, r *http.R
 	methodIDStr := chi.URLParam(r, "methodID")
 	methodID, err := uuid.Parse(methodIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid payment method ID")
+		return apperror.NewBadRequest("invalid payment method ID")
 	}
 
 	var req savePaymentInstructionRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid body request")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid body request")
 	}
 
 	if req.Content == "" {
-		return apperrors.NewBadRequest("content cannot be empty")
+		return apperror.NewBadRequest("content cannot be empty")
 	}
 
 	input := paymentusecase.SavePaymentInstructionInput{
@@ -167,12 +167,12 @@ func (h *PaymentHandler) SavePaymentInstruction(w http.ResponseWriter, r *http.R
 		"message": "payment instruction successfully saved",
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, response)
+	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Reques
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	result, err := h.getPaymentDetail.Execute(r.Context(), paymentusecase.GetPaymentDetailInput{
@@ -228,7 +228,7 @@ func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Reques
 
 	resp.Instruction = result.Instruction
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
@@ -238,7 +238,7 @@ func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Reques
 // calling this endpoint immediately queries Midtrans for the current status
 // and resolves the payment — without waiting for the background reconciler.
 func (h *PaymentHandler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (h *PaymentHandler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *htt
 	orderIDStr := chi.URLParam(r, "orderID")
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return apperrors.NewBadRequest("invalid order id")
+		return apperror.NewBadRequest("invalid order id")
 	}
 
 	input := paymentusecase.CheckPaymentStatusInput{
@@ -259,7 +259,7 @@ func (h *PaymentHandler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *htt
 		return err
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, checkPaymentStatusResponse{
+	httpx.WriteJSON(w, http.StatusOK, checkPaymentStatusResponse{
 		Status: string(result.Status),
 		Synced: result.Synced,
 	})

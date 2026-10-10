@@ -1,15 +1,15 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
 	applogger "komecore/pkg/logger"
 	mailer "komecore/pkg/mailer"
 	otp "komecore/pkg/otp"
@@ -76,10 +76,10 @@ func (u *RequestPasswordResetUsecase) Execute(ctx context.Context, params Reques
 		return nil, nil
 	}
 	if account.Type != params.AccountType {
-		return nil, apperrors.NewForbidden("account type mismatch")
+		return nil, apperror.NewForbidden("account type mismatch")
 	}
 	if account.Status != authdomain.AccountActive {
-		return nil, apperrors.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
 	}
 
 	chID, err := u.challengeSvc.CreateAndSend(ctx, authrepo.CreateChallengeParams{

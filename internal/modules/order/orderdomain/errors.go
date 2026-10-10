@@ -1,4 +1,4 @@
-﻿package orderdomain
+package orderdomain
 
 import "errors"
 

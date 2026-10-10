@@ -1,4 +1,4 @@
-﻿package authdomain
+package authdomain
 
 import (
 	"time"

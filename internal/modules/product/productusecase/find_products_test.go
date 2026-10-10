@@ -262,4 +262,3 @@ func TestFindProducts_FullTextSearch(t *testing.T) {
 		t.Errorf("expected default sort to be relevance when search query provided, got %v", productRepo.capturedParams.Sorts[0].By)
 	}
 }
-

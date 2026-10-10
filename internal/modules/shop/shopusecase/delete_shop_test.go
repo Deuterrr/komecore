@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"komecore/internal/common/authctx"
+	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/shop/shopdomain"
 	"komecore/internal/modules/shop/shoprepo"

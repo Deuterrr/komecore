@@ -1,15 +1,15 @@
-﻿package authusecase
+package authusecase
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth/authsvc"
 	"komecore/internal/modules/user/userrepo"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
@@ -98,12 +98,12 @@ func (u *RegisterCustomerUsecase) Execute(ctx context.Context, params RegisterCu
 	}
 	if existAcc != nil {
 		if existAcc.Password != "" {
-			return nil, apperrors.NewConflict(authdomain.ErrAccountAlreadyExists.Error())
+			return nil, apperror.NewConflict(authdomain.ErrAccountAlreadyExists.Error())
 		}
 	}
 
 	if existUsr != nil {
-		return nil, apperrors.NewConflict("username already exists")
+		return nil, apperror.NewConflict("username already exists")
 	}
 
 	var (

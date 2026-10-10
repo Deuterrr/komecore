@@ -1,14 +1,14 @@
-﻿package authsvc
+package authsvc
 
 import (
 	"net/http"
 	"slices"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
-	appmiddleware "komecore/internal/common/middleware"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
+	"komecore/internal/httpx"
+	appmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/common/authctx"
 	"komecore/internal/modules/auth/authdomain"
 	"komecore/internal/modules/auth/authrepo"
 
@@ -22,13 +22,13 @@ func NewAuthorizer() authrepo.Authorizer {
 }
 
 func (s *authorizer) RequireAccountType(allowedTypes ...authdomain.AccountType) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			actor, ok := GetActor(r.Context())
 			if !ok {
 				authCtx, authOk := authdomain.GetAuthContext(r.Context())
 				if !authOk {
-					return apperrors.NewUnauthorized("authentication required")
+					return apperror.NewUnauthorized("authentication required")
 				}
 				actor = ActorFromAuthContext(authCtx)
 				r = r.WithContext(WithActor(r.Context(), actor))
@@ -38,26 +38,26 @@ func (s *authorizer) RequireAccountType(allowedTypes ...authdomain.AccountType) 
 				return next(w, r)
 			}
 
-			return apperrors.NewForbidden("insufficient account type")
+			return apperror.NewForbidden("insufficient account type")
 		}
 	}
 }
 
 func (s *authorizer) RequireStaffRole(allowedRoles ...authdomain.RoleCode) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			actor, ok := GetActor(r.Context())
 			if !ok {
 				authCtx, authOk := authdomain.GetAuthContext(r.Context())
 				if !authOk {
-					return apperrors.NewUnauthorized("authentication required")
+					return apperror.NewUnauthorized("authentication required")
 				}
 				actor = ActorFromAuthContext(authCtx)
 				r = r.WithContext(WithActor(r.Context(), actor))
 			}
 
 			if actor.Type != authdomain.AccountTypeStaff {
-				return apperrors.NewForbidden(authdomain.ErrStaffRequired.Error())
+				return apperror.NewForbidden(authdomain.ErrStaffRequired.Error())
 			}
 
 			if actor.IsSuperAdmin() {
@@ -73,7 +73,7 @@ func (s *authorizer) RequireStaffRole(allowedRoles ...authdomain.RoleCode) appmi
 			}
 
 			if !allowed {
-				return apperrors.NewForbidden(authdomain.ErrInsufficientRole.Error())
+				return apperror.NewForbidden(authdomain.ErrInsufficientRole.Error())
 			}
 
 			return next(w, r)
@@ -82,33 +82,33 @@ func (s *authorizer) RequireStaffRole(allowedRoles ...authdomain.RoleCode) appmi
 }
 
 func (s *authorizer) RequirePermission(permission string) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			actor, ok := GetActor(r.Context())
 			if !ok {
 				authCtx, authOk := authdomain.GetAuthContext(r.Context())
 				if !authOk {
-					return apperrors.NewUnauthorized("authentication required")
+					return apperror.NewUnauthorized("authentication required")
 				}
 				actor = ActorFromAuthContext(authCtx)
 				r = r.WithContext(WithActor(r.Context(), actor))
 			}
 
 			if actor.Type != authdomain.AccountTypeStaff {
-				return apperrors.NewForbidden(authdomain.ErrStaffRequired.Error())
+				return apperror.NewForbidden(authdomain.ErrStaffRequired.Error())
 			}
 
 			if actor.HasPermission(uuid.Nil, permission) {
 				return next(w, r)
 			}
 
-			return apperrors.NewForbidden("insufficient permission")
+			return apperror.NewForbidden("insufficient permission")
 		}
 	}
 }
 
 func (s *authorizer) LoadActor(exec transaction.Executor) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			if _, ok := GetActor(r.Context()); ok {
 				return next(w, r)
@@ -116,7 +116,7 @@ func (s *authorizer) LoadActor(exec transaction.Executor) appmiddleware.Middlewa
 
 			authCtx, ok := authdomain.GetAuthContext(r.Context())
 			if !ok {
-				return apperrors.NewUnauthorized("authentication required")
+				return apperror.NewUnauthorized("authentication required")
 			}
 
 			actor := ActorFromAuthContext(authCtx)
@@ -126,7 +126,7 @@ func (s *authorizer) LoadActor(exec transaction.Executor) appmiddleware.Middlewa
 }
 
 func (s *authorizer) OptionalLoadActor(exec transaction.Executor) appmiddleware.Middleware {
-	return func(next apphttp.AppHandler) apphttp.AppHandler {
+	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			if _, ok := GetActor(r.Context()); ok {
 				return next(w, r)

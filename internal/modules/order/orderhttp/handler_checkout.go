@@ -3,8 +3,8 @@ package orderhttp
 import (
 	"net/http"
 
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/cart/cartdomain"
 	"komecore/internal/modules/order/orderusecase"
 
@@ -12,14 +12,14 @@ import (
 )
 
 func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
-	authCtx, _, err := apphttp.RequireCustomer(r)
+	authCtx, _, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
 	var req checkoutRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	reqCheckoutCalc := checkoutCalculateRequest{
@@ -111,31 +111,31 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 		resp.TotalAll = &result.GrandTotal
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
 func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) error {
-	authCtx, _, err := apphttp.RequireCustomer(r)
+	authCtx, _, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
 	var req checkoutCalculateRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	if req.AddressID == nil {
-		return apperrors.NewBadRequest("address id required")
+		return apperror.NewBadRequest("address id required")
 	}
 	if req.PaymentMethodID == nil {
-		return apperrors.NewBadRequest("payment method id required")
+		return apperror.NewBadRequest("payment method id required")
 	}
 
 	for _, shop := range req.Shops {
 		if shop.Courier == nil {
-			return apperrors.NewBadRequest("courier required")
+			return apperror.NewBadRequest("courier required")
 		}
 	}
 
@@ -232,7 +232,7 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 		resp.TotalAll = &result.GrandTotal
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
@@ -243,7 +243,7 @@ func (h *orderHandler) parseCheckoutInput(
 	if req.PaymentMethodID != nil {
 		parsed, err := uuid.Parse(*req.PaymentMethodID)
 		if err != nil {
-			return orderusecase.CheckoutInput{}, apperrors.NewBadRequest("invalid address id")
+			return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid address id")
 		}
 		paymentMethodID = &parsed
 	}
@@ -252,7 +252,7 @@ func (h *orderHandler) parseCheckoutInput(
 	if req.AddressID != nil {
 		parsed, err := uuid.Parse(*req.AddressID)
 		if err != nil {
-			return orderusecase.CheckoutInput{}, apperrors.NewBadRequest("invalid address id")
+			return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid address id")
 		}
 		addressID = &parsed
 	}
@@ -261,7 +261,7 @@ func (h *orderHandler) parseCheckoutInput(
 	for _, shopReq := range req.Shops {
 		shopID, err := uuid.Parse(shopReq.ShopID)
 		if err != nil {
-			return orderusecase.CheckoutInput{}, apperrors.NewBadRequest("invalid shop id")
+			return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid shop id")
 		}
 
 		var items []orderusecase.CheckoutItemInput
@@ -277,7 +277,7 @@ func (h *orderHandler) parseCheckoutInput(
 				if parsed, err := uuid.Parse(*itemReq.ProductID); err == nil {
 					productID = &parsed
 				} else {
-					return orderusecase.CheckoutInput{}, apperrors.NewBadRequest("invalid product id")
+					return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid product id")
 				}
 			}
 
@@ -292,11 +292,11 @@ func (h *orderHandler) parseCheckoutInput(
 			}
 
 			if productID == nil && cartItemID == nil {
-				return orderusecase.CheckoutInput{}, apperrors.NewBadRequest("product id or cart item id is required")
+				return orderusecase.CheckoutInput{}, apperror.NewBadRequest("product id or cart item id is required")
 			}
 
 			if itemReq.Quantity <= 0 {
-				return orderusecase.CheckoutInput{}, apperrors.NewBadRequest("invalid quantity")
+				return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid quantity")
 			}
 
 			var opt cartdomain.ItemOptions

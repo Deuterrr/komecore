@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"komecore/internal/infra/outbox"
-	paymentgateway "komecore/internal/infra/payment-gateway"
+	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/payment/paymentdomain"

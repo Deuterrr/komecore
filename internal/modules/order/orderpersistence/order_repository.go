@@ -1,4 +1,4 @@
-﻿package orderpersistence
+package orderpersistence
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/order/orderrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -341,7 +341,7 @@ func (r *OrderRepository) FindOrders(
 	}
 
 	// Build sorting expressions
-	var orderSortKeys = map[query.SortKey]string{
+	var orderSortKeys = map[pagination.SortKey]string{
 		orderrepo.OrderSortLatest: "o.created_at",
 		orderrepo.OrderSortNumber: "o.number",
 		orderrepo.OrderSortTotal:  "o.total",
@@ -357,7 +357,7 @@ func (r *OrderRepository) FindOrders(
 		}
 
 		direction := "DESC"
-		if sort.Direction == query.SortAsc {
+		if sort.Direction == pagination.SortAsc {
 			direction = "ASC"
 		}
 

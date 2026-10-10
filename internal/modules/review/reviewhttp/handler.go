@@ -3,9 +3,9 @@ package reviewhttp
 import (
 	"net/http"
 
-	"komecore/internal/common/authctx"
-	apperrors "komecore/internal/common/errors"
-	apphttp "komecore/internal/common/http"
+	"komecore/internal/apperror"
+	"komecore/internal/authctx"
+	"komecore/internal/httpx"
 	"komecore/internal/modules/review/reviewusecase"
 )
 
@@ -22,19 +22,19 @@ func NewReviewHandler(
 }
 
 func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) error {
-	_, customerID, err := apphttp.RequireCustomer(r)
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
 
-	productID, err := apphttp.ParamUUID(r, "productId")
+	productID, err := httpx.ParamUUID(r, "productId")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid product id")
+		return apperror.NewBadRequest("invalid product id")
 	}
 
 	var req createReviewRequest
-	if err := apphttp.DecodeJSON(r, &req); err != nil {
-		return apperrors.NewBadRequest("invalid request body")
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return apperror.NewBadRequest("invalid request body")
 	}
 
 	review, err := h.service.CreateReview(r.Context(), reviewusecase.CreateReviewInput{
@@ -61,18 +61,18 @@ func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) err
 		UpdatedAt:  review.UpdatedAt,
 	}
 
-	apphttp.WriteJSON(w, http.StatusCreated, resp)
+	httpx.WriteJSON(w, http.StatusCreated, resp)
 	return nil
 }
 
 func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Request) error {
-	productID, err := apphttp.ParamUUID(r, "productId")
+	productID, err := httpx.ParamUUID(r, "productId")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid product id")
+		return apperror.NewBadRequest("invalid product id")
 	}
 
-	page := apphttp.QueryIntDefault(r, "page", 1)
-	limit := apphttp.QueryIntDefault(r, "limit", 10)
+	page := httpx.QueryIntDefault(r, "page", 1)
+	limit := httpx.QueryIntDefault(r, "limit", 10)
 
 	result, err := h.service.ListReviews(r.Context(), reviewusecase.ListReviewsInput{
 		ProductID: productID,
@@ -109,23 +109,23 @@ func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Reques
 		Total:         result.Total,
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
 
 func (h *ReviewHandler) DeleteReview(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok || actor == nil {
-		authCtx, err := apphttp.RequireAuth(r)
+		authCtx, err := httpx.RequireAuth(r)
 		if err != nil {
 			return err
 		}
 		actor = authctx.ActorFromAuthContext(authCtx)
 	}
 
-	reviewID, err := apphttp.ParamUUID(r, "id")
+	reviewID, err := httpx.ParamUUID(r, "id")
 	if err != nil {
-		return apperrors.NewBadRequest("invalid review id")
+		return apperror.NewBadRequest("invalid review id")
 	}
 
 	err = h.service.DeleteReview(r.Context(), reviewusecase.DeleteReviewInput{
@@ -136,7 +136,7 @@ func (h *ReviewHandler) DeleteReview(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	apphttp.WriteJSON(w, http.StatusOK, messageResponse{
+	httpx.WriteJSON(w, http.StatusOK, messageResponse{
 		Message: "review deleted successfully",
 	})
 	return nil

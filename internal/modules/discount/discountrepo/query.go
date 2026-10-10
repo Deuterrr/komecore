@@ -1,11 +1,11 @@
 package discountrepo
 
-import query "komecore/internal/shared/query"
+import "komecore/internal/pagination"
 
 type ListCouponsParams struct {
 	Code     *string
 	IsActive *bool
 
-	query.Pagination
-	query.Sorts
+	pagination.Pagination
+	pagination.Sorts
 }

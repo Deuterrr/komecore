@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/staff/staffdomain"
 	"komecore/internal/modules/staff/staffrepo"
 	"komecore/internal/modules/user/userdomain"
 	"komecore/internal/modules/user/userrepo"
-	query "komecore/internal/shared/query"
+	"komecore/internal/pagination"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -152,10 +152,10 @@ func (s *StaffService) WithAnalyticsRepository(repo AnalyticsRepository) *StaffS
 // AddStaffAccount adds an authentication account and membership to an existing staff entity.
 func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccountParams) error {
 	if input.Email == "" {
-		return apperrors.NewBadRequest("email is required")
+		return apperror.NewBadRequest("email is required")
 	}
 	if input.Password == "" {
-		return apperrors.NewBadRequest("password is required")
+		return apperror.NewBadRequest("password is required")
 	}
 
 	actorMembership, err := s.membershipRepo.GetByAccountIDAndStaffID(ctx, s.executor,
@@ -173,7 +173,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "actor membership not found"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -199,7 +199,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "actor lacks admin role"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	existingAcc, err := s.accountManager.GetByEmail(ctx, s.executor, input.Email)
@@ -214,7 +214,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "email already exists"},
 		})
-		return apperrors.NewConflict("an account with this email already exists")
+		return apperror.NewConflict("an account with this email already exists")
 	}
 
 	existingStaff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
@@ -229,7 +229,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "staff not found"},
 		})
-		return apperrors.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
 	}
 
 	existingUserAcc, err := s.accountManager.GetByUserID(ctx, s.executor, existingStaff.UserID)
@@ -244,7 +244,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "staff user already has a bound account"},
 		})
-		return apperrors.NewConflict("this staff entity already has a bound account (1 account per user limit)")
+		return apperror.NewConflict("this staff entity already has a bound account (1 account per user limit)")
 	}
 
 	staffRole, err := s.roleRepo.GetByCode(ctx, s.executor, staffdomain.RoleStaff)
@@ -308,10 +308,10 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 // CreateStaff creates a new staff entity with associated user.
 func (s *StaffService) CreateStaff(ctx context.Context, input CreateStaffInput) error {
 	if input.Name == "" {
-		return apperrors.NewBadRequest("name is required")
+		return apperror.NewBadRequest("name is required")
 	}
 	if input.Username == "" {
-		return apperrors.NewBadRequest("username is required")
+		return apperror.NewBadRequest("username is required")
 	}
 
 	existingUser, err := s.userRepo.GetByUsername(ctx, s.executor, input.Username)
@@ -319,7 +319,7 @@ func (s *StaffService) CreateStaff(ctx context.Context, input CreateStaffInput) 
 		return fmt.Errorf("failed to check existing username: %w", err)
 	}
 	if existingUser != nil {
-		return apperrors.NewConflict("a user with this username already exists")
+		return apperror.NewConflict("a user with this username already exists")
 	}
 
 	now := appclock.Now()
@@ -370,12 +370,12 @@ func (s *StaffService) CreateStaff(ctx context.Context, input CreateStaffInput) 
 
 // FindStaff searches staff entities with pagination and sorting.
 func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]staffdomain.StaffProfile, int, error) {
-	var staffSortKeys = map[string]query.SortKey{
+	var staffSortKeys = map[string]pagination.SortKey{
 		"latest":   staffrepo.StaffSortLatest,
 		"modified": staffrepo.StaffSortModify,
 	}
 
-	var sorts query.Sorts
+	var sorts pagination.Sorts
 	if input.Sort != "" {
 		parts := strings.SplitSeq(input.Sort, ",")
 		for part := range parts {
@@ -387,17 +387,17 @@ func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]s
 			subparts := strings.Split(part, ":")
 			key := strings.TrimSpace(subparts[0])
 
-			var dir query.SortDirection = query.SortDesc
+			var dir pagination.SortDirection = pagination.SortDesc
 			if len(subparts) > 1 {
 				d := strings.ToLower(strings.TrimSpace(subparts[1]))
 				if d == "asc" {
-					dir = query.SortAsc
+					dir = pagination.SortAsc
 				}
 			}
 
 			sortKey, exists := staffSortKeys[key]
 			if exists {
-				sorts = append(sorts, query.Sort{
+				sorts = append(sorts, pagination.Sort{
 					By:        sortKey,
 					Direction: dir,
 				})
@@ -406,17 +406,17 @@ func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]s
 	}
 
 	if len(sorts) == 0 {
-		sorts = query.Sorts{
+		sorts = pagination.Sorts{
 			{
 				By:        staffrepo.StaffSortLatest,
-				Direction: query.SortDesc,
+				Direction: pagination.SortDesc,
 			},
 		}
 	}
 
 	params := staffrepo.FindStaffParams{
 		ID: input.ID,
-		Pagination: query.Pagination{
+		Pagination: pagination.Pagination{
 			Page:  input.Page,
 			Limit: input.Limit,
 		},
@@ -428,7 +428,7 @@ func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]s
 		return nil, 0, fmt.Errorf("failed to load staff: %w", err)
 	}
 	if len(staff) == 0 {
-		return nil, 0, apperrors.NewNotFound("staff not available at the moment")
+		return nil, 0, apperror.NewNotFound("staff not available at the moment")
 	}
 
 	return staff, total, nil
@@ -444,7 +444,7 @@ func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAcc
 		return nil, fmt.Errorf("failed to verify actor membership: %w", err)
 	}
 	if actorMembership == nil {
-		return nil, apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return nil, apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -463,7 +463,7 @@ func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAcc
 		}
 	}
 	if !foundAdmin {
-		return nil, apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return nil, apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
@@ -471,7 +471,7 @@ func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAcc
 		return nil, fmt.Errorf("failed to retrieve staff: %w", err)
 	}
 	if staff == nil {
-		return nil, apperrors.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+		return nil, apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
 	}
 
 	accounts, err := s.membershipRepo.ListAccountsByStaffID(ctx, s.executor, staff.ID)
@@ -488,7 +488,7 @@ func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAcc
 // UpdateStaff modifies a staff entity's details.
 func (s *StaffService) UpdateStaff(ctx context.Context, input UpdateStaffInput) error {
 	if input.Name == "" {
-		return apperrors.NewBadRequest("name is required")
+		return apperror.NewBadRequest("name is required")
 	}
 
 	actorMembership, err := s.membershipRepo.GetByAccountIDAndStaffID(ctx, s.executor,
@@ -506,7 +506,7 @@ func (s *StaffService) UpdateStaff(ctx context.Context, input UpdateStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor membership not found"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -532,7 +532,7 @@ func (s *StaffService) UpdateStaff(ctx context.Context, input UpdateStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor lacks admin role"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
@@ -540,7 +540,7 @@ func (s *StaffService) UpdateStaff(ctx context.Context, input UpdateStaffInput) 
 		return fmt.Errorf("failed to retrieve staff: %w", err)
 	}
 	if staff == nil {
-		return apperrors.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -587,7 +587,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor membership not found"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -613,7 +613,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor lacks admin role"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
@@ -621,7 +621,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 		return fmt.Errorf("failed to retrieve staff: %w", err)
 	}
 	if staff == nil {
-		return apperrors.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -655,7 +655,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 // RemoveStaffAccount removes an account membership from a staff entity.
 func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaffAccountInput) error {
 	if input.ActorAccountID == input.AccountID {
-		return apperrors.NewBadRequest("cannot remove own account from staff")
+		return apperror.NewBadRequest("cannot remove own account from staff")
 	}
 
 	actorMembership, err := s.membershipRepo.GetByAccountIDAndStaffID(ctx, s.executor,
@@ -673,7 +673,7 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "account_id": input.AccountID.String(), "reason": "actor membership not found"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -699,7 +699,7 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "account_id": input.AccountID.String(), "reason": "actor lacks admin role"},
 		})
-		return apperrors.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
 	}
 
 	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
@@ -707,7 +707,7 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 		return fmt.Errorf("failed to retrieve staff: %w", err)
 	}
 	if staff == nil {
-		return apperrors.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
 	}
 
 	targetMembership, err := s.membershipRepo.GetByAccountIDAndStaffID(ctx, s.executor,
@@ -718,7 +718,7 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 		return fmt.Errorf("failed to retrieve target membership: %w", err)
 	}
 	if targetMembership == nil {
-		return apperrors.NewNotFound("staff account membership not found")
+		return apperror.NewNotFound("staff account membership not found")
 	}
 
 	targetAccount, err := s.accountManager.GetByID(ctx, s.executor, input.AccountID)
@@ -726,7 +726,7 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 		return fmt.Errorf("failed to retrieve target account: %w", err)
 	}
 	if targetAccount == nil {
-		return apperrors.NewNotFound("target account not found")
+		return apperror.NewNotFound("target account not found")
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {

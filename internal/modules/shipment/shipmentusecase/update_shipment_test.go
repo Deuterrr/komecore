@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/shipment/shipmentdomain"
 )
 
@@ -21,8 +21,8 @@ func TestUpdateShipment_ShipmentNotFound(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when shipment not found")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeNotFound {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeNotFound {
 		t.Errorf("expected NotFound AppError, got: %v", err)
 	}
 }
@@ -93,8 +93,8 @@ func TestUpdateShipment_ValidationError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected validation error when courier is empty")
 	}
-	var appErr *apperrors.AppError
-	if !errors.As(err, &appErr) || appErr.Type != apperrors.ErrTypeInvalidInput {
+	var appErr *apperror.AppError
+	if !errors.As(err, &appErr) || appErr.Type != apperror.ErrTypeInvalidInput {
 		t.Errorf("expected InvalidInput AppError, got: %v", err)
 	}
 }

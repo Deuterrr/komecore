@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/address/addressusecase"
 
 	"github.com/google/uuid"
@@ -106,7 +106,7 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 
 		err := uc.SaveCustomerAddress(ctx, input)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsConflict(err))
+		assert.True(t, apperror.IsConflict(err))
 		assert.Equal(t, 0, repo.saveCalls)
 	})
 
@@ -122,7 +122,7 @@ func TestSaveCustomerAddressUsecase_Execute(t *testing.T) {
 
 		err := uc.SaveCustomerAddress(ctx, input)
 		assert.Error(t, err)
-		assert.True(t, apperrors.IsBadRequest(err))
+		assert.True(t, apperror.IsBadRequest(err))
 		assert.Equal(t, 0, repo.saveCalls)
 	})
 

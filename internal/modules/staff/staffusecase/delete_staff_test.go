@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/staff/staffdomain"
 
 	"github.com/google/uuid"
@@ -120,7 +120,7 @@ func TestDeleteStaff_NotFound(t *testing.T) {
 		t.Fatal("expected error for not found staff, got nil")
 	}
 
-	appErr, ok := err.(*apperrors.AppError)
+	appErr, ok := err.(*apperror.AppError)
 	if !ok || appErr.StatusCode != 404 {
 		t.Fatalf("expected 404 Not Found error, got: %v", err)
 	}

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	apperrors "komecore/internal/common/errors"
+	"komecore/internal/apperror"
 	"komecore/internal/modules/wishlist/wishlistdomain"
 	"komecore/internal/modules/wishlist/wishlistusecase"
 
@@ -41,5 +41,5 @@ func TestRemoveFromWishlist_NotFound(t *testing.T) {
 
 	err := svc.RemoveFromWishlist(ctx, wishlistusecase.RemoveFromWishlistInput{CustomerID: uuid.New(), ProductID: uuid.New()})
 	require.Error(t, err)
-	assert.True(t, apperrors.IsNotFound(err))
+	assert.True(t, apperror.IsNotFound(err))
 }
