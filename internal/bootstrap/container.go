@@ -8,6 +8,7 @@ import (
 
 	appconfig "komecore/internal/config"
 	transaction "komecore/internal/infra/transactor"
+	appclock "komecore/pkg/clock"
 	imgSvc "komecore/pkg/imageutil"
 	mailerSvc "komecore/pkg/mailer"
 	otpSvc "komecore/pkg/otp"
@@ -17,6 +18,7 @@ import (
 	"komecore/internal/modules/auth/authpersistence"
 	"komecore/internal/modules/cart/cartpersistence"
 	"komecore/internal/modules/courier/courierpersistence"
+	"komecore/internal/modules/discount/discountpersistence"
 	"komecore/internal/modules/inventory/inventorypersistence"
 	"komecore/internal/modules/order/orderpersistence"
 	"komecore/internal/modules/payment/paymentpersistence"
@@ -35,6 +37,7 @@ import (
 	"komecore/internal/modules/address/addressrepo"
 	"komecore/internal/modules/cart/cartrepo"
 	"komecore/internal/modules/courier/courierrepo"
+	"komecore/internal/modules/discount/discountrepo"
 	"komecore/internal/modules/inventory/inventoryrepo"
 	"komecore/internal/modules/order/orderrepo"
 	"komecore/internal/modules/payment/paymentrepo"
@@ -50,6 +53,7 @@ import (
 	"komecore/internal/modules/auth/authusecase"
 	"komecore/internal/modules/cart/cartusecase"
 	"komecore/internal/modules/courier/courierusecase"
+	"komecore/internal/modules/discount/discountusecase"
 	"komecore/internal/modules/inventory/inventoryusecase"
 	"komecore/internal/modules/order/orderusecase"
 	"komecore/internal/modules/payment/paymentusecase"
@@ -140,6 +144,7 @@ type Container struct {
 
 	Wishlist wishlistusecase.WishlistService
 	Review   reviewusecase.ReviewService
+	Discount discountusecase.DiscountService
 
 	Limiter applimiter.Limiter
 }
@@ -188,6 +193,7 @@ type repositories struct {
 	shipment            shipmentrepo.ShipmentRepository
 	wishlist            wishlistrepo.WishlistRepository
 	review              reviewrepo.ReviewRepository
+	coupon              discountrepo.CouponRepository
 }
 
 func initRepositories() *repositories {
@@ -225,6 +231,7 @@ func initRepositories() *repositories {
 		shipment:            shipmentpersistence.NewShipmentRepository(),
 		wishlist:            wishlistpersistence.NewWishlistRepository(),
 		review:              reviewpersistence.NewReviewRepository(),
+		coupon:              discountpersistence.NewCouponRepository(),
 	}
 }
 
@@ -241,6 +248,7 @@ type sharedServices struct {
 	imageTransformer     imgSvc.ImageTransformer
 	imageVariantProvider imgSvc.VariantCreator
 	pricingService       orderrepo.PricingService
+	discountService      *discountusecase.DiscountService
 }
 
 func initSharedServices(cfg Config, infra *Dependency, repos *repositories) *sharedServices {
@@ -277,6 +285,12 @@ func initSharedServices(cfg Config, infra *Dependency, repos *repositories) *sha
 	imageTransformer := imgSvc.NewImageTransformer()
 	imageVariantProvider := imgSvc.NewResolutionGenerator(imageTransformer)
 
+	discountService := discountusecase.NewDiscountService(
+		repos.coupon,
+		infra.TransactionExecutor,
+		appclock.RealClock{},
+	)
+
 	pricingService := ordersvc.NewPricingService(
 		repos.address,
 		repos.cart,
@@ -287,7 +301,7 @@ func initSharedServices(cfg Config, infra *Dependency, repos *repositories) *sha
 		infra.ShippingProvider,
 		repos.addressShop,
 		repos.shop,
-	)
+	).WithCouponService(discountService)
 
 	return &sharedServices{
 		tokenSvc:             tokenSvc,
@@ -302,6 +316,7 @@ func initSharedServices(cfg Config, infra *Dependency, repos *repositories) *sha
 		imageTransformer:     imageTransformer,
 		imageVariantProvider: imageVariantProvider,
 		pricingService:       pricingService,
+		discountService:      discountService,
 	}
 }
 
@@ -361,6 +376,7 @@ func buildContainer(
 		otpGen               = svcs.otpGen
 		imageVariantProvider = svcs.imageVariantProvider
 		pricingService       = svcs.pricingService
+		discountService      = svcs.discountService
 	)
 
 	orderPaymentAdapter := newOrderPaymentAdapter(orderRepo, orderItemRepo)
@@ -728,7 +744,7 @@ func buildContainer(
 			userRepo,
 			infra.PaymentGateway,
 			pricingService,
-		),
+		).WithCouponService(discountService),
 		FindOrders: *orderusecase.NewFindOrdersUsecase(
 			infra.TransactionExecutor,
 			orderRepo,
@@ -814,6 +830,8 @@ func buildContainer(
 			infra.TransactionExecutor,
 			infra.TransactionProvider,
 		),
+
+		Discount: *discountService,
 
 		Limiter: applimiter.NewInMemorySlidingWindowLimiter(10*time.Second, 30),
 	}

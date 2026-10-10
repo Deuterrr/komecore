@@ -15,6 +15,7 @@ import (
 	"komecore/internal/modules/auth/authhttp"
 	"komecore/internal/modules/cart/carthttp"
 	"komecore/internal/modules/courier/courierhttp"
+	"komecore/internal/modules/discount/discounthttp"
 	"komecore/internal/modules/inventory/inventoryhttp"
 	"komecore/internal/modules/order/orderhttp"
 	"komecore/internal/modules/payment/paymenthttp"
@@ -173,6 +174,7 @@ type handlers struct {
 	order     *orderhttp.OrderHandler
 	wishlist  *wishlisthttp.WishlistHandler
 	review    *reviewhttp.ReviewHandler
+	discount  *discounthttp.DiscountHandler
 }
 
 func initHandlers(c *Container) *handlers {
@@ -250,6 +252,9 @@ func initHandlers(c *Container) *handlers {
 		),
 		review: reviewhttp.NewReviewHandler(
 			&c.Review,
+		),
+		discount: discounthttp.NewDiscountHandler(
+			&c.Discount,
 		),
 	}
 }
@@ -433,5 +438,14 @@ func bindCommerceRoutes(r chi.Router, h *handlers, chains *RouteChains) {
 		r.Patch("/{shipmentID}/status", chains.StaffOnly(h.shipment.UpdateShipmentStatus))
 		r.Patch("/{shipmentID}/dispatch", chains.StaffOnly(h.shipment.DispatchShipment))
 		r.Patch("/{shipmentID}", chains.StaffOnly(h.shipment.UpdateShipment))
+	})
+
+	r.Route("/coupons", func(r chi.Router) {
+		r.Post("/validate", chains.CoreAuth(h.discount.ValidateCoupon))
+	})
+
+	r.Route("/admin/coupons", func(r chi.Router) {
+		r.Get("/", chains.StaffAdminOnly(h.discount.ListCoupons))
+		r.Post("/", chains.StaffAdminOnly(h.discount.CreateCoupon))
 	})
 }
