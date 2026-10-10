@@ -311,6 +311,21 @@ DELETE {{baseUrl}}/api/v1/staff/{{staffId}}/accounts/{{accountId}}
 Authorization: Bearer {{staffToken}}
 
 
+### Get Revenue Analytics Over Time (Staff Admin)
+GET {{baseUrl}}/api/v1/staff/analytics/revenue?range=30d&interval=day
+Authorization: Bearer {{staffToken}}
+
+
+### Get Order Pipeline Breakdown (Staff Admin)
+GET {{baseUrl}}/api/v1/staff/analytics/orders
+Authorization: Bearer {{staffToken}}
+
+
+### Get Top Selling Products (Staff Admin)
+GET {{baseUrl}}/api/v1/staff/analytics/top-products?limit=10
+Authorization: Bearer {{staffToken}}
+
+
 # ==============================================================================
 # 06. Catalog & Products
 # ==============================================================================

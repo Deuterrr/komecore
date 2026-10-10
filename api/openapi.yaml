@@ -894,6 +894,88 @@ paths:
           description: Account removed
 
   # ==============================================================================
+  # STAFF ANALYTICS
+  # ==============================================================================
+  /api/v1/staff/analytics/revenue:
+    get:
+      summary: Revenue Analytics Over Time (Staff Admin)
+      description: Returns aggregate gross revenue and order counts bucketed by interval (day, week, month) over a specified historical range (7d, 30d, 90d, 1y).
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: range
+          in: query
+          schema: { type: string, default: "30d" }
+          description: Time window to aggregate (e.g. 7d, 30d, 90d, 1y)
+        - name: interval
+          in: query
+          schema: { type: string, default: "day" }
+          description: Bucket granularity (day, week, month)
+      responses:
+        '200':
+          description: Revenue analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueAnalyticsResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Staff Admin required)
+
+  /api/v1/staff/analytics/orders:
+    get:
+      summary: Order Pipeline Analytics (Staff Admin)
+      description: Returns breakdown of orders and totals grouped by lifecycle status (pending, confirmed, shipped, delivered, cancelled).
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      responses:
+        '200':
+          description: Order pipeline breakdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPipelineResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Staff Admin required)
+
+  /api/v1/staff/analytics/top-products:
+    get:
+      summary: Top Selling Products Analytics (Staff Admin)
+      description: Returns highest performing products ranked by total sales volume and gross revenue.
+      tags:
+        - Staff Administration
+      security:
+        - BearerAuth: []
+        - CookieStaffAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+          description: Maximum number of top products to return
+      responses:
+        '200':
+          description: Top selling products list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopProductResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Staff Admin required)
+
+  # ==============================================================================
   # CATALOG & PRODUCTS
   # ==============================================================================
   /api/v1/products:
@@ -3723,4 +3805,53 @@ components:
           items:
             $ref: '#/components/schemas/CouponResponse'
         total: { type: integer, example: 1 }
+
+    RevenueBucketResponse:
+      type: object
+      required: [bucket, revenue, count]
+      properties:
+        bucket: { type: string, format: date-time, example: "2026-10-01T00:00:00Z" }
+        revenue: { type: integer, format: int64, example: 12500000 }
+        count: { type: integer, format: int64, example: 42 }
+
+    RevenueAnalyticsResponse:
+      type: object
+      required: [range, interval, total_revenue, total_orders, buckets]
+      properties:
+        range: { type: string, example: "30d" }
+        interval: { type: string, example: "day" }
+        total_revenue: { type: integer, format: int64, example: 45000000 }
+        total_orders: { type: integer, format: int64, example: 120 }
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueBucketResponse'
+
+    OrderStatusCountResponse:
+      type: object
+      required: [status, count, total_amount]
+      properties:
+        status: { type: string, example: "confirmed" }
+        count: { type: integer, format: int64, example: 25 }
+        total_amount: { type: integer, format: int64, example: 18500000 }
+
+    OrderPipelineResponse:
+      type: object
+      required: [total_orders, total_amount, breakdown]
+      properties:
+        total_orders: { type: integer, format: int64, example: 120 }
+        total_amount: { type: integer, format: int64, example: 85000000 }
+        breakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStatusCountResponse'
+
+    TopProductResponse:
+      type: object
+      required: [product_id, product_name, quantity_sold, total_revenue]
+      properties:
+        product_id: { type: string, format: uuid, example: "b0000000-0000-0000-0000-000000000001" }
+        product_name: { type: string, example: "Wireless Bluetooth Earbuds" }
+        quantity_sold: { type: integer, format: int64, example: 85 }
+        total_revenue: { type: integer, format: int64, example: 25500000 }
 
