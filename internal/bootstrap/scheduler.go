@@ -55,6 +55,10 @@ func NewScheduler(cfg Config, container *Container, logger applogger.Logger) *Sc
 	)
 	s.Register(orderStaffExpiryJob)
 
+	if container.OutboxWorker != nil {
+		s.Register(container.OutboxWorker)
+	}
+
 	return s
 }
 

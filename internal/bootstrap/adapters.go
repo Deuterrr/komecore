@@ -48,11 +48,25 @@ func (a *orderPaymentAdapter) GetOrderForPayment(ctx context.Context, exec trans
 	if order == nil {
 		return nil, nil
 	}
+
+	var customerEmail, customerName string
+	if exec != nil {
+		_ = exec.QueryRow(ctx, `
+			SELECT COALESCE(u.name, ''), COALESCE(a.email, '')
+			FROM customers c
+			JOIN users u ON u.id = c.user_id
+			JOIN accounts a ON a.user_id = u.id
+			WHERE c.id = $1
+		`, order.CustomerID).Scan(&customerName, &customerEmail)
+	}
+
 	return &paymentusecase.OrderInfo{
-		ID:         order.ID,
-		CustomerID: order.CustomerID,
-		Number:     order.Number,
-		Total:      order.Total,
+		ID:            order.ID,
+		CustomerID:    order.CustomerID,
+		Number:        order.Number,
+		Total:         order.Total,
+		CustomerEmail: customerEmail,
+		CustomerName:  customerName,
 	}, nil
 }
 

@@ -331,6 +331,12 @@ func bindIdentityRoutes(r chi.Router, h *handlers, chains *RouteChains) {
 				r.Delete("/{accountID}", chains.StaffAdminOnly(h.staff.RemoveStaffAccount))
 			})
 		})
+
+		r.Route("/analytics", func(r chi.Router) {
+			r.Get("/revenue", chains.StaffAdminOnly(h.staff.GetRevenueAnalytics))
+			r.Get("/orders", chains.StaffAdminOnly(h.staff.GetOrderPipelineAnalytics))
+			r.Get("/top-products", chains.StaffAdminOnly(h.staff.GetTopProductsAnalytics))
+		})
 	})
 }
 

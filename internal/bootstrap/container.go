@@ -67,6 +67,7 @@ import (
 
 	appmiddleware "komecore/internal/common/middleware"
 	"komecore/internal/infra/cache"
+	"komecore/internal/infra/outbox"
 	paymentgateway "komecore/internal/infra/payment-gateway"
 )
 
@@ -83,6 +84,8 @@ type Container struct {
 	Idempotency        *appmiddleware.IdempotencyMiddleware
 	paymentMethodRepo  paymentrepo.PaymentMethodRepository
 	paymentGateway     paymentgateway.Provider
+	OutboxWorker       *outbox.Worker
+	OutboxRepo         outbox.Repository
 
 	FindProducts     productusecase.FindProductsUsecase
 	GetProduct       productusecase.GetProductUsecase
@@ -194,6 +197,8 @@ type repositories struct {
 	wishlist            wishlistrepo.WishlistRepository
 	review              reviewrepo.ReviewRepository
 	coupon              discountrepo.CouponRepository
+	analytics           staffrepo.AnalyticsRepository
+	outbox              outbox.Repository
 }
 
 func initRepositories() *repositories {
@@ -232,6 +237,8 @@ func initRepositories() *repositories {
 		wishlist:            wishlistpersistence.NewWishlistRepository(),
 		review:              reviewpersistence.NewReviewRepository(),
 		coupon:              discountpersistence.NewCouponRepository(),
+		analytics:           staffpersistence.NewAnalyticsRepository(),
+		outbox:              outbox.NewOutboxRepository(),
 	}
 }
 
@@ -390,6 +397,17 @@ func buildContainer(
 	userSessionAdapter := newUserSessionAdapter(sessionRepo)
 	userStaffProfileAdapter := newUserStaffProfileAdapter(staffRepo)
 
+	outboxDispatcher := outbox.NewEmailDispatcher(mailSender)
+	outboxWorker := outbox.NewWorker(
+		repos.outbox,
+		outboxDispatcher,
+		infra.TransactionExecutor,
+		infra.TransactionProvider,
+		log,
+		5*time.Second,
+		20,
+	)
+
 	processPaymentWebhook := *paymentusecase.NewProcessPaymentWebhookUsecase(
 		paymentRepo,
 		paymentEventRepo,
@@ -400,7 +418,7 @@ func buildContainer(
 		auditLogger,
 		infra.TransactionProvider,
 		infra.TransactionExecutor,
-	)
+	).WithOutboxRecorder(repos.outbox)
 
 	c := &Container{
 		Logger:             log,
@@ -415,6 +433,8 @@ func buildContainer(
 		Idempotency:        appmiddleware.NewIdempotencyMiddleware(infra.Cache),
 		paymentMethodRepo:  paymentMethodRepo,
 		paymentGateway:     infra.PaymentGateway,
+		OutboxWorker:       outboxWorker,
+		OutboxRepo:         repos.outbox,
 
 		FindProducts: *productusecase.NewFindProductsUsecase(
 			productRepo,
@@ -515,7 +535,7 @@ func buildContainer(
 			pwHasher,
 			userDeletionSvc,
 			auditLogger,
-		),
+		).WithAnalyticsRepository(repos.analytics),
 
 		RegisterCustomer: *authusecase.NewRegisterCustomerUsecase(
 			infra.TransactionExecutor,
@@ -744,7 +764,7 @@ func buildContainer(
 			userRepo,
 			infra.PaymentGateway,
 			pricingService,
-		).WithCouponService(discountService),
+		).WithCouponService(discountService).WithOutboxRecorder(repos.outbox),
 		FindOrders: *orderusecase.NewFindOrdersUsecase(
 			infra.TransactionExecutor,
 			orderRepo,
@@ -787,7 +807,7 @@ func buildContainer(
 			addressShopRepo,
 			infra.LogisticsProvider,
 			auditLogger,
-		),
+		).WithOutboxRecorder(repos.outbox),
 		GetOrderTracking: *orderusecase.NewGetOrderTrackingUsecase(
 			infra.TransactionExecutor,
 			orderRepo,
