@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -11,9 +11,12 @@ import (
 )
 
 type mockOrder struct {
-	ID         uuid.UUID
-	CustomerID uuid.UUID
-	Status     string
+	ID            uuid.UUID
+	CustomerID    uuid.UUID
+	Status        string
+	Number        string
+	CustomerEmail string
+	CustomerName  string
 }
 
 type mockOrderPaymentManager struct {
@@ -44,9 +47,12 @@ func (m *mockOrderPaymentManager) GetOrderForPayment(_ context.Context, _ transa
 		return nil, nil
 	}
 	return &OrderInfo{
-		ID:         o.ID,
-		CustomerID: o.CustomerID,
-		Total:      100000,
+		ID:            o.ID,
+		CustomerID:    o.CustomerID,
+		Number:        o.Number,
+		Total:         100000,
+		CustomerEmail: o.CustomerEmail,
+		CustomerName:  o.CustomerName,
 	}, nil
 }
 

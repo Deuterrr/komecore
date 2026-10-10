@@ -1,4 +1,4 @@
-﻿package orderusecase
+package orderusecase
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	apperrors "komecore/internal/common/errors"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/infra/outbox"
 	"komecore/internal/modules/address/addressrepo"
 	"komecore/internal/modules/order/orderdomain"
 	"komecore/internal/modules/order/orderrepo"
@@ -31,6 +32,7 @@ type DispatchShopShipmentUsecase struct {
 	shopAddressRepo addressrepo.ShopAddressRepository
 	logistics       shipping.LogisticsProvider
 	auditLogger     applogger.AuditLogger
+	outboxRecorder  OutboxRecorder
 }
 
 func NewDispatchShopShipmentUsecase(
@@ -57,6 +59,11 @@ func NewDispatchShopShipmentUsecase(
 		logistics:       logistics,
 		auditLogger:     auditLogger,
 	}
+}
+
+func (u *DispatchShopShipmentUsecase) WithOutboxRecorder(recorder OutboxRecorder) *DispatchShopShipmentUsecase {
+	u.outboxRecorder = recorder
+	return u
 }
 
 type DispatchShopShipmentInput struct {
@@ -295,6 +302,26 @@ func (u *DispatchShopShipmentUsecase) Execute(
 			}
 			order.Status = orderdomain.OrderStatusShipped
 		}
+
+		if u.outboxRecorder != nil {
+			trackingNo := ""
+			if shipment.TrackingNumber != nil {
+				trackingNo = *shipment.TrackingNumber
+			}
+			outboxPayload := outbox.ShipmentDispatchedPayload{
+				OrderID:        order.ID,
+				OrderNumber:    order.Number,
+				CustomerEmail:  "",
+				CustomerName:   customerAddr.ReceiverName,
+				TrackingNumber: trackingNo,
+				Courier:        shipment.Courier,
+				Service:        shipment.Service,
+			}
+			if err := u.outboxRecorder.Enqueue(ctx, exec, outbox.EventShipmentDispatched, outboxPayload); err != nil {
+				return fmt.Errorf("failed to enqueue outbox shipment.dispatched event: %w", err)
+			}
+		}
+
 		return nil
 	})
 	if err != nil {

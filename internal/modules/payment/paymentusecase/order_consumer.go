@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -10,10 +10,12 @@ import (
 )
 
 type OrderInfo struct {
-	ID         uuid.UUID
-	CustomerID uuid.UUID
-	Number     string
-	Total      int64
+	ID            uuid.UUID
+	CustomerID    uuid.UUID
+	Number        string
+	Total         int64
+	CustomerEmail string
+	CustomerName  string
 }
 
 type OrderItemInfo struct {

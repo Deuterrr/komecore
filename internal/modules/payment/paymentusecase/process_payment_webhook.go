@@ -1,4 +1,4 @@
-﻿package paymentusecase
+package paymentusecase
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	apperrors "komecore/internal/common/errors"
+	"komecore/internal/infra/outbox"
 	paymentgateway "komecore/internal/infra/payment-gateway"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory/inventorydomain"
@@ -20,6 +21,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type OutboxRecorder interface {
+	Enqueue(ctx context.Context, exec transaction.Executor, eventType string, payload any) error
+}
+
 type ProcessPaymentWebhookUsecase struct {
 	repository       paymentrepo.PaymentRepository
 	paymentEventRepo paymentrepo.PaymentEventRepository
@@ -30,6 +35,7 @@ type ProcessPaymentWebhookUsecase struct {
 	auditLogger      applogger.AuditLogger
 	transactor       transaction.Transactor
 	executor         transaction.Executor
+	outboxRecorder   OutboxRecorder
 }
 
 func NewProcessPaymentWebhookUsecase(
@@ -54,6 +60,11 @@ func NewProcessPaymentWebhookUsecase(
 		transactor:       transactor,
 		executor:         executor,
 	}
+}
+
+func (u *ProcessPaymentWebhookUsecase) WithOutboxRecorder(recorder OutboxRecorder) *ProcessPaymentWebhookUsecase {
+	u.outboxRecorder = recorder
+	return u
 }
 
 type ProcessPaymentWebhookInput struct {
@@ -387,6 +398,46 @@ func (u *ProcessPaymentWebhookUsecase) process(
 
 		if err := u.paymentEventRepo.Create(ctx, exec, paymentEvent); err != nil {
 			return fmt.Errorf("failed to create payment event: %w", err)
+		}
+
+		if action == "commit" && u.outboxRecorder != nil {
+			var (
+				orderNum  string
+				custEmail string
+				custName  string
+			)
+			if orderInfo, err := u.orderMgr.GetOrderForPayment(ctx, exec, payment.OrderID); err == nil && orderInfo != nil {
+				orderNum = orderInfo.Number
+				custEmail = orderInfo.CustomerEmail
+				custName = orderInfo.CustomerName
+			}
+			var paidAt time.Time
+			if payment.PaidAt != nil {
+				paidAt = *payment.PaidAt
+			} else {
+				paidAt = now
+			}
+			var payMethod string
+			if input.Payload != nil {
+				if pt, ok := input.Payload["payment_type"].(string); ok {
+					payMethod = pt
+				}
+			}
+			if payMethod == "" {
+				payMethod = payment.Provider
+			}
+			outboxPayload := outbox.PaymentSettledPayload{
+				OrderID:       payment.OrderID,
+				OrderNumber:   orderNum,
+				CustomerEmail: custEmail,
+				CustomerName:  custName,
+				Amount:        payment.Amount,
+				PaymentMethod: payMethod,
+				PaidAt:        paidAt,
+			}
+			if err := u.outboxRecorder.Enqueue(ctx, exec, outbox.EventPaymentSettled, outboxPayload); err != nil {
+				return fmt.Errorf("failed to enqueue outbox payment.settled event: %w", err)
+			}
 		}
 
 		return nil

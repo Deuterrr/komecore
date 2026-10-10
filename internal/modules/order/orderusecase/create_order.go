@@ -11,6 +11,7 @@ import (
 	apperrors "komecore/internal/common/errors"
 	paymentgateway "komecore/internal/infra/payment-gateway"
 	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/infra/outbox"
 	"komecore/internal/modules/auth/authrepo"
 	"komecore/internal/modules/cart/cartdomain"
 	"komecore/internal/modules/cart/cartrepo"
@@ -81,6 +82,10 @@ type CouponRedeemer interface {
 	RedeemCoupon(ctx context.Context, exec transaction.Executor, input discountusecase.RedeemCouponInput) (*discountdomain.CouponRedemption, error)
 }
 
+type OutboxRecorder interface {
+	Enqueue(ctx context.Context, exec transaction.Executor, eventType string, payload any) error
+}
+
 type CreateOrderUsecase struct {
 	executor               transaction.Executor
 	transactor             transaction.Transactor
@@ -100,6 +105,7 @@ type CreateOrderUsecase struct {
 	paymentGateway         paymentgateway.Provider
 	pricingService         orderrepo.PricingService
 	couponService          CouponRedeemer
+	outboxRecorder         OutboxRecorder
 }
 
 func NewCreateOrderUsecase(
@@ -144,6 +150,11 @@ func NewCreateOrderUsecase(
 
 func (u *CreateOrderUsecase) WithCouponService(cs CouponRedeemer) *CreateOrderUsecase {
 	u.couponService = cs
+	return u
+}
+
+func (u *CreateOrderUsecase) WithOutboxRecorder(recorder OutboxRecorder) *CreateOrderUsecase {
+	u.outboxRecorder = recorder
 	return u
 }
 
@@ -498,6 +509,29 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		}
 
 		instruction = ins
+
+		if u.outboxRecorder != nil {
+			outboxItems := make([]outbox.OrderCreatedItem, 0, len(orderItems))
+			for _, item := range orderItems {
+				outboxItems = append(outboxItems, outbox.OrderCreatedItem{
+					ProductName: item.ProductName,
+					Quantity:    item.Quantity,
+					UnitPrice:   item.UnitPrice,
+					Subtotal:    item.Subtotal,
+				})
+			}
+			outboxPayload := outbox.OrderCreatedPayload{
+				OrderID:       order.ID,
+				OrderNumber:   order.Number,
+				CustomerEmail: customerEmail,
+				CustomerName:  customerName,
+				Total:         order.Total,
+				Items:         outboxItems,
+			}
+			if err := u.outboxRecorder.Enqueue(ctx, exec, outbox.EventOrderCreated, outboxPayload); err != nil {
+				return fmt.Errorf("failed to enqueue outbox order.created event: %w", err)
+			}
+		}
 
 		return nil
 	})
