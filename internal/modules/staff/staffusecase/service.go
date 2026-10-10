@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	apperrors "komecore/internal/common/errors"
 	transaction "komecore/internal/infra/transactor"
@@ -97,6 +98,12 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, exec transaction.Executor, props userrepo.CreateUserProps) error
 }
 
+type AnalyticsRepository interface {
+	GetRevenueOverTime(ctx context.Context, exec transaction.Executor, interval string, since time.Time) ([]staffdomain.RevenueBucket, error)
+	GetOrderPipeline(ctx context.Context, exec transaction.Executor) ([]staffdomain.OrderStatusCount, error)
+	GetTopProducts(ctx context.Context, exec transaction.Executor, limit int) ([]staffdomain.TopProduct, error)
+}
+
 type StaffService struct {
 	executor            transaction.Executor
 	transactor          transaction.Transactor
@@ -108,6 +115,7 @@ type StaffService struct {
 	pwHasher            PasswordHasher
 	userDeletionService UserDeletionService
 	auditLogger         applogger.AuditLogger
+	analyticsRepo       AnalyticsRepository
 }
 
 func NewStaffService(
@@ -134,6 +142,11 @@ func NewStaffService(
 		userDeletionService: userDeletionService,
 		auditLogger:         auditLogger,
 	}
+}
+
+func (s *StaffService) WithAnalyticsRepository(repo AnalyticsRepository) *StaffService {
+	s.analyticsRepo = repo
+	return s
 }
 
 // AddStaffAccount adds an authentication account and membership to an existing staff entity.
@@ -748,4 +761,115 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 	})
 
 	return nil
+}
+
+// GetRevenueAnalytics retrieves time-bucketed revenue metrics for the specified range and interval.
+func (s *StaffService) GetRevenueAnalytics(ctx context.Context, rangeParam, intervalParam string) (*staffdomain.RevenueAnalytics, error) {
+	if s.analyticsRepo == nil {
+		return &staffdomain.RevenueAnalytics{
+			Range:    rangeParam,
+			Interval: intervalParam,
+			Buckets:  []staffdomain.RevenueBucket{},
+		}, nil
+	}
+
+	interval := strings.ToLower(strings.TrimSpace(intervalParam))
+	if interval == "" {
+		interval = "day"
+	}
+	switch interval {
+	case "day", "week", "month":
+		// valid
+	default:
+		interval = "day"
+	}
+
+	rangeStr := strings.ToLower(strings.TrimSpace(rangeParam))
+	if rangeStr == "" {
+		rangeStr = "30d"
+	}
+
+	now := appclock.Now()
+	var since time.Time
+	switch rangeStr {
+	case "7d":
+		since = now.AddDate(0, 0, -7)
+	case "30d":
+		since = now.AddDate(0, 0, -30)
+	case "90d":
+		since = now.AddDate(0, 0, -90)
+	case "1y":
+		since = now.AddDate(-1, 0, 0)
+	default:
+		rangeStr = "30d"
+		since = now.AddDate(0, 0, -30)
+	}
+
+	buckets, err := s.analyticsRepo.GetRevenueOverTime(ctx, s.executor, interval, since)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve revenue analytics: %w", err)
+	}
+
+	var totalRevenue int64
+	var totalOrders int64
+	for _, b := range buckets {
+		totalRevenue += b.Revenue
+		totalOrders += b.Count
+	}
+
+	return &staffdomain.RevenueAnalytics{
+		Range:        rangeStr,
+		Interval:     interval,
+		TotalRevenue: totalRevenue,
+		TotalOrders:  totalOrders,
+		Buckets:      buckets,
+	}, nil
+}
+
+// GetOrderPipelineAnalytics retrieves current order counts and revenue totals grouped by order status.
+func (s *StaffService) GetOrderPipelineAnalytics(ctx context.Context) (*staffdomain.OrderPipelineAnalytics, error) {
+	if s.analyticsRepo == nil {
+		return &staffdomain.OrderPipelineAnalytics{
+			Breakdown: []staffdomain.OrderStatusCount{},
+		}, nil
+	}
+
+	counts, err := s.analyticsRepo.GetOrderPipeline(ctx, s.executor)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve order pipeline analytics: %w", err)
+	}
+
+	var totalOrders int64
+	var totalAmount int64
+	for _, c := range counts {
+		totalOrders += c.Count
+		totalAmount += c.TotalAmount
+	}
+
+	return &staffdomain.OrderPipelineAnalytics{
+		TotalOrders: totalOrders,
+		TotalAmount: totalAmount,
+		Breakdown:   counts,
+	}, nil
+}
+
+// GetTopProductsAnalytics retrieves highest revenue-generating settled products.
+func (s *StaffService) GetTopProductsAnalytics(ctx context.Context, limit int) ([]staffdomain.TopProduct, error) {
+	if s.analyticsRepo == nil {
+		return []staffdomain.TopProduct{}, nil
+	}
+
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	products, err := s.analyticsRepo.GetTopProducts(ctx, s.executor, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve top products analytics: %w", err)
+	}
+
+	return products, nil
 }
