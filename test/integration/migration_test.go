@@ -18,6 +18,8 @@ var expectedTables = []string{
 	"accounts",
 	"carts",
 	"cart_items",
+	"coupons",
+	"coupon_redemptions",
 	"couriers",
 	"customer_addresses",
 	"customers",
