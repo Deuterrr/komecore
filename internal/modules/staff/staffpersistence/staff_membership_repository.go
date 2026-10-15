@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -22,7 +22,7 @@ func (r *StaffMembershipRepository) GetByAccountID(
 	ctx context.Context,
 	exec transaction.Executor,
 	accountID uuid.UUID,
-) (*staffdomain.StaffMembership, error) {
+) (*staff.StaffMembership, error) {
 	query := `
 		SELECT
 			id,
@@ -38,7 +38,7 @@ func (r *StaffMembershipRepository) GetByAccountID(
 		LIMIT 1
 	`
 
-	var m staffdomain.StaffMembership
+	var m staff.StaffMembership
 	err := exec.QueryRow(ctx, query, accountID).Scan(
 		&m.ID,
 		&m.StaffID,
@@ -62,7 +62,7 @@ func (r *StaffMembershipRepository) GetByAccountIDAndStaffID(
 	exec transaction.Executor,
 	accountID uuid.UUID,
 	staffID uuid.UUID,
-) (*staffdomain.StaffMembership, error) {
+) (*staff.StaffMembership, error) {
 	query := `
 		SELECT
 			id,
@@ -78,7 +78,7 @@ func (r *StaffMembershipRepository) GetByAccountIDAndStaffID(
 		LIMIT 1
 	`
 
-	var m staffdomain.StaffMembership
+	var m staff.StaffMembership
 	err := exec.QueryRow(ctx, query, accountID, staffID).Scan(
 		&m.ID,
 		&m.StaffID,
@@ -102,7 +102,7 @@ func (r *StaffMembershipRepository) ListRolesByAccountIDAndStaffID(
 	exec transaction.Executor,
 	accountID uuid.UUID,
 	staffID uuid.UUID,
-) ([]staffdomain.Role, error) {
+) ([]staff.Role, error) {
 	query := `
 		SELECT
 			ro.id,
@@ -122,9 +122,9 @@ func (r *StaffMembershipRepository) ListRolesByAccountIDAndStaffID(
 	}
 	defer rows.Close()
 
-	var roles []staffdomain.Role
+	var roles []staff.Role
 	for rows.Next() {
-		var role staffdomain.Role
+		var role staff.Role
 		if err := rows.Scan(
 			&role.ID,
 			&role.Code,
@@ -145,7 +145,7 @@ func (r *StaffMembershipRepository) ListRolesByAccountIDAndStaffID(
 func (r *StaffMembershipRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	membership staffdomain.StaffMembership,
+	membership staff.StaffMembership,
 ) error {
 	query := `
 		INSERT INTO staff_memberships (
@@ -238,7 +238,7 @@ func (r *StaffMembershipRepository) ListAccountsByStaffID(
 	ctx context.Context,
 	exec transaction.Executor,
 	staffID uuid.UUID,
-) ([]staffdomain.StaffAccountMember, error) {
+) ([]staff.StaffAccountMember, error) {
 	query := `
 		SELECT
 			sm.id,
@@ -267,11 +267,11 @@ func (r *StaffMembershipRepository) ListAccountsByStaffID(
 	}
 	defer rows.Close()
 
-	var accounts []staffdomain.StaffAccountMember
+	var accounts []staff.StaffAccountMember
 	for rows.Next() {
 		var (
-			a    staffdomain.StaffAccountMember
-			role staffdomain.Role
+			a    staff.StaffAccountMember
+			role staff.Role
 		)
 		if err := rows.Scan(
 			&a.ID,

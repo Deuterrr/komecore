@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"komecore/internal/modules/user/userdomain"
+	"komecore/internal/modules/user"
 	"komecore/internal/modules/user/userusecase"
 
 	"github.com/google/uuid"
@@ -21,12 +21,12 @@ func TestGetUserUsecase_ByID(t *testing.T) {
 	avatar := "https://example.com/avatar.jpg"
 	now := time.Now()
 
-	expectedUser := &userdomain.User{
+	expectedUser := &user.User{
 		ID:        userID,
 		Name:      "Alice Smith",
 		Username:  "alicesmith",
 		Phone:     &phone,
-		Role:      userdomain.RoleCustomer,
+		Role:      user.RoleCustomer,
 		AvatarURL: &avatar,
 		CreatedAt: now,
 	}
@@ -56,7 +56,7 @@ func TestGetUserUsecase_ByID(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve user")
-		assert.Equal(t, &userdomain.User{}, result)
+		assert.Equal(t, &user.User{}, result)
 		assert.Equal(t, 1, repo.getByIDCalls)
 	})
 }

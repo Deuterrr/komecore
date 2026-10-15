@@ -6,11 +6,10 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
-	"komecore/internal/modules/staff/staffrepo"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/staff"
+	"komecore/internal/modules/user"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -20,13 +19,13 @@ import (
 type VerifyAccountUsecase struct {
 	executor       transaction.Executor
 	transactor     transaction.Transactor
-	accountRepo    authrepo.AccountRepository
-	pwHasher       authrepo.PasswordHasher
-	userRepo       userrepo.UserRepository
-	customerRepo   authrepo.CustomerRepository
-	membershipRepo staffrepo.StaffMembershipRepository
-	challengeRepo  authrepo.VerificationChallengeRepository
-	sessionIssuer  authrepo.SessionIssuerService
+	accountRepo    auth.AccountRepository
+	pwHasher       auth.PasswordHasher
+	userRepo       user.Repository
+	customerRepo   auth.CustomerRepository
+	membershipRepo staff.MembershipRepository
+	challengeRepo  auth.VerificationChallengeRepository
+	sessionIssuer  auth.SessionIssuerService
 	auditLogger    applogger.AuditLogger
 	sysLogger      applogger.Logger
 }
@@ -34,16 +33,16 @@ type VerifyAccountUsecase struct {
 func NewVerifyAccountUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	pwHasher authrepo.PasswordHasher,
-	tokenHasher authrepo.TokenHasher,
-	userRepo userrepo.UserRepository,
-	customerRepo authrepo.CustomerRepository,
-	membershipRepo staffrepo.StaffMembershipRepository,
-	challengeRepo authrepo.VerificationChallengeRepository,
-	tokenSvc authrepo.TokenService,
-	sessionRepo authrepo.SessionRepository,
-	refreshTokenRepo authrepo.RefreshTokenRepository,
+	accountRepo auth.AccountRepository,
+	pwHasher auth.PasswordHasher,
+	tokenHasher auth.TokenHasher,
+	userRepo user.Repository,
+	customerRepo auth.CustomerRepository,
+	membershipRepo staff.MembershipRepository,
+	challengeRepo auth.VerificationChallengeRepository,
+	tokenSvc auth.TokenService,
+	sessionRepo auth.SessionRepository,
+	refreshTokenRepo auth.RefreshTokenRepository,
 	auditLogger applogger.AuditLogger,
 ) *VerifyAccountUsecase {
 	sessionIssuer := authsvc.NewSessionIssuerService(
@@ -69,7 +68,7 @@ func NewVerifyAccountUsecase(
 	}
 }
 
-func (u *VerifyAccountUsecase) SetSessionIssuer(sessionIssuer authrepo.SessionIssuerService) {
+func (u *VerifyAccountUsecase) SetSessionIssuer(sessionIssuer auth.SessionIssuerService) {
 	u.sessionIssuer = sessionIssuer
 }
 
@@ -85,7 +84,7 @@ type VerifyAccountParams struct {
 }
 
 type VerifyAccountResult struct {
-	AccessToken, RefreshToken authrepo.GeneratedToken
+	AccessToken, RefreshToken auth.GeneratedToken
 }
 
 func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountParams) (result *VerifyAccountResult, err error) {
@@ -96,19 +95,19 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 		return nil, fmt.Errorf("failed to get challenge: %w", err)
 	}
 	if challenge == nil {
-		return nil, apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+		return nil, apperror.NewNotFound(auth.ErrNotFoundChallenge.Error())
 	}
 	if challenge.ConsumedAt != nil {
-		return nil, apperror.NewConflict(authdomain.ErrConsumedChallenge.Error())
+		return nil, apperror.NewConflict(auth.ErrConsumedChallenge.Error())
 	}
 	if challenge.VerifiedAt != nil {
-		return nil, apperror.NewConflict(authdomain.ErrVerifiedChallenge.Error())
+		return nil, apperror.NewConflict(auth.ErrVerifiedChallenge.Error())
 	}
 	if challenge.ExpiresAt.Before(now) {
-		return nil, apperror.NewConflict(authdomain.ErrExpiredChallenge.Error())
+		return nil, apperror.NewConflict(auth.ErrExpiredChallenge.Error())
 	}
 	if challenge.AttemptCount >= 5 {
-		return nil, apperror.NewConflict(authdomain.ErrMaxAttemptReached.Error())
+		return nil, apperror.NewConflict(auth.ErrMaxAttemptReached.Error())
 	}
 
 	if err := u.pwHasher.Compare(challenge.CodeHash, input.OTP); err != nil {
@@ -116,7 +115,7 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 		if err := u.challengeRepo.Save(ctx, u.executor, *challenge); err != nil {
 			return nil, fmt.Errorf("failed to update challenge attempts: %w", err)
 		}
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidOTP.Error())
+		return nil, apperror.NewUnauthorized(auth.ErrInvalidOTP.Error())
 	}
 
 	challenge.VerifiedAt = &now
@@ -126,7 +125,7 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 		accountID  uuid.UUID
 		staffID    *uuid.UUID
 		customerID *uuid.UUID
-		roleCodes  []authdomain.RoleCode
+		roleCodes  []auth.RoleCode
 	)
 
 	account, err := u.accountRepo.GetByUserID(ctx, u.executor, *challenge.UserID)
@@ -137,7 +136,7 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 		accountID = account.ID
 
 		switch account.Type {
-		case authdomain.AccountTypeCustomer:
+		case auth.AccountTypeCustomer:
 			cust, err := u.customerRepo.GetByUserID(ctx, u.executor, account.UserID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get customer profile: %w", err)
@@ -146,7 +145,7 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 				customerID = &cust.ID
 			}
 
-		case authdomain.AccountTypeStaff:
+		case auth.AccountTypeStaff:
 			memberStaff, err := u.membershipRepo.GetByAccountID(ctx, u.executor, account.ID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get staff membership: %w", err)
@@ -160,9 +159,9 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 				if err != nil {
 					return nil, fmt.Errorf("failed to list staff roles: %w", err)
 				}
-				roleCodes = make([]authdomain.RoleCode, len(roles))
+				roleCodes = make([]auth.RoleCode, len(roles))
 				for i, r := range roles {
-					roleCodes[i] = authdomain.RoleCode(r.Code)
+					roleCodes[i] = auth.RoleCode(r.Code)
 				}
 			}
 		}
@@ -180,7 +179,7 @@ func (u *VerifyAccountUsecase) Execute(ctx context.Context, input VerifyAccountP
 		return nil, err
 	}
 
-	sessionRes, err := u.sessionIssuer.Issue(ctx, authrepo.IssueSessionParams{
+	sessionRes, err := u.sessionIssuer.Issue(ctx, auth.IssueSessionParams{
 		UserID:     *challenge.UserID,
 		AccountID:  accountID,
 		UserAgent:  input.UserAgent,

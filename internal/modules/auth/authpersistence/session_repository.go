@@ -7,7 +7,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
+	"komecore/internal/modules/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,7 +23,7 @@ func (r *SessionRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*authdomain.Session, error) {
+) (*auth.Session, error) {
 	query := `
 		SELECT
 			id,
@@ -41,7 +41,7 @@ func (r *SessionRepository) GetByID(
 		LIMIT 1
 	`
 
-	var s authdomain.Session
+	var s auth.Session
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&s.ID,
 		&s.UserID,
@@ -135,7 +135,7 @@ func (r *SessionRepository) UpdateLastActivityByID(
 func (r *SessionRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	session authdomain.Session,
+	session auth.Session,
 ) error {
 	query := `
 		INSERT INTO sessions (

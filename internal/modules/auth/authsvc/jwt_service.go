@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -16,7 +15,7 @@ type JWTService struct {
 	secretKey []byte
 }
 
-func NewJWTService(secret string) authrepo.TokenService {
+func NewJWTService(secret string) auth.TokenService {
 	return &JWTService{
 		secretKey: []byte(secret),
 	}
@@ -33,7 +32,7 @@ type jwtClaims struct {
 	jwt.RegisteredClaims
 }
 
-func (j *JWTService) Generate(params authrepo.GenerateTokenParams) (authrepo.GeneratedToken, error) {
+func (j *JWTService) Generate(params auth.GenerateTokenParams) (auth.GeneratedToken, error) {
 	now := appclock.Now()
 	exp := now.Add(params.Duration)
 
@@ -73,17 +72,17 @@ func (j *JWTService) Generate(params authrepo.GenerateTokenParams) (authrepo.Gen
 
 	signed, err := token.SignedString(j.secretKey)
 	if err != nil {
-		return authrepo.GeneratedToken{}, fmt.Errorf("sign jwt token failed: %w", err)
+		return auth.GeneratedToken{}, fmt.Errorf("sign jwt token failed: %w", err)
 	}
 
-	return authrepo.GeneratedToken{
+	return auth.GeneratedToken{
 		Token:     signed,
 		ExpiresAt: exp,
 		Type:      params.Type,
 	}, nil
 }
 
-func (j *JWTService) Validate(tokenStr string) (*authdomain.TokenClaims, error) {
+func (j *JWTService) Validate(tokenStr string) (*auth.TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenStr,
 		&jwtClaims{},
@@ -119,10 +118,10 @@ func (j *JWTService) Validate(tokenStr string) (*authdomain.TokenClaims, error) 
 		return nil, fmt.Errorf("invalid session id claim: %w", err)
 	}
 
-	tknClaim := &authdomain.TokenClaims{
+	tknClaim := &auth.TokenClaims{
 		UserID:    userID,
 		SessionID: sessionID,
-		Type:      authdomain.TokenType(claims.Type),
+		Type:      auth.TokenType(claims.Type),
 		IssuedAt:  claims.IssuedAt.Time,
 		ExpiresAt: claims.ExpiresAt.Time,
 	}

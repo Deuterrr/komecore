@@ -5,22 +5,21 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	applogger "komecore/pkg/logger"
 )
 
 type DeleteAccountUsecase struct {
 	transactor          transaction.Transactor
-	userDeletionService authrepo.UserDeletionService
-	customerRepo        authrepo.CustomerRepository
+	userDeletionService auth.UserDeletionService
+	customerRepo        auth.CustomerRepository
 	auditLogger         applogger.AuditLogger
 }
 
 func NewDeleteAccountUsecase(
 	transactor transaction.Transactor,
-	userDeletionService authrepo.UserDeletionService,
-	customerRepo authrepo.CustomerRepository,
+	userDeletionService auth.UserDeletionService,
+	customerRepo auth.CustomerRepository,
 	auditLogger applogger.AuditLogger,
 ) *DeleteAccountUsecase {
 	return &DeleteAccountUsecase{
@@ -31,7 +30,7 @@ func NewDeleteAccountUsecase(
 	}
 }
 
-func (u *DeleteAccountUsecase) Execute(ctx context.Context, authCtx authdomain.AuthContext) error {
+func (u *DeleteAccountUsecase) Execute(ctx context.Context, authCtx auth.AuthContext) error {
 	userID := authCtx.UserID
 
 	if err := u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {

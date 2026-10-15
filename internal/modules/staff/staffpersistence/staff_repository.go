@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
-	"komecore/internal/modules/staff/staffrepo"
+	"komecore/internal/modules/staff"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -24,7 +23,7 @@ func NewStaffRepository() *StaffRepository {
 func (r *StaffRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	staff staffdomain.Staff,
+	staff staff.Staff,
 ) error {
 	query := `
 		INSERT INTO staff (
@@ -50,7 +49,7 @@ func (r *StaffRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*staffdomain.Staff, error) {
+) (*staff.Staff, error) {
 	query := `
 		SELECT
 			id,
@@ -63,7 +62,7 @@ func (r *StaffRepository) GetByID(
 		LIMIT 1
 	`
 
-	var m staffdomain.Staff
+	var m staff.Staff
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&m.ID,
 		&m.UserID,
@@ -83,7 +82,7 @@ func (r *StaffRepository) GetProfileByUserID(
 	ctx context.Context,
 	exec transaction.Executor,
 	userID uuid.UUID,
-) (*staffdomain.StaffProfile, error) {
+) (*staff.StaffProfile, error) {
 	query := `
 		SELECT
 			s.id,
@@ -100,7 +99,7 @@ func (r *StaffRepository) GetProfileByUserID(
 		WHERE s.user_id = $1
 	`
 
-	var profile staffdomain.StaffProfile
+	var profile staff.StaffProfile
 	err := exec.QueryRow(ctx, query, userID).Scan(
 		&profile.ID,
 		&profile.UserID,
@@ -113,7 +112,7 @@ func (r *StaffRepository) GetProfileByUserID(
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, staffdomain.ErrNotFoundStaff
+			return nil, staff.ErrNotFoundStaff
 		}
 
 		return nil, fmt.Errorf("get staff profile by user id failed: %w", err)
@@ -125,8 +124,8 @@ func (r *StaffRepository) GetProfileByUserID(
 func (r *StaffRepository) FindStaff(
 	ctx context.Context,
 	exec transaction.Executor,
-	params staffrepo.FindStaffParams,
-) ([]staffdomain.StaffProfile, int, error) {
+	params staff.FindStaffParams,
+) ([]staff.StaffProfile, int, error) {
 	baseQuery := `
 		FROM staff m
 		INNER JOIN users u ON u.id = m.user_id
@@ -184,8 +183,8 @@ func (r *StaffRepository) FindStaff(
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
 	var staffSortKeys = map[pagination.SortKey]string{
-		staffrepo.StaffSortLatest: "m.created_at",
-		staffrepo.StaffSortModify: "m.updated_at",
+		staff.StaffSortLatest: "m.created_at",
+		staff.StaffSortModify: "m.updated_at",
 	}
 
 	var sortClauses []string
@@ -239,9 +238,9 @@ func (r *StaffRepository) FindStaff(
 	}
 	defer rows.Close()
 
-	var results []staffdomain.StaffProfile
+	var results []staff.StaffProfile
 	for rows.Next() {
-		var m staffdomain.StaffProfile
+		var m staff.StaffProfile
 		err := rows.Scan(
 			&m.ID,
 			&m.UserID,
@@ -283,7 +282,7 @@ func (r *StaffRepository) Update(
 		return fmt.Errorf("update staff failed: %w", err)
 	}
 	if staffRes.RowsAffected() == 0 {
-		return staffdomain.ErrNotFoundStaff
+		return staff.ErrNotFoundStaff
 	}
 
 	userQuery := `
@@ -323,7 +322,7 @@ func (r *StaffRepository) Delete(
 		return fmt.Errorf("soft delete staff failed: %w", err)
 	}
 	if res.RowsAffected() == 0 {
-		return staffdomain.ErrNotFoundStaff
+		return staff.ErrNotFoundStaff
 	}
 
 	return nil

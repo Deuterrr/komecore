@@ -6,8 +6,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -15,21 +14,21 @@ import (
 
 type sessionIssuerImpl struct {
 	transactor       transaction.Transactor
-	tokenSvc         authrepo.TokenService
-	tokenHasher      authrepo.TokenHasher
-	sessionRepo      authrepo.SessionRepository
-	refreshTokenRepo authrepo.RefreshTokenRepository
-	accountRepo      authrepo.AccountRepository
+	tokenSvc         auth.TokenService
+	tokenHasher      auth.TokenHasher
+	sessionRepo      auth.SessionRepository
+	refreshTokenRepo auth.RefreshTokenRepository
+	accountRepo      auth.AccountRepository
 }
 
 func NewSessionIssuerService(
 	transactor transaction.Transactor,
-	tokenSvc authrepo.TokenService,
-	tokenHasher authrepo.TokenHasher,
-	sessionRepo authrepo.SessionRepository,
-	refreshTokenRepo authrepo.RefreshTokenRepository,
-	accountRepo authrepo.AccountRepository,
-) authrepo.SessionIssuerService {
+	tokenSvc auth.TokenService,
+	tokenHasher auth.TokenHasher,
+	sessionRepo auth.SessionRepository,
+	refreshTokenRepo auth.RefreshTokenRepository,
+	accountRepo auth.AccountRepository,
+) auth.SessionIssuerService {
 	return &sessionIssuerImpl{
 		transactor:       transactor,
 		tokenSvc:         tokenSvc,
@@ -42,11 +41,11 @@ func NewSessionIssuerService(
 
 func (s *sessionIssuerImpl) Issue(
 	ctx context.Context,
-	params authrepo.IssueSessionParams,
-) (*authrepo.IssueSessionResult, error) {
+	params auth.IssueSessionParams,
+) (*auth.IssueSessionResult, error) {
 	now := appclock.Now()
 
-	session := authdomain.Session{
+	session := auth.Session{
 		ID:        uuid.New(),
 		UserID:    params.UserID,
 		UserAgent: params.UserAgent,
@@ -55,26 +54,26 @@ func (s *sessionIssuerImpl) Issue(
 		CreatedAt: now,
 	}
 
-	accessTkn, err := s.tokenSvc.Generate(authrepo.GenerateTokenParams{
+	accessTkn, err := s.tokenSvc.Generate(auth.GenerateTokenParams{
 		UserID:     params.UserID,
 		SessionID:  session.ID,
 		StaffID:    params.StaffID,
 		CustomerID: params.CustomerID,
 		Roles:      params.Roles,
-		Type:       authdomain.TokenTypeAccess,
+		Type:       auth.TokenTypeAccess,
 		Duration:   30 * time.Minute,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	refreshTkn, err := s.tokenSvc.Generate(authrepo.GenerateTokenParams{
+	refreshTkn, err := s.tokenSvc.Generate(auth.GenerateTokenParams{
 		UserID:     params.UserID,
 		SessionID:  session.ID,
 		StaffID:    params.StaffID,
 		CustomerID: params.CustomerID,
 		Roles:      params.Roles,
-		Type:       authdomain.TokenTypeRefresh,
+		Type:       auth.TokenTypeRefresh,
 		Duration:   7 * 24 * time.Hour,
 	})
 	if err != nil {
@@ -82,7 +81,7 @@ func (s *sessionIssuerImpl) Issue(
 	}
 
 	refreshTknHashed := s.tokenHasher.Hash(refreshTkn.Token)
-	refreshTknDomain := authdomain.RefreshToken{
+	refreshTknDomain := auth.RefreshToken{
 		ID:        uuid.New(),
 		SessionID: session.ID,
 		TokenHash: refreshTknHashed,
@@ -108,7 +107,7 @@ func (s *sessionIssuerImpl) Issue(
 		return nil, err
 	}
 
-	return &authrepo.IssueSessionResult{
+	return &auth.IssueSessionResult{
 		SessionID:    session.ID,
 		AccessToken:  accessTkn,
 		RefreshToken: refreshTkn,

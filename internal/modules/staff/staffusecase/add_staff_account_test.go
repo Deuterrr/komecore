@@ -7,7 +7,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -42,17 +42,17 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 	roleID := uuid.New()
 
 	memRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: roleID, Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: roleID, Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 	staffR := &mockStaffRepo{
-		staff: &staffdomain.Staff{
+		staff: &staff.Staff{
 			ID:        targetStaffID,
 			UserID:    targetUserID,
 			CreatedAt: time.Now(),
@@ -60,7 +60,7 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 	}
 	accRepo := &customMockAccountRepo{}
 	roleR := &mockRoleRepo{
-		role: &staffdomain.Role{ID: roleID, Code: staffdomain.RoleStaff, Name: "Staff"},
+		role: &staff.Role{ID: roleID, Code: staff.RoleStaff, Name: "Staff"},
 	}
 	pwHash := &mockPwHasher{}
 	exec := &mockExecutor{}
@@ -125,17 +125,17 @@ func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
 	targetStaffID := uuid.New()
 
 	memRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaff, Name: "Staff"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaff, Name: "Staff"},
 		},
 	}
 	staffR := &mockStaffRepo{
-		staff: &staffdomain.Staff{ID: targetStaffID, UserID: uuid.New()},
+		staff: &staff.Staff{ID: targetStaffID, UserID: uuid.New()},
 	}
 
 	uc := NewStaffService(
@@ -170,13 +170,13 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 	targetStaffID := uuid.New()
 
 	memRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 	accRepo := &customMockAccountRepo{
@@ -219,17 +219,17 @@ func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
 	targetUserID := uuid.New()
 
 	memRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 	staffR := &mockStaffRepo{
-		staff: &staffdomain.Staff{ID: targetStaffID, UserID: targetUserID},
+		staff: &staff.Staff{ID: targetStaffID, UserID: targetUserID},
 	}
 	accRepo := &customMockAccountRepo{
 		existingAccountByUser: &AccountInfo{

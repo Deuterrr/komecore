@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 
 	"github.com/google/uuid"
 )
@@ -18,24 +18,24 @@ func TestListStaffAccounts_Success(t *testing.T) {
 	targetStaffID := actorStaffID
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
-		accounts: []staffdomain.StaffAccountMember{
+		accounts: []staff.StaffAccountMember{
 			{
 				AccountID: actorAccountID,
 				UserID:    uuid.New(),
 				Email:     "admin@komecore.com",
 				Name:      "Admin User",
 				Username:  "admin",
-				Role: staffdomain.Role{
+				Role: staff.Role{
 					ID:   uuid.New(),
-					Code: staffdomain.RoleStaffAdmin,
+					Code: staff.RoleStaffAdmin,
 					Name: "Staff Admin",
 				},
 				CreatedAt: time.Now(),
@@ -44,7 +44,7 @@ func TestListStaffAccounts_Success(t *testing.T) {
 	}
 
 	staffRepo := &mockStaffRepo{
-		staff: &staffdomain.Staff{
+		staff: &staff.Staff{
 			ID:     targetStaffID,
 			UserID: uuid.New(),
 		},
@@ -89,18 +89,18 @@ func TestListStaffAccounts_UnauthorizedRole(t *testing.T) {
 	actorStaffID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaff, Name: "Staff"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaff, Name: "Staff"},
 		},
 	}
 
 	staffRepo := &mockStaffRepo{
-		staff: &staffdomain.Staff{ID: actorStaffID},
+		staff: &staff.Staff{ID: actorStaffID},
 	}
 
 	uc := NewStaffService(
@@ -138,13 +138,13 @@ func TestListStaffAccounts_StaffNotFound(t *testing.T) {
 	actorStaffID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 

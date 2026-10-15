@@ -11,24 +11,23 @@ import (
 	appcookie "komecore/internal/httpx/cookie"
 	commonmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 )
 
 type jwtAuthenticator struct {
-	tokenSvc         authrepo.TokenService
-	sessionRepo      authrepo.SessionRepository
-	tokenHasher      authrepo.TokenHasher
-	refreshTokenRepo authrepo.RefreshTokenRepository
+	tokenSvc         auth.TokenService
+	sessionRepo      auth.SessionRepository
+	tokenHasher      auth.TokenHasher
+	refreshTokenRepo auth.RefreshTokenRepository
 }
 
 func NewJWTAuthenticator(
-	tokenSvc authrepo.TokenService,
-	sessionRepo authrepo.SessionRepository,
-	tokenHasher authrepo.TokenHasher,
-	refreshTokenRepo authrepo.RefreshTokenRepository,
-) authrepo.Authenticator {
+	tokenSvc auth.TokenService,
+	sessionRepo auth.SessionRepository,
+	tokenHasher auth.TokenHasher,
+	refreshTokenRepo auth.RefreshTokenRepository,
+) Authenticator {
 	return &jwtAuthenticator{
 		tokenSvc:         tokenSvc,
 		sessionRepo:      sessionRepo,
@@ -55,7 +54,7 @@ func extractToken(r *http.Request, cookie appcookie.CookieName) string {
 
 func isValidCookieForAuth(
 	cookie appcookie.CookieName,
-	authCtx *authdomain.AuthContext,
+	authCtx *auth.AuthContext,
 ) bool {
 	if authCtx == nil {
 		return false
@@ -79,19 +78,19 @@ func (aM *jwtAuthenticator) RequireAuth(
 		return func(w http.ResponseWriter, r *http.Request) error {
 			token := extractToken(r, cookie)
 			if token == "" {
-				return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+				return apperror.NewUnauthorized(auth.ErrAuthenticationRequired.Error())
 			}
 
 			authCtx, err := aM.authenticate(r.Context(), exec, token)
 			if err != nil {
-				return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+				return apperror.NewUnauthorized(auth.ErrAuthenticationRequired.Error())
 			}
 
 			if !isValidCookieForAuth(cookie, authCtx) {
-				return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+				return apperror.NewUnauthorized(auth.ErrAuthenticationRequired.Error())
 			}
 
-			ctx := authdomain.WithAuthContext(r.Context(), authCtx)
+			ctx := auth.WithAuthContext(r.Context(), authCtx)
 			ctx = WithActor(ctx, ActorFromAuthContext(authCtx))
 
 			return next(w, r.WithContext(ctx))
@@ -121,13 +120,13 @@ func (aM *jwtAuthenticator) RequireAnyAuth(
 					continue
 				}
 
-				ctx := authdomain.WithAuthContext(r.Context(), authCtx)
+				ctx := auth.WithAuthContext(r.Context(), authCtx)
 				ctx = WithActor(ctx, ActorFromAuthContext(authCtx))
 
 				return next(w, r.WithContext(ctx))
 			}
 
-			return apperror.NewUnauthorized(authdomain.ErrAuthenticationRequired.Error())
+			return apperror.NewUnauthorized(auth.ErrAuthenticationRequired.Error())
 		}
 	}
 }
@@ -164,7 +163,7 @@ func (aM *jwtAuthenticator) OptionalAuth(
 					continue
 				}
 
-				ctx := authdomain.WithAuthContext(r.Context(), authCtx)
+				ctx := auth.WithAuthContext(r.Context(), authCtx)
 				ctx = WithActor(ctx, ActorFromAuthContext(authCtx))
 
 				return next(w, r.WithContext(ctx))
@@ -179,13 +178,13 @@ func (aM *jwtAuthenticator) authenticate(
 	ctx context.Context,
 	exec transaction.Executor,
 	token string,
-) (*authdomain.AuthContext, error) {
+) (*auth.AuthContext, error) {
 	claims, err := aM.tokenSvc.Validate(token)
 	if err != nil {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidToken.Error())
+		return nil, apperror.NewUnauthorized(auth.ErrInvalidToken.Error())
 	}
-	if claims.Type != authdomain.TokenTypeAccess {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidToken.Error())
+	if claims.Type != auth.TokenTypeAccess {
+		return nil, apperror.NewUnauthorized(auth.ErrInvalidToken.Error())
 	}
 
 	session, err := aM.sessionRepo.GetByID(ctx, exec, claims.SessionID)
@@ -196,15 +195,15 @@ func (aM *jwtAuthenticator) authenticate(
 		session.UserID != claims.UserID ||
 		session.RevokedAt != nil ||
 		session.ExpiresAt.Before(appclock.Now()) {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidSession.Error())
+		return nil, apperror.NewUnauthorized(auth.ErrInvalidSession.Error())
 	}
 
-	accType := authdomain.AccountTypeCustomer
+	accType := auth.AccountTypeCustomer
 	if claims.StaffID != nil {
-		accType = authdomain.AccountTypeStaff
+		accType = auth.AccountTypeStaff
 	}
 
-	return &authdomain.AuthContext{
+	return &auth.AuthContext{
 		UserID:          claims.UserID,
 		SessionID:       claims.SessionID,
 		TokenType:       claims.Type,

@@ -6,8 +6,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -17,10 +16,10 @@ import (
 type ResetPasswordUsecase struct {
 	executor      transaction.Executor
 	transactor    transaction.Transactor
-	accountRepo   authrepo.AccountRepository
-	sessionRepo   authrepo.SessionRepository
-	challengeRepo authrepo.VerificationChallengeRepository
-	pwHasher      authrepo.PasswordHasher
+	accountRepo   auth.AccountRepository
+	sessionRepo   auth.SessionRepository
+	challengeRepo auth.VerificationChallengeRepository
+	pwHasher      auth.PasswordHasher
 	auditLogger   applogger.AuditLogger
 	sysLogger     applogger.Logger
 }
@@ -28,10 +27,10 @@ type ResetPasswordUsecase struct {
 func NewResetPasswordUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	sessionRepo authrepo.SessionRepository,
-	challengeRepo authrepo.VerificationChallengeRepository,
-	pwHasher authrepo.PasswordHasher,
+	accountRepo auth.AccountRepository,
+	sessionRepo auth.SessionRepository,
+	challengeRepo auth.VerificationChallengeRepository,
+	pwHasher auth.PasswordHasher,
 	auditLogger applogger.AuditLogger,
 ) *ResetPasswordUsecase {
 	return &ResetPasswordUsecase{
@@ -62,19 +61,19 @@ func (u *ResetPasswordUsecase) Execute(ctx context.Context, params ResetPassword
 		return fmt.Errorf("failed to get challenge: %w", err)
 	}
 	if challenge == nil {
-		return apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+		return apperror.NewNotFound(auth.ErrNotFoundChallenge.Error())
 	}
-	if challenge.Purpose != authdomain.OTPPurposePasswordReset {
-		return apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+	if challenge.Purpose != auth.OTPPurposePasswordReset {
+		return apperror.NewNotFound(auth.ErrNotFoundChallenge.Error())
 	}
 	if challenge.ConsumedAt != nil {
-		return apperror.NewConflict(authdomain.ErrConsumedChallenge.Error())
+		return apperror.NewConflict(auth.ErrConsumedChallenge.Error())
 	}
 	if challenge.VerifiedAt == nil {
 		return apperror.NewConflict("challenge is not verified")
 	}
 	if challenge.ExpiresAt.Before(now) {
-		return apperror.NewConflict(authdomain.ErrExpiredChallenge.Error())
+		return apperror.NewConflict(auth.ErrExpiredChallenge.Error())
 	}
 	if challenge.UserID == nil {
 		return apperror.NewInternal(fmt.Errorf("challenge has no user_id bound"))

@@ -5,22 +5,21 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	applogger "komecore/pkg/logger"
 )
 
 type LogoutUsecase struct {
 	transactor     transaction.Transactor
-	refreshTknRepo authrepo.RefreshTokenRepository
-	sessionRepo    authrepo.SessionRepository
+	refreshTknRepo auth.RefreshTokenRepository
+	sessionRepo    auth.SessionRepository
 	auditLogger    applogger.AuditLogger
 }
 
 func NewLogoutUsecase(
 	transactor transaction.Transactor,
-	refreshTknRepo authrepo.RefreshTokenRepository,
-	sessionRepo authrepo.SessionRepository,
+	refreshTknRepo auth.RefreshTokenRepository,
+	sessionRepo auth.SessionRepository,
 	auditLogger applogger.AuditLogger,
 ) *LogoutUsecase {
 	return &LogoutUsecase{
@@ -33,7 +32,7 @@ func NewLogoutUsecase(
 
 func (u *LogoutUsecase) Execute(
 	ctx context.Context,
-	authCtx authdomain.AuthContext,
+	authCtx auth.AuthContext,
 ) error {
 	err := u.transactor.WithinTransaction(
 		ctx,

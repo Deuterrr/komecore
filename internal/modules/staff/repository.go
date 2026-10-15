@@ -1,38 +1,51 @@
-package staffrepo
+package staff
 
 import (
 	"context"
-
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
+	"time"
 
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/pagination"
 )
 
-type StaffRepository interface {
+var (
+	StaffSortLatest pagination.SortKey = "latest"
+	StaffSortModify pagination.SortKey = "modified"
+)
+
+type FindStaffParams struct {
+	ID *uuid.UUID
+
+	pagination.Pagination
+	pagination.Sorts
+}
+
+type Repository interface {
 	Create(
 		ctx context.Context,
 		exec transaction.Executor,
-		staff staffdomain.Staff,
+		staff Staff,
 	) error
 
 	GetByID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*staffdomain.Staff, error)
+	) (*Staff, error)
 
 	GetProfileByUserID(
 		ctx context.Context,
 		exec transaction.Executor,
 		userID uuid.UUID,
-	) (*staffdomain.StaffProfile, error)
+	) (*StaffProfile, error)
 
 	FindStaff(
 		ctx context.Context,
 		exec transaction.Executor,
 		params FindStaffParams,
-	) ([]staffdomain.StaffProfile, int, error)
+	) ([]StaffProfile, int, error)
 
 	Update(
 		ctx context.Context,
@@ -50,31 +63,31 @@ type StaffRepository interface {
 	) error
 }
 
-type StaffMembershipRepository interface {
+type MembershipRepository interface {
 	GetByAccountID(
 		ctx context.Context,
 		exec transaction.Executor,
 		accountID uuid.UUID,
-	) (*staffdomain.StaffMembership, error)
+	) (*StaffMembership, error)
 
 	GetByAccountIDAndStaffID(
 		ctx context.Context,
 		exec transaction.Executor,
 		accountID uuid.UUID,
 		staffID uuid.UUID,
-	) (*staffdomain.StaffMembership, error)
+	) (*StaffMembership, error)
 
 	ListRolesByAccountIDAndStaffID(
 		ctx context.Context,
 		exec transaction.Executor,
 		accountID uuid.UUID,
 		staffID uuid.UUID,
-	) ([]staffdomain.Role, error)
+	) ([]Role, error)
 
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		membership staffdomain.StaffMembership,
+		membership StaffMembership,
 	) error
 
 	DeleteByAccountID(
@@ -100,7 +113,7 @@ type StaffMembershipRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		staffID uuid.UUID,
-	) ([]staffdomain.StaffAccountMember, error)
+	) ([]StaffAccountMember, error)
 }
 
 type RoleRepository interface {
@@ -109,11 +122,20 @@ type RoleRepository interface {
 		exec transaction.Executor,
 		accountID uuid.UUID,
 		staffID uuid.UUID,
-	) ([]staffdomain.Role, error)
+	) ([]Role, error)
 
 	GetByCode(
 		ctx context.Context,
 		exec transaction.Executor,
-		code staffdomain.RoleCode,
-	) (*staffdomain.Role, error)
+		code RoleCode,
+	) (*Role, error)
 }
+
+type AnalyticsRepository interface {
+	GetRevenueOverTime(ctx context.Context, exec transaction.Executor, interval string, since time.Time) ([]RevenueBucket, error)
+	GetOrderPipeline(ctx context.Context, exec transaction.Executor) ([]OrderStatusCount, error)
+	GetTopProducts(ctx context.Context, exec transaction.Executor, limit int) ([]TopProduct, error)
+}
+
+type StaffRepository = Repository
+type StaffMembershipRepository = MembershipRepository

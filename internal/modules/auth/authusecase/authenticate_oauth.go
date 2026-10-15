@@ -7,10 +7,9 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/user"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -20,11 +19,11 @@ import (
 type AuthenticateOAuthUsecase struct {
 	executor      transaction.Executor
 	transactor    transaction.Transactor
-	accountRepo   authrepo.AccountRepository
-	oauthRepo     authrepo.OAuthConnectionRepository
-	userRepo      userrepo.UserRepository
-	customerRepo  authrepo.CustomerRepository
-	sessionIssuer authrepo.SessionIssuerService
+	accountRepo   auth.AccountRepository
+	oauthRepo     auth.OAuthConnectionRepository
+	userRepo      user.Repository
+	customerRepo  auth.CustomerRepository
+	sessionIssuer auth.SessionIssuerService
 	auditLogger   applogger.AuditLogger
 	sysLogger     applogger.Logger
 }
@@ -32,14 +31,14 @@ type AuthenticateOAuthUsecase struct {
 func NewAuthenticateOAuthUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	oauthRepo authrepo.OAuthConnectionRepository,
-	userRepo userrepo.UserRepository,
-	customerRepo authrepo.CustomerRepository,
-	tokenHasher authrepo.TokenHasher,
-	tokenSvc authrepo.TokenService,
-	sessionRepo authrepo.SessionRepository,
-	refreshTokenRepo authrepo.RefreshTokenRepository,
+	accountRepo auth.AccountRepository,
+	oauthRepo auth.OAuthConnectionRepository,
+	userRepo user.Repository,
+	customerRepo auth.CustomerRepository,
+	tokenHasher auth.TokenHasher,
+	tokenSvc auth.TokenService,
+	sessionRepo auth.SessionRepository,
+	refreshTokenRepo auth.RefreshTokenRepository,
 	auditLogger applogger.AuditLogger,
 ) *AuthenticateOAuthUsecase {
 	sessionIssuer := authsvc.NewSessionIssuerService(
@@ -63,7 +62,7 @@ func NewAuthenticateOAuthUsecase(
 	}
 }
 
-func (u *AuthenticateOAuthUsecase) SetSessionIssuer(sessionIssuer authrepo.SessionIssuerService) {
+func (u *AuthenticateOAuthUsecase) SetSessionIssuer(sessionIssuer auth.SessionIssuerService) {
 	u.sessionIssuer = sessionIssuer
 }
 
@@ -74,7 +73,7 @@ func (u *AuthenticateOAuthUsecase) SetSysLogger(sysLogger applogger.Logger) {
 type AuthenticateOAuthParams struct {
 	UserAgent *string
 	IPAddress *string
-	Provider  authdomain.OAuthProvider
+	Provider  auth.OAuthProvider
 	Subject   string
 	Email     string
 	Name      string
@@ -82,8 +81,8 @@ type AuthenticateOAuthParams struct {
 }
 
 type AuthenticateOAuthResult struct {
-	AccessToken  authrepo.GeneratedToken
-	RefreshToken authrepo.GeneratedToken
+	AccessToken  auth.GeneratedToken
+	RefreshToken auth.GeneratedToken
 }
 
 func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input AuthenticateOAuthParams) (result *AuthenticateOAuthResult, err error) {
@@ -98,7 +97,7 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 	}
 
 	var userID uuid.UUID
-	var account *authdomain.Account
+	var account *auth.Account
 
 	// OAuth identity is already linked;
 	// update login metadata and continue authentication flow with existing account.
@@ -126,17 +125,17 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 			return nil, apperror.NewNotFound("account not found")
 		}
 
-		if account.Status != authdomain.AccountActive &&
-			account.Status != authdomain.AccountPending {
+		if account.Status != auth.AccountActive &&
+			account.Status != auth.AccountPending {
 			return nil, apperror.NewForbidden("account is suspended or locked")
 		}
 
-		if account.Status == authdomain.AccountPending {
+		if account.Status == auth.AccountPending {
 			err = u.accountRepo.ActivateByUserID(ctx, u.executor, userID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to activate account: %w", err)
 			}
-			account.Status = authdomain.AccountActive
+			account.Status = auth.AccountActive
 		}
 	}
 
@@ -159,7 +158,7 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 		}
 
 		userID = account.UserID
-		newConn := authdomain.OAuthConnection{
+		newConn := auth.OAuthConnection{
 			ID:          uuid.New(),
 			UserID:      userID,
 			Provider:    input.Provider,
@@ -170,11 +169,11 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 		}
 
 		if err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-			if account.Status == authdomain.AccountPending {
+			if account.Status == auth.AccountPending {
 				if err := u.accountRepo.ActivateByUserID(ctx, exec, userID); err != nil {
 					return fmt.Errorf("failed to activate account: %w", err)
 				}
-				account.Status = authdomain.AccountActive
+				account.Status = auth.AccountActive
 			}
 			if err := u.oauthRepo.Create(ctx, exec, newConn); err != nil {
 				return fmt.Errorf("failed to link oauth connection: %w", err)
@@ -195,7 +194,7 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 		baseUsername, _, _ := strings.Cut(input.Email, "@")
 		username := fmt.Sprintf("%s_%s", baseUsername, uuid.New().String()[:7])
 
-		userProps := userrepo.CreateUserProps{
+		userProps := user.CreateUserProps{
 			ID:        userID,
 			Name:      input.Name,
 			Username:  username,
@@ -203,23 +202,23 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 			CreatedAt: now,
 		}
 
-		newAcc := authdomain.Account{
+		newAcc := auth.Account{
 			ID:        accountID,
 			UserID:    userID,
 			Email:     input.Email,
 			Password:  "",
-			Status:    authdomain.AccountActive,
-			Type:      authdomain.AccountTypeCustomer,
+			Status:    auth.AccountActive,
+			Type:      auth.AccountTypeCustomer,
 			CreatedAt: now,
 		}
 
-		cust := authdomain.Customer{
+		cust := auth.Customer{
 			ID:        customerID,
 			UserID:    userID,
 			CreatedAt: now,
 		}
 
-		newConn := authdomain.OAuthConnection{
+		newConn := auth.OAuthConnection{
 			ID:          uuid.New(),
 			UserID:      userID,
 			Provider:    input.Provider,
@@ -229,7 +228,7 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 			CreatedAt:   now,
 		}
 
-		profile := userrepo.SaveProfileProps{
+		profile := user.SaveProfileProps{
 			UserID:    userID,
 			Name:      &input.Name,
 			AvatarURL: input.AvatarURL,
@@ -269,7 +268,7 @@ func (u *AuthenticateOAuthUsecase) Execute(ctx context.Context, input Authentica
 		customerID = &custProfile.ID
 	}
 
-	sessionRes, err := u.sessionIssuer.Issue(ctx, authrepo.IssueSessionParams{
+	sessionRes, err := u.sessionIssuer.Issue(ctx, auth.IssueSessionParams{
 		UserID:     userID,
 		AccountID:  account.ID,
 		UserAgent:  input.UserAgent,

@@ -3,12 +3,12 @@ package authsvc
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 )
 
 type sHA256TokenHasher struct{}
 
-func NewSHATokenHasher() authrepo.TokenHasher {
+func NewSHATokenHasher() auth.TokenHasher {
 	return &sHA256TokenHasher{}
 }
 

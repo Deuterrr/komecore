@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"komecore/internal/modules/auth"
+	"komecore/internal/modules/user"
+
 	"github.com/google/uuid"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/user/userdomain"
 )
 
 func TestMeUsecase_Execute_Success(t *testing.T) {
@@ -15,15 +16,15 @@ func TestMeUsecase_Execute_Success(t *testing.T) {
 	userID := uuid.New()
 	accountID := uuid.New()
 
-	existingAcc := &authdomain.Account{
+	existingAcc := &auth.Account{
 		ID:     accountID,
 		UserID: userID,
 		Email:  "me@gmail.com",
-		Status: authdomain.AccountActive,
+		Status: auth.AccountActive,
 	}
 
 	avatar := "http://example.com/me.png"
-	existingUser := &userdomain.User{
+	existingUser := &user.User{
 		ID:        userID,
 		Name:      "Me User",
 		AvatarURL: &avatar,
@@ -39,7 +40,7 @@ func TestMeUsecase_Execute_Success(t *testing.T) {
 		&mockOAuthRepo{},
 	)
 
-	authCtx := authdomain.AuthContext{
+	authCtx := auth.AuthContext{
 		UserID:          userID,
 		IsAuthenticated: true,
 	}
@@ -71,16 +72,16 @@ func TestMeUsecase_SmartWrite_SkippedWhenRecent(t *testing.T) {
 	accountID := uuid.New()
 
 	recentTime := time.Now().Add(-1 * time.Minute)
-	existingAcc := &authdomain.Account{
+	existingAcc := &auth.Account{
 		ID:          accountID,
 		UserID:      userID,
 		Email:       "recent@gmail.com",
-		Status:      authdomain.AccountActive,
+		Status:      auth.AccountActive,
 		LastLoginAt: &recentTime,
 	}
 
 	accountRepoMock := &mockAccountRepo{account: existingAcc}
-	userRepoMock := &mockUserRepo{user: &userdomain.User{ID: userID}}
+	userRepoMock := &mockUserRepo{user: &user.User{ID: userID}}
 
 	uc := NewMeUsecase(
 		&mockExecutor{},
@@ -89,7 +90,7 @@ func TestMeUsecase_SmartWrite_SkippedWhenRecent(t *testing.T) {
 		&mockOAuthRepo{},
 	)
 
-	authCtx := authdomain.AuthContext{
+	authCtx := auth.AuthContext{
 		UserID:          userID,
 		IsAuthenticated: true,
 	}
@@ -114,16 +115,16 @@ func TestMeUsecase_SmartWrite_TriggersWhenOlderThanThreshold(t *testing.T) {
 	accountID := uuid.New()
 
 	oldTime := time.Now().Add(-10 * time.Minute)
-	existingAcc := &authdomain.Account{
+	existingAcc := &auth.Account{
 		ID:          accountID,
 		UserID:      userID,
 		Email:       "old@gmail.com",
-		Status:      authdomain.AccountActive,
+		Status:      auth.AccountActive,
 		LastLoginAt: &oldTime,
 	}
 
 	accountRepoMock := &mockAccountRepo{account: existingAcc}
-	userRepoMock := &mockUserRepo{user: &userdomain.User{ID: userID}}
+	userRepoMock := &mockUserRepo{user: &user.User{ID: userID}}
 
 	uc := NewMeUsecase(
 		&mockExecutor{},
@@ -132,7 +133,7 @@ func TestMeUsecase_SmartWrite_TriggersWhenOlderThanThreshold(t *testing.T) {
 		&mockOAuthRepo{},
 	)
 
-	authCtx := authdomain.AuthContext{
+	authCtx := auth.AuthContext{
 		UserID:          userID,
 		IsAuthenticated: true,
 	}

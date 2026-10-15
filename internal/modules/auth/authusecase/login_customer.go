@@ -6,8 +6,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
 	applogger "komecore/pkg/logger"
 
@@ -17,10 +16,10 @@ import (
 type LoginCustomerUsecase struct {
 	executor      transaction.Executor
 	transactor    transaction.Transactor
-	accountRepo   authrepo.AccountRepository
-	pwHasher      authrepo.PasswordHasher
-	customerRepo  authrepo.CustomerRepository
-	sessionIssuer authrepo.SessionIssuerService
+	accountRepo   auth.AccountRepository
+	pwHasher      auth.PasswordHasher
+	customerRepo  auth.CustomerRepository
+	sessionIssuer auth.SessionIssuerService
 	auditLogger   applogger.AuditLogger
 	sysLogger     applogger.Logger
 }
@@ -28,13 +27,13 @@ type LoginCustomerUsecase struct {
 func NewLoginCustomerUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	pwHasher authrepo.PasswordHasher,
-	tokenHasher authrepo.TokenHasher,
-	tokenSvc authrepo.TokenService,
-	sessionRepo authrepo.SessionRepository,
-	refreshTokenRepo authrepo.RefreshTokenRepository,
-	customerRepo authrepo.CustomerRepository,
+	accountRepo auth.AccountRepository,
+	pwHasher auth.PasswordHasher,
+	tokenHasher auth.TokenHasher,
+	tokenSvc auth.TokenService,
+	sessionRepo auth.SessionRepository,
+	refreshTokenRepo auth.RefreshTokenRepository,
+	customerRepo auth.CustomerRepository,
 	auditLogger applogger.AuditLogger,
 ) *LoginCustomerUsecase {
 	sessionIssuer := authsvc.NewSessionIssuerService(
@@ -57,7 +56,7 @@ func NewLoginCustomerUsecase(
 	}
 }
 
-func (u *LoginCustomerUsecase) SetSessionIssuer(sessionIssuer authrepo.SessionIssuerService) {
+func (u *LoginCustomerUsecase) SetSessionIssuer(sessionIssuer auth.SessionIssuerService) {
 	u.sessionIssuer = sessionIssuer
 }
 
@@ -73,7 +72,7 @@ type LoginCustomerParams struct {
 }
 
 type LoginEmailResult struct {
-	AccessToken, RefreshToken authrepo.GeneratedToken
+	AccessToken, RefreshToken auth.GeneratedToken
 }
 
 func (u *LoginCustomerUsecase) Execute(ctx context.Context, input LoginCustomerParams) (result *LoginEmailResult, err error) {
@@ -82,17 +81,17 @@ func (u *LoginCustomerUsecase) Execute(ctx context.Context, input LoginCustomerP
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if existing == nil {
-		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, auth.ErrInvalidCredentials.Error())
 	}
-	if existing.Type != authdomain.AccountTypeCustomer {
-		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
+	if existing.Type != auth.AccountTypeCustomer {
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, auth.ErrInvalidCredentials.Error())
 	}
-	if existing.Status != authdomain.AccountActive {
-		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+	if existing.Status != auth.AccountActive {
+		return nil, apperror.NewForbidden(auth.ErrEmailNotVerified.Error())
 	}
 
 	if err := u.pwHasher.Compare(existing.Password, input.Password); err != nil {
-		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, auth.ErrInvalidCredentials.Error())
 	}
 
 	var customerID *uuid.UUID
@@ -104,7 +103,7 @@ func (u *LoginCustomerUsecase) Execute(ctx context.Context, input LoginCustomerP
 		customerID = &cust.ID
 	}
 
-	sessionRes, err := u.sessionIssuer.Issue(ctx, authrepo.IssueSessionParams{
+	sessionRes, err := u.sessionIssuer.Issue(ctx, auth.IssueSessionParams{
 		UserID:     existing.UserID,
 		AccountID:  existing.ID,
 		UserAgent:  input.UserAgent,

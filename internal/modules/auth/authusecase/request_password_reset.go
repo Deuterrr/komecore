@@ -7,8 +7,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
 	applogger "komecore/pkg/logger"
 	mailer "komecore/pkg/mailer"
@@ -20,8 +19,8 @@ import (
 type RequestPasswordResetUsecase struct {
 	executor     transaction.Executor
 	transactor   transaction.Transactor
-	accountRepo  authrepo.AccountRepository
-	challengeSvc authrepo.ChallengeService
+	accountRepo  auth.AccountRepository
+	challengeSvc auth.ChallengeService
 	auditLogger  applogger.AuditLogger
 	sysLogger    applogger.Logger
 }
@@ -29,9 +28,9 @@ type RequestPasswordResetUsecase struct {
 func NewRequestPasswordResetUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	challengeRepo authrepo.VerificationChallengeRepository,
-	pwHasher authrepo.PasswordHasher,
+	accountRepo auth.AccountRepository,
+	challengeRepo auth.VerificationChallengeRepository,
+	pwHasher auth.PasswordHasher,
 	otpGen otp.Generator,
 	mailer mailer.Sender,
 	auditLogger applogger.AuditLogger,
@@ -53,7 +52,7 @@ func NewRequestPasswordResetUsecase(
 	}
 }
 
-func (u *RequestPasswordResetUsecase) SetChallengeService(challengeSvc authrepo.ChallengeService) {
+func (u *RequestPasswordResetUsecase) SetChallengeService(challengeSvc auth.ChallengeService) {
 	u.challengeSvc = challengeSvc
 }
 
@@ -63,7 +62,7 @@ func (u *RequestPasswordResetUsecase) SetSysLogger(sysLogger applogger.Logger) {
 
 type RequestPasswordResetParams struct {
 	Email       string
-	AccountType authdomain.AccountType
+	AccountType auth.AccountType
 }
 
 func (u *RequestPasswordResetUsecase) Execute(ctx context.Context, params RequestPasswordResetParams) (challengeID *uuid.UUID, err error) {
@@ -78,14 +77,14 @@ func (u *RequestPasswordResetUsecase) Execute(ctx context.Context, params Reques
 	if account.Type != params.AccountType {
 		return nil, apperror.NewForbidden("account type mismatch")
 	}
-	if account.Status != authdomain.AccountActive {
-		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+	if account.Status != auth.AccountActive {
+		return nil, apperror.NewForbidden(auth.ErrEmailNotVerified.Error())
 	}
 
-	chID, err := u.challengeSvc.CreateAndSend(ctx, authrepo.CreateChallengeParams{
+	chID, err := u.challengeSvc.CreateAndSend(ctx, auth.CreateChallengeParams{
 		UserID:   &account.UserID,
 		Email:    params.Email,
-		Purpose:  authdomain.OTPPurposePasswordReset,
+		Purpose:  auth.OTPPurposePasswordReset,
 		Duration: 15 * time.Minute,
 	})
 	if err != nil {

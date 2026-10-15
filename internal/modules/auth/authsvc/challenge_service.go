@@ -5,8 +5,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 	mailer "komecore/pkg/mailer"
 	otp "komecore/pkg/otp"
@@ -16,19 +15,19 @@ import (
 
 type challengeServiceImpl struct {
 	transactor    transaction.Transactor
-	challengeRepo authrepo.VerificationChallengeRepository
-	pwHasher      authrepo.PasswordHasher
+	challengeRepo auth.VerificationChallengeRepository
+	pwHasher      auth.PasswordHasher
 	otpGen        otp.Generator
 	mailer        mailer.Sender
 }
 
 func NewChallengeService(
 	transactor transaction.Transactor,
-	challengeRepo authrepo.VerificationChallengeRepository,
-	pwHasher authrepo.PasswordHasher,
+	challengeRepo auth.VerificationChallengeRepository,
+	pwHasher auth.PasswordHasher,
 	otpGen otp.Generator,
 	mailer mailer.Sender,
-) authrepo.ChallengeService {
+) auth.ChallengeService {
 	return &challengeServiceImpl{
 		transactor:    transactor,
 		challengeRepo: challengeRepo,
@@ -40,7 +39,7 @@ func NewChallengeService(
 
 func (s *challengeServiceImpl) CreateAndSend(
 	ctx context.Context,
-	params authrepo.CreateChallengeParams,
+	params auth.CreateChallengeParams,
 ) (*uuid.UUID, error) {
 	now := appclock.Now()
 
@@ -54,11 +53,11 @@ func (s *challengeServiceImpl) CreateAndSend(
 	}
 
 	challengeID := uuid.New()
-	challenge := authdomain.VerificationChallenge{
+	challenge := auth.VerificationChallenge{
 		ID:        challengeID,
 		UserID:    params.UserID,
-		Type:      authdomain.OTPTypeNumeric,
-		Channel:   authdomain.OTPChannelEmail,
+		Type:      auth.OTPTypeNumeric,
+		Channel:   auth.OTPChannelEmail,
 		Purpose:   params.Purpose,
 		Target:    params.Email,
 		CodeHash:  codeHash,
@@ -77,7 +76,7 @@ func (s *challengeServiceImpl) CreateAndSend(
 	}
 
 	subject := "Verification Code"
-	if params.Purpose == authdomain.OTPPurposePasswordReset {
+	if params.Purpose == auth.OTPPurposePasswordReset {
 		subject = "Password Reset Verification Code"
 	}
 

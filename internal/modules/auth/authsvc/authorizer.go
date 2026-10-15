@@ -9,24 +9,23 @@ import (
 	"komecore/internal/httpx"
 	appmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 
 	"github.com/google/uuid"
 )
 
 type authorizer struct{}
 
-func NewAuthorizer() authrepo.Authorizer {
+func NewAuthorizer() Authorizer {
 	return &authorizer{}
 }
 
-func (s *authorizer) RequireAccountType(allowedTypes ...authdomain.AccountType) appmiddleware.Middleware {
+func (s *authorizer) RequireAccountType(allowedTypes ...auth.AccountType) appmiddleware.Middleware {
 	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			actor, ok := GetActor(r.Context())
 			if !ok {
-				authCtx, authOk := authdomain.GetAuthContext(r.Context())
+				authCtx, authOk := auth.GetAuthContext(r.Context())
 				if !authOk {
 					return apperror.NewUnauthorized("authentication required")
 				}
@@ -43,12 +42,12 @@ func (s *authorizer) RequireAccountType(allowedTypes ...authdomain.AccountType) 
 	}
 }
 
-func (s *authorizer) RequireStaffRole(allowedRoles ...authdomain.RoleCode) appmiddleware.Middleware {
+func (s *authorizer) RequireStaffRole(allowedRoles ...auth.RoleCode) appmiddleware.Middleware {
 	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			actor, ok := GetActor(r.Context())
 			if !ok {
-				authCtx, authOk := authdomain.GetAuthContext(r.Context())
+				authCtx, authOk := auth.GetAuthContext(r.Context())
 				if !authOk {
 					return apperror.NewUnauthorized("authentication required")
 				}
@@ -56,8 +55,8 @@ func (s *authorizer) RequireStaffRole(allowedRoles ...authdomain.RoleCode) appmi
 				r = r.WithContext(WithActor(r.Context(), actor))
 			}
 
-			if actor.Type != authdomain.AccountTypeStaff {
-				return apperror.NewForbidden(authdomain.ErrStaffRequired.Error())
+			if actor.Type != auth.AccountTypeStaff {
+				return apperror.NewForbidden(auth.ErrStaffRequired.Error())
 			}
 
 			if actor.IsSuperAdmin() {
@@ -73,7 +72,7 @@ func (s *authorizer) RequireStaffRole(allowedRoles ...authdomain.RoleCode) appmi
 			}
 
 			if !allowed {
-				return apperror.NewForbidden(authdomain.ErrInsufficientRole.Error())
+				return apperror.NewForbidden(auth.ErrInsufficientRole.Error())
 			}
 
 			return next(w, r)
@@ -86,7 +85,7 @@ func (s *authorizer) RequirePermission(permission string) appmiddleware.Middlewa
 		return func(w http.ResponseWriter, r *http.Request) error {
 			actor, ok := GetActor(r.Context())
 			if !ok {
-				authCtx, authOk := authdomain.GetAuthContext(r.Context())
+				authCtx, authOk := auth.GetAuthContext(r.Context())
 				if !authOk {
 					return apperror.NewUnauthorized("authentication required")
 				}
@@ -94,8 +93,8 @@ func (s *authorizer) RequirePermission(permission string) appmiddleware.Middlewa
 				r = r.WithContext(WithActor(r.Context(), actor))
 			}
 
-			if actor.Type != authdomain.AccountTypeStaff {
-				return apperror.NewForbidden(authdomain.ErrStaffRequired.Error())
+			if actor.Type != auth.AccountTypeStaff {
+				return apperror.NewForbidden(auth.ErrStaffRequired.Error())
 			}
 
 			if actor.HasPermission(uuid.Nil, permission) {
@@ -114,7 +113,7 @@ func (s *authorizer) LoadActor(exec transaction.Executor) appmiddleware.Middlewa
 				return next(w, r)
 			}
 
-			authCtx, ok := authdomain.GetAuthContext(r.Context())
+			authCtx, ok := auth.GetAuthContext(r.Context())
 			if !ok {
 				return apperror.NewUnauthorized("authentication required")
 			}
@@ -132,7 +131,7 @@ func (s *authorizer) OptionalLoadActor(exec transaction.Executor) appmiddleware.
 				return next(w, r)
 			}
 
-			authCtx, ok := authdomain.GetAuthContext(r.Context())
+			authCtx, ok := auth.GetAuthContext(r.Context())
 			if !ok {
 				return next(w, r)
 			}

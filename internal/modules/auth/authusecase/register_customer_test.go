@@ -6,9 +6,8 @@ import (
 	"testing"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/auth"
+	"komecore/internal/modules/user"
 	mailer "komecore/pkg/mailer"
 
 	"github.com/google/uuid"
@@ -36,14 +35,14 @@ func (m *mockOTPGen) Generate() (string, error) {
 }
 
 type mockChallengeRepo struct {
-	challenge *authdomain.VerificationChallenge
+	challenge *auth.VerificationChallenge
 	saveCalls int
 }
 
-func (m *mockChallengeRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.VerificationChallenge, error) {
+func (m *mockChallengeRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.VerificationChallenge, error) {
 	return m.challenge, nil
 }
-func (m *mockChallengeRepo) Save(_ context.Context, _ transaction.Executor, c authdomain.VerificationChallenge) error {
+func (m *mockChallengeRepo) Save(_ context.Context, _ transaction.Executor, c auth.VerificationChallenge) error {
 	m.challenge = &c
 	m.saveCalls++
 	return nil
@@ -114,12 +113,12 @@ func TestRegisterCustomer_LinkLocalToGoogleAccount_Success(t *testing.T) {
 	userID := uuid.New()
 
 	// Existing Google account with same email, but NO password (empty string)
-	existingAcc := &authdomain.Account{
+	existingAcc := &auth.Account{
 		ID:       uuid.New(),
 		UserID:   userID,
 		Email:    "googleuser@gmail.com",
 		Password: "", // Empty means Google-first / OAuth-only
-		Status:   authdomain.AccountActive,
+		Status:   auth.AccountActive,
 	}
 
 	accountRepoMock := &mockAccountRepo{account: existingAcc}
@@ -130,7 +129,7 @@ func TestRegisterCustomer_LinkLocalToGoogleAccount_Success(t *testing.T) {
 	otpGenMock := &mockOTPGen{otp: "654321"}
 
 	var savedUsername string
-	userRepoMock.saveProfile = func(props userrepo.SaveProfileProps) error {
+	userRepoMock.saveProfile = func(props user.SaveProfileProps) error {
 		if props.UserID != userID {
 			t.Errorf("expected UserID %v, got %v", userID, props.UserID)
 		}
@@ -183,7 +182,7 @@ func TestRegisterCustomer_LinkLocalToGoogleAccount_UsernameConflict(t *testing.T
 	ctx := context.Background()
 	userID := uuid.New()
 
-	existingAcc := &authdomain.Account{
+	existingAcc := &auth.Account{
 		ID:       uuid.New(),
 		UserID:   userID,
 		Email:    "googleuser@gmail.com",
@@ -193,7 +192,7 @@ func TestRegisterCustomer_LinkLocalToGoogleAccount_UsernameConflict(t *testing.T
 	accountRepoMock := &mockAccountRepo{account: existingAcc}
 	// The username "taken_username" is already owned by ANOTHER user (with different ID)
 	userRepoMock := &mockUserRepo{
-		user: &userdomain.User{ID: uuid.New(), Username: "taken_username"},
+		user: &user.User{ID: uuid.New(), Username: "taken_username"},
 	}
 
 	uc := NewRegisterCustomerUsecase(
@@ -226,7 +225,7 @@ func TestRegisterCustomer_LocalAccountAlreadyExistsWithPassword_Conflict(t *test
 	ctx := context.Background()
 	userID := uuid.New()
 
-	existingAcc := &authdomain.Account{
+	existingAcc := &auth.Account{
 		ID:       uuid.New(),
 		UserID:   userID,
 		Email:    "localuser@gmail.com",

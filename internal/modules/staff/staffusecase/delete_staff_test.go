@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 
 	"github.com/google/uuid"
 )
@@ -18,18 +18,18 @@ func TestDeleteStaff_Success(t *testing.T) {
 	staffUserID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 
 	staffRepo := &mockStaffRepo{
-		staff: &staffdomain.Staff{
+		staff: &staff.Staff{
 			ID:     targetStaffID,
 			UserID: staffUserID,
 		},
@@ -81,13 +81,13 @@ func TestDeleteStaff_NotFound(t *testing.T) {
 	actorStaffID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   actorStaffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 

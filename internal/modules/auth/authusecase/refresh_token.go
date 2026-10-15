@@ -7,27 +7,26 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 )
 
 type RefreshTokenUsecase struct {
 	executor         transaction.Executor
 	transactor       transaction.Transactor
-	tokenSvc         authrepo.TokenService
-	tokenHasher      authrepo.TokenHasher
-	sessionRepo      authrepo.SessionRepository
-	refreshTokenRepo authrepo.RefreshTokenRepository
+	tokenSvc         auth.TokenService
+	tokenHasher      auth.TokenHasher
+	sessionRepo      auth.SessionRepository
+	refreshTokenRepo auth.RefreshTokenRepository
 }
 
 func NewRefreshTokenUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	tokenSvc authrepo.TokenService,
-	tokenHasher authrepo.TokenHasher,
-	sessionRepo authrepo.SessionRepository,
-	refreshTokenRepo authrepo.RefreshTokenRepository,
+	tokenSvc auth.TokenService,
+	tokenHasher auth.TokenHasher,
+	sessionRepo auth.SessionRepository,
+	refreshTokenRepo auth.RefreshTokenRepository,
 ) *RefreshTokenUsecase {
 	return &RefreshTokenUsecase{
 		executor:         executor,
@@ -41,12 +40,12 @@ func NewRefreshTokenUsecase(
 
 type RefreshTokenParams struct {
 	RefreshToken string
-	AccountType  authdomain.AccountType
+	AccountType  auth.AccountType
 }
 
 type RefreshTokenResult struct {
-	AccessToken  authrepo.GeneratedToken
-	RefreshToken authrepo.GeneratedToken
+	AccessToken  auth.GeneratedToken
+	RefreshToken auth.GeneratedToken
 }
 
 func (u *RefreshTokenUsecase) Execute(
@@ -59,16 +58,16 @@ func (u *RefreshTokenUsecase) Execute(
 
 	claims, err := u.tokenSvc.Validate(params.RefreshToken)
 	if err != nil {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidToken.Error())
+		return nil, apperror.NewUnauthorized(auth.ErrInvalidToken.Error())
 	}
-	if claims.Type != authdomain.TokenTypeRefresh {
+	if claims.Type != auth.TokenTypeRefresh {
 		return nil, apperror.NewUnauthorized("invalid token type for refresh")
 	}
 
-	if params.AccountType == authdomain.AccountTypeStaff && claims.StaffID == nil {
+	if params.AccountType == auth.AccountTypeStaff && claims.StaffID == nil {
 		return nil, apperror.NewForbidden("staff account required")
 	}
-	if params.AccountType == authdomain.AccountTypeCustomer && claims.StaffID != nil {
+	if params.AccountType == auth.AccountTypeCustomer && claims.StaffID != nil {
 		return nil, apperror.NewForbidden("customer account required")
 	}
 
@@ -77,7 +76,7 @@ func (u *RefreshTokenUsecase) Execute(
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 	if session == nil || session.RevokedAt != nil || session.ExpiresAt.Before(appclock.Now()) {
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidSession.Error())
+		return nil, apperror.NewUnauthorized(auth.ErrInvalidSession.Error())
 	}
 
 	dbRefreshToken, err := u.refreshTokenRepo.GetBySessionID(ctx, u.executor, claims.SessionID)
@@ -92,31 +91,31 @@ func (u *RefreshTokenUsecase) Execute(
 		return nil, apperror.NewUnauthorized("refresh token mismatch")
 	}
 
-	roleCodes := make([]authdomain.RoleCode, len(claims.Roles))
+	roleCodes := make([]auth.RoleCode, len(claims.Roles))
 	for i, rCode := range claims.Roles {
-		roleCodes[i] = authdomain.RoleCode(rCode)
+		roleCodes[i] = auth.RoleCode(rCode)
 	}
 
-	newAccessTkn, err := u.tokenSvc.Generate(authrepo.GenerateTokenParams{
+	newAccessTkn, err := u.tokenSvc.Generate(auth.GenerateTokenParams{
 		UserID:     claims.UserID,
 		SessionID:  claims.SessionID,
 		StaffID:    claims.StaffID,
 		CustomerID: claims.CustomerID,
 		Roles:      roleCodes,
-		Type:       authdomain.TokenTypeAccess,
+		Type:       auth.TokenTypeAccess,
 		Duration:   30 * time.Minute,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate new access token: %w", err)
 	}
 
-	newRefreshTkn, err := u.tokenSvc.Generate(authrepo.GenerateTokenParams{
+	newRefreshTkn, err := u.tokenSvc.Generate(auth.GenerateTokenParams{
 		UserID:     claims.UserID,
 		SessionID:  claims.SessionID,
 		StaffID:    claims.StaffID,
 		CustomerID: claims.CustomerID,
 		Roles:      roleCodes,
-		Type:       authdomain.TokenTypeRefresh,
+		Type:       auth.TokenTypeRefresh,
 		Duration:   7 * 24 * time.Hour,
 	})
 	if err != nil {

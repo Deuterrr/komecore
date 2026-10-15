@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
+	"komecore/internal/modules/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,7 +18,7 @@ func NewChallengeRepository() *ChallengeRepository {
 	return &ChallengeRepository{}
 }
 
-func (r *ChallengeRepository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*authdomain.VerificationChallenge, error) {
+func (r *ChallengeRepository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*auth.VerificationChallenge, error) {
 	query := `
 		SELECT
 			id,
@@ -38,7 +38,7 @@ func (r *ChallengeRepository) GetByID(ctx context.Context, exec transaction.Exec
 		LIMIT 1
 	`
 
-	var vC authdomain.VerificationChallenge
+	var vC auth.VerificationChallenge
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&vC.ID,
 		&vC.UserID,
@@ -63,7 +63,7 @@ func (r *ChallengeRepository) GetByID(ctx context.Context, exec transaction.Exec
 	return &vC, nil
 }
 
-func (r *ChallengeRepository) Create(ctx context.Context, exec transaction.Executor, challenge authdomain.VerificationChallenge) error {
+func (r *ChallengeRepository) Create(ctx context.Context, exec transaction.Executor, challenge auth.VerificationChallenge) error {
 	query := `
 		INSERT INTO verification_challenges (
 			id,
@@ -99,7 +99,7 @@ func (r *ChallengeRepository) Create(ctx context.Context, exec transaction.Execu
 	return nil
 }
 
-func (r *ChallengeRepository) Save(ctx context.Context, exec transaction.Executor, challenge authdomain.VerificationChallenge) error {
+func (r *ChallengeRepository) Save(ctx context.Context, exec transaction.Executor, challenge auth.VerificationChallenge) error {
 	query := `
 		INSERT INTO verification_challenges (
 			id,

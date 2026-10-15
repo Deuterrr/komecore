@@ -7,10 +7,9 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/user"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 	mailer "komecore/pkg/mailer"
@@ -22,11 +21,11 @@ import (
 type RegisterCustomerUsecase struct {
 	executor     transaction.Executor
 	transactor   transaction.Transactor
-	accountRepo  authrepo.AccountRepository
-	hasher       authdomain.PasswordHasher
-	userRepo     userrepo.UserRepository
-	customerRepo authrepo.CustomerRepository
-	challengeSvc authrepo.ChallengeService
+	accountRepo  auth.AccountRepository
+	hasher       auth.PasswordHasher
+	userRepo     user.Repository
+	customerRepo auth.CustomerRepository
+	challengeSvc auth.ChallengeService
 	auditLogger  applogger.AuditLogger
 	sysLogger    applogger.Logger
 }
@@ -34,17 +33,17 @@ type RegisterCustomerUsecase struct {
 func NewRegisterCustomerUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	hasher authdomain.PasswordHasher,
-	userRepo userrepo.UserRepository,
-	customerRepo authrepo.CustomerRepository,
-	challengeRepo authrepo.VerificationChallengeRepository,
+	accountRepo auth.AccountRepository,
+	hasher auth.PasswordHasher,
+	userRepo user.Repository,
+	customerRepo auth.CustomerRepository,
+	challengeRepo auth.VerificationChallengeRepository,
 	otpGen otp.Generator,
 	mailer mailer.Sender,
 	auditLogger applogger.AuditLogger,
 ) *RegisterCustomerUsecase {
-	var pwHasher authrepo.PasswordHasher
-	if ph, ok := hasher.(authrepo.PasswordHasher); ok {
+	var pwHasher auth.PasswordHasher
+	if ph, ok := hasher.(auth.PasswordHasher); ok {
 		pwHasher = ph
 	}
 
@@ -68,7 +67,7 @@ func NewRegisterCustomerUsecase(
 	}
 }
 
-func (u *RegisterCustomerUsecase) SetChallengeService(challengeSvc authrepo.ChallengeService) {
+func (u *RegisterCustomerUsecase) SetChallengeService(challengeSvc auth.ChallengeService) {
 	u.challengeSvc = challengeSvc
 }
 
@@ -98,7 +97,7 @@ func (u *RegisterCustomerUsecase) Execute(ctx context.Context, params RegisterCu
 	}
 	if existAcc != nil {
 		if existAcc.Password != "" {
-			return nil, apperror.NewConflict(authdomain.ErrAccountAlreadyExists.Error())
+			return nil, apperror.NewConflict(auth.ErrAccountAlreadyExists.Error())
 		}
 	}
 
@@ -122,7 +121,7 @@ func (u *RegisterCustomerUsecase) Execute(ctx context.Context, params RegisterCu
 			return nil, fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		userProps := userrepo.CreateUserProps{
+		userProps := user.CreateUserProps{
 			ID:        userID,
 			Name:      params.Name,
 			Username:  params.Username,
@@ -130,17 +129,17 @@ func (u *RegisterCustomerUsecase) Execute(ctx context.Context, params RegisterCu
 			CreatedAt: now,
 		}
 
-		acc := authdomain.Account{
+		acc := auth.Account{
 			ID:        accountID,
 			UserID:    userID,
 			Email:     params.Email,
 			Password:  hashedPassword,
-			Status:    authdomain.AccountPending,
-			Type:      authdomain.AccountTypeCustomer,
+			Status:    auth.AccountPending,
+			Type:      auth.AccountTypeCustomer,
 			CreatedAt: now,
 		}
 
-		cust := authdomain.Customer{
+		cust := auth.Customer{
 			ID:        customerID,
 			UserID:    userID,
 			CreatedAt: now,
@@ -176,7 +175,7 @@ func (u *RegisterCustomerUsecase) Execute(ctx context.Context, params RegisterCu
 				return fmt.Errorf("failed to update account password: %w", err)
 			}
 
-			userProps := userrepo.SaveProfileProps{
+			userProps := user.SaveProfileProps{
 				UserID:    userID,
 				Name:      &params.Name,
 				Username:  &params.Username,
@@ -192,10 +191,10 @@ func (u *RegisterCustomerUsecase) Execute(ctx context.Context, params RegisterCu
 		}
 	}
 
-	chID, err := u.challengeSvc.CreateAndSend(ctx, authrepo.CreateChallengeParams{
+	chID, err := u.challengeSvc.CreateAndSend(ctx, auth.CreateChallengeParams{
 		UserID:   &userID,
 		Email:    params.Email,
-		Purpose:  authdomain.OTPPurposeRegister,
+		Purpose:  auth.OTPPurposeRegister,
 		Duration: 15 * time.Minute,
 	})
 	if err != nil {

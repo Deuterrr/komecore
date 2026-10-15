@@ -1,9 +1,7 @@
-package authrepo
+package auth
 
 import (
 	"time"
-
-	"komecore/internal/modules/auth/authdomain"
 
 	"github.com/google/uuid"
 )
@@ -13,9 +11,9 @@ type GenerateTokenParams struct {
 	SessionID  uuid.UUID
 	StaffID    *uuid.UUID
 	CustomerID *uuid.UUID
-	Roles      []authdomain.RoleCode
+	Roles      []RoleCode
 
-	Type authdomain.TokenType
+	Type TokenType
 
 	Duration time.Duration
 }
@@ -23,5 +21,5 @@ type GenerateTokenParams struct {
 type GeneratedToken struct {
 	Token     string
 	ExpiresAt time.Time
-	Type      authdomain.TokenType
+	Type      TokenType
 }

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/user/userdomain"
+	"komecore/internal/modules/user"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,7 +65,7 @@ func TestCreateStaffUsecase_ValidationErrors(t *testing.T) {
 func TestCreateStaffUsecase_DuplicateUsername(t *testing.T) {
 	staffR := &mockStaffRepo{}
 	userR := &mockUserRepo{
-		user: &userdomain.User{
+		user: &user.User{
 			Username: "existing-user",
 		},
 	}

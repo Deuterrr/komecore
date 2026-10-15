@@ -8,10 +8,8 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
-	"komecore/internal/modules/staff/staffrepo"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/staff"
+	"komecore/internal/modules/user"
 	"komecore/internal/pagination"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
@@ -73,35 +71,35 @@ type RemoveStaffAccountInput struct {
 }
 
 type StaffRepository interface {
-	Create(ctx context.Context, exec transaction.Executor, staff staffdomain.Staff) error
-	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staffdomain.Staff, error)
-	FindStaff(ctx context.Context, exec transaction.Executor, params staffrepo.FindStaffParams) ([]staffdomain.StaffProfile, int, error)
+	Create(ctx context.Context, exec transaction.Executor, staff staff.Staff) error
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staff.Staff, error)
+	FindStaff(ctx context.Context, exec transaction.Executor, params staff.FindStaffParams) ([]staff.StaffProfile, int, error)
 	Update(ctx context.Context, exec transaction.Executor, staffID uuid.UUID, name string, logoUrl *string, bannerUrl *string) error
 	Delete(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) error
 }
 
 type StaffMembershipRepository interface {
-	GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staffdomain.StaffMembership, error)
-	ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staffdomain.Role, error)
-	Save(ctx context.Context, exec transaction.Executor, membership staffdomain.StaffMembership) error
-	ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]staffdomain.StaffAccountMember, error)
+	GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staff.StaffMembership, error)
+	ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staff.Role, error)
+	Save(ctx context.Context, exec transaction.Executor, membership staff.StaffMembership) error
+	ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]staff.StaffAccountMember, error)
 	DeleteByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) error
 	DeleteByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) error
 }
 
 type RoleRepository interface {
-	GetByCode(ctx context.Context, exec transaction.Executor, code staffdomain.RoleCode) (*staffdomain.Role, error)
+	GetByCode(ctx context.Context, exec transaction.Executor, code staff.RoleCode) (*staff.Role, error)
 }
 
 type UserRepository interface {
-	GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*userdomain.User, error)
-	CreateUser(ctx context.Context, exec transaction.Executor, props userrepo.CreateUserProps) error
+	GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*user.User, error)
+	CreateUser(ctx context.Context, exec transaction.Executor, props user.CreateUserProps) error
 }
 
 type AnalyticsRepository interface {
-	GetRevenueOverTime(ctx context.Context, exec transaction.Executor, interval string, since time.Time) ([]staffdomain.RevenueBucket, error)
-	GetOrderPipeline(ctx context.Context, exec transaction.Executor) ([]staffdomain.OrderStatusCount, error)
-	GetTopProducts(ctx context.Context, exec transaction.Executor, limit int) ([]staffdomain.TopProduct, error)
+	GetRevenueOverTime(ctx context.Context, exec transaction.Executor, interval string, since time.Time) ([]staff.RevenueBucket, error)
+	GetOrderPipeline(ctx context.Context, exec transaction.Executor) ([]staff.OrderStatusCount, error)
+	GetTopProducts(ctx context.Context, exec transaction.Executor, limit int) ([]staff.TopProduct, error)
 }
 
 type StaffService struct {
@@ -173,7 +171,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "actor membership not found"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -186,7 +184,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 
 	found := false
 	for _, role := range actorRoles {
-		if role.Code == staffdomain.RoleStaffAdmin {
+		if role.Code == staff.RoleStaffAdmin {
 			found = true
 			break
 		}
@@ -199,7 +197,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "actor lacks admin role"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
 	existingAcc, err := s.accountManager.GetByEmail(ctx, s.executor, input.Email)
@@ -229,7 +227,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "email": input.Email, "reason": "staff not found"},
 		})
-		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+		return apperror.NewNotFound(staff.ErrNotFoundStaff.Error())
 	}
 
 	existingUserAcc, err := s.accountManager.GetByUserID(ctx, s.executor, existingStaff.UserID)
@@ -247,7 +245,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 		return apperror.NewConflict("this staff entity already has a bound account (1 account per user limit)")
 	}
 
-	staffRole, err := s.roleRepo.GetByCode(ctx, s.executor, staffdomain.RoleStaff)
+	staffRole, err := s.roleRepo.GetByCode(ctx, s.executor, staff.RoleStaff)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve staff role: %w", err)
 	}
@@ -271,7 +269,7 @@ func (s *StaffService) AddStaffAccount(ctx context.Context, input AddStaffAccoun
 		CreatedAt: now,
 	}
 
-	newMembership := staffdomain.StaffMembership{
+	newMembership := staff.StaffMembership{
 		ID:        uuid.New(),
 		StaffID:   existingStaff.ID,
 		AccountID: newAccountID,
@@ -326,7 +324,7 @@ func (s *StaffService) CreateStaff(ctx context.Context, input CreateStaffInput) 
 	newUserID := uuid.New()
 	newStaffID := uuid.New()
 
-	newUser := userrepo.CreateUserProps{
+	newUser := user.CreateUserProps{
 		ID:        newUserID,
 		Name:      input.Name,
 		Username:  input.Username,
@@ -337,7 +335,7 @@ func (s *StaffService) CreateStaff(ctx context.Context, input CreateStaffInput) 
 		newUser.AvatarURL = input.LogoUrl
 	}
 
-	staff := staffdomain.Staff{
+	staff := staff.Staff{
 		ID:        newStaffID,
 		UserID:    newUserID,
 		CreatedAt: now,
@@ -369,10 +367,10 @@ func (s *StaffService) CreateStaff(ctx context.Context, input CreateStaffInput) 
 }
 
 // FindStaff searches staff entities with pagination and sorting.
-func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]staffdomain.StaffProfile, int, error) {
+func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]staff.StaffProfile, int, error) {
 	var staffSortKeys = map[string]pagination.SortKey{
-		"latest":   staffrepo.StaffSortLatest,
-		"modified": staffrepo.StaffSortModify,
+		"latest":   staff.StaffSortLatest,
+		"modified": staff.StaffSortModify,
 	}
 
 	var sorts pagination.Sorts
@@ -408,13 +406,13 @@ func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]s
 	if len(sorts) == 0 {
 		sorts = pagination.Sorts{
 			{
-				By:        staffrepo.StaffSortLatest,
+				By:        staff.StaffSortLatest,
 				Direction: pagination.SortDesc,
 			},
 		}
 	}
 
-	params := staffrepo.FindStaffParams{
+	params := staff.FindStaffParams{
 		ID: input.ID,
 		Pagination: pagination.Pagination{
 			Page:  input.Page,
@@ -435,7 +433,7 @@ func (s *StaffService) FindStaff(ctx context.Context, input FindStaffInput) ([]s
 }
 
 // ListStaffAccounts returns accounts associated with a staff entity.
-func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAccountsParams) ([]staffdomain.StaffAccountMember, error) {
+func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAccountsParams) ([]staff.StaffAccountMember, error) {
 	actorMembership, err := s.membershipRepo.GetByAccountIDAndStaffID(ctx, s.executor,
 		input.ActorAccountID,
 		input.ActorStaffID,
@@ -444,7 +442,7 @@ func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAcc
 		return nil, fmt.Errorf("failed to verify actor membership: %w", err)
 	}
 	if actorMembership == nil {
-		return nil, apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return nil, apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -457,29 +455,29 @@ func (s *StaffService) ListStaffAccounts(ctx context.Context, input ListStaffAcc
 
 	foundAdmin := false
 	for _, role := range actorRoles {
-		if role.Code == staffdomain.RoleStaffAdmin {
+		if role.Code == staff.RoleStaffAdmin {
 			foundAdmin = true
 			break
 		}
 	}
 	if !foundAdmin {
-		return nil, apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return nil, apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
-	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
+	stf, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve staff: %w", err)
 	}
-	if staff == nil {
-		return nil, apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+	if stf == nil {
+		return nil, apperror.NewNotFound(staff.ErrNotFoundStaff.Error())
 	}
 
-	accounts, err := s.membershipRepo.ListAccountsByStaffID(ctx, s.executor, staff.ID)
+	accounts, err := s.membershipRepo.ListAccountsByStaffID(ctx, s.executor, stf.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list staff accounts: %w", err)
 	}
 	if accounts == nil {
-		accounts = []staffdomain.StaffAccountMember{}
+		accounts = []staff.StaffAccountMember{}
 	}
 
 	return accounts, nil
@@ -506,7 +504,7 @@ func (s *StaffService) UpdateStaff(ctx context.Context, input UpdateStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor membership not found"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -519,7 +517,7 @@ func (s *StaffService) UpdateStaff(ctx context.Context, input UpdateStaffInput) 
 
 	foundAdmin := false
 	for _, role := range actorRoles {
-		if role.Code == staffdomain.RoleStaffAdmin {
+		if role.Code == staff.RoleStaffAdmin {
 			foundAdmin = true
 			break
 		}
@@ -532,15 +530,15 @@ func (s *StaffService) UpdateStaff(ctx context.Context, input UpdateStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor lacks admin role"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
-	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
+	stf, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve staff: %w", err)
 	}
-	if staff == nil {
-		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+	if stf == nil {
+		return apperror.NewNotFound(staff.ErrNotFoundStaff.Error())
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -587,7 +585,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor membership not found"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -600,7 +598,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 
 	foundAdmin := false
 	for _, role := range actorRoles {
-		if role.Code == staffdomain.RoleStaffAdmin {
+		if role.Code == staff.RoleStaffAdmin {
 			foundAdmin = true
 			break
 		}
@@ -613,15 +611,15 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "reason": "actor lacks admin role"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
-	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
+	stf, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve staff: %w", err)
 	}
-	if staff == nil {
-		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+	if stf == nil {
+		return apperror.NewNotFound(staff.ErrNotFoundStaff.Error())
 	}
 
 	err = s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
@@ -631,7 +629,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 		if err := s.membershipRepo.DeleteByStaffID(ctx, exec, input.StaffID); err != nil {
 			return fmt.Errorf("failed to delete staff memberships: %w", err)
 		}
-		if err := s.userDeletionService.DeleteUserRecord(ctx, exec, staff.UserID); err != nil {
+		if err := s.userDeletionService.DeleteUserRecord(ctx, exec, stf.UserID); err != nil {
 			return fmt.Errorf("failed to soft-delete user and accounts for staff: %w", err)
 		}
 		return nil
@@ -646,7 +644,7 @@ func (s *StaffService) DeleteStaff(ctx context.Context, input DeleteStaffInput) 
 		Resource:   "staff",
 		ResourceID: input.StaffID.String(),
 		Outcome:    applogger.OutcomeSuccess,
-		Metadata:   map[string]any{"staff_id": input.StaffID.String(), "user_id": staff.UserID.String()},
+		Metadata:   map[string]any{"staff_id": input.StaffID.String(), "user_id": stf.UserID.String()},
 	})
 
 	return nil
@@ -673,7 +671,7 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "account_id": input.AccountID.String(), "reason": "actor membership not found"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
 	actorRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
@@ -686,7 +684,7 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 
 	foundAdmin := false
 	for _, role := range actorRoles {
-		if role.Code == staffdomain.RoleStaffAdmin {
+		if role.Code == staff.RoleStaffAdmin {
 			foundAdmin = true
 			break
 		}
@@ -699,15 +697,15 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 			Outcome:  applogger.OutcomeFailure,
 			Metadata: map[string]any{"staff_id": input.StaffID.String(), "account_id": input.AccountID.String(), "reason": "actor lacks admin role"},
 		})
-		return apperror.NewForbidden(staffdomain.ErrInsufficientRole.Error())
+		return apperror.NewForbidden(staff.ErrInsufficientRole.Error())
 	}
 
-	staff, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
+	stf, err := s.staffRepo.GetByID(ctx, s.executor, input.StaffID)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve staff: %w", err)
 	}
-	if staff == nil {
-		return apperror.NewNotFound(staffdomain.ErrNotFoundStaff.Error())
+	if stf == nil {
+		return apperror.NewNotFound(staff.ErrNotFoundStaff.Error())
 	}
 
 	targetMembership, err := s.membershipRepo.GetByAccountIDAndStaffID(ctx, s.executor,
@@ -764,12 +762,12 @@ func (s *StaffService) RemoveStaffAccount(ctx context.Context, input RemoveStaff
 }
 
 // GetRevenueAnalytics retrieves time-bucketed revenue metrics for the specified range and interval.
-func (s *StaffService) GetRevenueAnalytics(ctx context.Context, rangeParam, intervalParam string) (*staffdomain.RevenueAnalytics, error) {
+func (s *StaffService) GetRevenueAnalytics(ctx context.Context, rangeParam, intervalParam string) (*staff.RevenueAnalytics, error) {
 	if s.analyticsRepo == nil {
-		return &staffdomain.RevenueAnalytics{
+		return &staff.RevenueAnalytics{
 			Range:    rangeParam,
 			Interval: intervalParam,
-			Buckets:  []staffdomain.RevenueBucket{},
+			Buckets:  []staff.RevenueBucket{},
 		}, nil
 	}
 
@@ -817,7 +815,7 @@ func (s *StaffService) GetRevenueAnalytics(ctx context.Context, rangeParam, inte
 		totalOrders += b.Count
 	}
 
-	return &staffdomain.RevenueAnalytics{
+	return &staff.RevenueAnalytics{
 		Range:        rangeStr,
 		Interval:     interval,
 		TotalRevenue: totalRevenue,
@@ -827,10 +825,10 @@ func (s *StaffService) GetRevenueAnalytics(ctx context.Context, rangeParam, inte
 }
 
 // GetOrderPipelineAnalytics retrieves current order counts and revenue totals grouped by order status.
-func (s *StaffService) GetOrderPipelineAnalytics(ctx context.Context) (*staffdomain.OrderPipelineAnalytics, error) {
+func (s *StaffService) GetOrderPipelineAnalytics(ctx context.Context) (*staff.OrderPipelineAnalytics, error) {
 	if s.analyticsRepo == nil {
-		return &staffdomain.OrderPipelineAnalytics{
-			Breakdown: []staffdomain.OrderStatusCount{},
+		return &staff.OrderPipelineAnalytics{
+			Breakdown: []staff.OrderStatusCount{},
 		}, nil
 	}
 
@@ -846,7 +844,7 @@ func (s *StaffService) GetOrderPipelineAnalytics(ctx context.Context) (*staffdom
 		totalAmount += c.TotalAmount
 	}
 
-	return &staffdomain.OrderPipelineAnalytics{
+	return &staff.OrderPipelineAnalytics{
 		TotalOrders: totalOrders,
 		TotalAmount: totalAmount,
 		Breakdown:   counts,
@@ -854,9 +852,9 @@ func (s *StaffService) GetOrderPipelineAnalytics(ctx context.Context) (*staffdom
 }
 
 // GetTopProductsAnalytics retrieves highest revenue-generating settled products.
-func (s *StaffService) GetTopProductsAnalytics(ctx context.Context, limit int) ([]staffdomain.TopProduct, error) {
+func (s *StaffService) GetTopProductsAnalytics(ctx context.Context, limit int) ([]staff.TopProduct, error) {
 	if s.analyticsRepo == nil {
-		return []staffdomain.TopProduct{}, nil
+		return []staff.TopProduct{}, nil
 	}
 
 	if limit <= 0 {

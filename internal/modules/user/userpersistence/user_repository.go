@@ -6,8 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/user"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,7 +22,7 @@ func (r *UserRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*userdomain.User, error) {
+) (*user.User, error) {
 	query := `
 		SELECT
 			u.id,
@@ -43,7 +42,7 @@ func (r *UserRepository) GetByID(
 		LIMIT 1
 	`
 
-	var m userdomain.User
+	var m user.User
 
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&m.ID,
@@ -61,7 +60,7 @@ func (r *UserRepository) GetByID(
 			return nil, nil
 		}
 
-		return &userdomain.User{}, fmt.Errorf("query user by id failed: %w", err)
+		return &user.User{}, fmt.Errorf("query user by id failed: %w", err)
 	}
 
 	return &m, nil
@@ -71,7 +70,7 @@ func (r *UserRepository) GetByUsername(
 	ctx context.Context,
 	exec transaction.Executor,
 	username string,
-) (*userdomain.User, error) {
+) (*user.User, error) {
 	query := `
 		SELECT
 			u.id,
@@ -91,7 +90,7 @@ func (r *UserRepository) GetByUsername(
 		LIMIT 1
 	`
 
-	var m userdomain.User
+	var m user.User
 	err := exec.QueryRow(ctx, query, username).Scan(
 		&m.ID,
 		&m.Name,
@@ -117,7 +116,7 @@ func (r *UserRepository) GetByUsername(
 func (r *UserRepository) CreateUser(
 	ctx context.Context,
 	exec transaction.Executor,
-	props userrepo.CreateUserProps,
+	props user.CreateUserProps,
 ) error {
 	query := `
 		INSERT INTO users (
@@ -149,7 +148,7 @@ func (r *UserRepository) CreateUser(
 func (r *UserRepository) SaveProfile(
 	ctx context.Context,
 	exec transaction.Executor,
-	props userrepo.SaveProfileProps,
+	props user.SaveProfileProps,
 ) error {
 	query := `
 		UPDATE users

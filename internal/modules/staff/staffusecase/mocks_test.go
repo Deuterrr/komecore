@@ -5,10 +5,8 @@ import (
 	"errors"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
-	"komecore/internal/modules/staff/staffrepo"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/staff"
+	"komecore/internal/modules/user"
 	applogger "komecore/pkg/logger"
 
 	"github.com/google/uuid"
@@ -49,7 +47,7 @@ func (m *mockAuditLogger) Log(ctx context.Context, event applogger.AuditEvent) {
 }
 
 type mockStaffRepo struct {
-	staff        *staffdomain.Staff
+	staff        *staff.Staff
 	getByIDError error
 	updateError  error
 	deleteError  error
@@ -58,19 +56,19 @@ type mockStaffRepo struct {
 	deleteCalls  int
 }
 
-func (m *mockStaffRepo) Create(ctx context.Context, exec transaction.Executor, staff staffdomain.Staff) error {
+func (m *mockStaffRepo) Create(ctx context.Context, exec transaction.Executor, staff staff.Staff) error {
 	m.createCalls++
 	return nil
 }
 
-func (m *mockStaffRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staffdomain.Staff, error) {
+func (m *mockStaffRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staff.Staff, error) {
 	if m.getByIDError != nil {
 		return nil, m.getByIDError
 	}
 	return m.staff, nil
 }
 
-func (m *mockStaffRepo) FindStaff(ctx context.Context, exec transaction.Executor, params staffrepo.FindStaffParams) ([]staffdomain.StaffProfile, int, error) {
+func (m *mockStaffRepo) FindStaff(ctx context.Context, exec transaction.Executor, params staff.FindStaffParams) ([]staff.StaffProfile, int, error) {
 	return nil, 0, nil
 }
 
@@ -87,10 +85,10 @@ func (m *mockStaffRepo) Delete(ctx context.Context, exec transaction.Executor, s
 var _ StaffRepository = (*mockStaffRepo)(nil)
 
 type mockStaffMembershipRepo struct {
-	membership         *staffdomain.StaffMembership
-	targetMembership   *staffdomain.StaffMembership
-	roles              []staffdomain.Role
-	accounts           []staffdomain.StaffAccountMember
+	membership         *staff.StaffMembership
+	targetMembership   *staff.StaffMembership
+	roles              []staff.Role
+	accounts           []staff.StaffAccountMember
 	getMemError        error
 	getRolesError      error
 	listAccsError      error
@@ -101,7 +99,7 @@ type mockStaffMembershipRepo struct {
 	deleteByStaffCalls int
 }
 
-func (m *mockStaffMembershipRepo) GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staffdomain.StaffMembership, error) {
+func (m *mockStaffMembershipRepo) GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staff.StaffMembership, error) {
 	if m.getMemError != nil {
 		return nil, m.getMemError
 	}
@@ -111,19 +109,19 @@ func (m *mockStaffMembershipRepo) GetByAccountIDAndStaffID(ctx context.Context, 
 	return m.membership, nil
 }
 
-func (m *mockStaffMembershipRepo) ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staffdomain.Role, error) {
+func (m *mockStaffMembershipRepo) ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staff.Role, error) {
 	if m.getRolesError != nil {
 		return nil, m.getRolesError
 	}
 	return m.roles, nil
 }
 
-func (m *mockStaffMembershipRepo) Save(ctx context.Context, exec transaction.Executor, membership staffdomain.StaffMembership) error {
+func (m *mockStaffMembershipRepo) Save(ctx context.Context, exec transaction.Executor, membership staff.StaffMembership) error {
 	m.saveCalls++
 	return nil
 }
 
-func (m *mockStaffMembershipRepo) ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]staffdomain.StaffAccountMember, error) {
+func (m *mockStaffMembershipRepo) ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]staff.StaffAccountMember, error) {
 	if m.listAccsError != nil {
 		return nil, m.listAccsError
 	}
@@ -183,15 +181,15 @@ func (m *mockAccountRepo) RevokeSessionsByUserID(ctx context.Context, exec trans
 var _ AccountManager = (*mockAccountRepo)(nil)
 
 type mockUserRepo struct {
-	user        *userdomain.User
+	user        *user.User
 	createCalls int
 }
 
-func (m *mockUserRepo) GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*userdomain.User, error) {
+func (m *mockUserRepo) GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*user.User, error) {
 	return m.user, nil
 }
 
-func (m *mockUserRepo) CreateUser(ctx context.Context, exec transaction.Executor, props userrepo.CreateUserProps) error {
+func (m *mockUserRepo) CreateUser(ctx context.Context, exec transaction.Executor, props user.CreateUserProps) error {
 	m.createCalls++
 	return nil
 }
@@ -199,10 +197,10 @@ func (m *mockUserRepo) CreateUser(ctx context.Context, exec transaction.Executor
 var _ UserRepository = (*mockUserRepo)(nil)
 
 type mockRoleRepo struct {
-	role *staffdomain.Role
+	role *staff.Role
 }
 
-func (m *mockRoleRepo) GetByCode(ctx context.Context, exec transaction.Executor, code staffdomain.RoleCode) (*staffdomain.Role, error) {
+func (m *mockRoleRepo) GetByCode(ctx context.Context, exec transaction.Executor, code staff.RoleCode) (*staff.Role, error) {
 	return m.role, nil
 }
 

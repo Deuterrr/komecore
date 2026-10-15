@@ -9,33 +9,33 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 	"komecore/internal/modules/staff/staffusecase"
 
 	"github.com/google/uuid"
 )
 
 type mockAnalyticsRepo struct {
-	buckets     []staffdomain.RevenueBucket
-	pipeline    []staffdomain.OrderStatusCount
-	topProducts []staffdomain.TopProduct
+	buckets     []staff.RevenueBucket
+	pipeline    []staff.OrderStatusCount
+	topProducts []staff.TopProduct
 }
 
-func (m *mockAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transaction.Executor, _ string, _ time.Time) ([]staffdomain.RevenueBucket, error) {
+func (m *mockAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transaction.Executor, _ string, _ time.Time) ([]staff.RevenueBucket, error) {
 	return m.buckets, nil
 }
 
-func (m *mockAnalyticsRepo) GetOrderPipeline(_ context.Context, _ transaction.Executor) ([]staffdomain.OrderStatusCount, error) {
+func (m *mockAnalyticsRepo) GetOrderPipeline(_ context.Context, _ transaction.Executor) ([]staff.OrderStatusCount, error) {
 	return m.pipeline, nil
 }
 
-func (m *mockAnalyticsRepo) GetTopProducts(_ context.Context, _ transaction.Executor, _ int) ([]staffdomain.TopProduct, error) {
+func (m *mockAnalyticsRepo) GetTopProducts(_ context.Context, _ transaction.Executor, _ int) ([]staff.TopProduct, error) {
 	return m.topProducts, nil
 }
 
 func TestHandler_GetRevenueAnalytics(t *testing.T) {
 	repo := &mockAnalyticsRepo{
-		buckets: []staffdomain.RevenueBucket{
+		buckets: []staff.RevenueBucket{
 			{Bucket: time.Now().UTC(), Revenue: 1000000, Count: 10},
 		},
 	}
@@ -76,7 +76,7 @@ func TestHandler_GetRevenueAnalytics(t *testing.T) {
 
 func TestHandler_GetOrderPipelineAnalytics(t *testing.T) {
 	repo := &mockAnalyticsRepo{
-		pipeline: []staffdomain.OrderStatusCount{
+		pipeline: []staff.OrderStatusCount{
 			{Status: "pending", Count: 5, TotalAmount: 500000},
 			{Status: "processing", Count: 12, TotalAmount: 1200000},
 		},
@@ -119,7 +119,7 @@ func TestHandler_GetOrderPipelineAnalytics(t *testing.T) {
 func TestHandler_GetTopProductsAnalytics(t *testing.T) {
 	prodID := uuid.New()
 	repo := &mockAnalyticsRepo{
-		topProducts: []staffdomain.TopProduct{
+		topProducts: []staff.TopProduct{
 			{ProductID: prodID, ProductName: "Espresso Beans", QuantitySold: 42, TotalRevenue: 4200000},
 		},
 	}

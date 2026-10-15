@@ -9,8 +9,7 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/user"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -29,12 +28,12 @@ type SessionReader interface {
 }
 
 type StaffProfileProvider interface {
-	GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*userdomain.StaffProfile, error)
+	GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*user.StaffProfile, error)
 }
 
 type ProfileResult struct {
-	Customer *userdomain.CustomerProfile
-	Staff    *userdomain.StaffProfile
+	Customer *user.CustomerProfile
+	Staff    *user.StaffProfile
 }
 
 type UpdateProfileInput struct {
@@ -44,8 +43,8 @@ type UpdateProfileInput struct {
 }
 
 type UserRepository interface {
-	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*userdomain.User, error)
-	SaveProfile(ctx context.Context, exec transaction.Executor, props userrepo.SaveProfileProps) error
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*user.User, error)
+	SaveProfile(ctx context.Context, exec transaction.Executor, props user.SaveProfileProps) error
 }
 
 type UserService struct {
@@ -75,12 +74,12 @@ func NewUserService(
 	}
 }
 
-func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*userdomain.User, error) {
-	user, err := s.userRepo.GetByID(ctx, s.executor, id)
+func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
+	u, err := s.userRepo.GetByID(ctx, s.executor, id)
 	if err != nil {
-		return &userdomain.User{}, fmt.Errorf("failed to retrieve user: %w", err)
+		return &user.User{}, fmt.Errorf("failed to retrieve user: %w", err)
 	}
-	return user, nil
+	return u, nil
 }
 
 func (s *UserService) GetCurrentProfile(ctx context.Context, authCtx authctx.AuthContext) (*ProfileResult, error) {
@@ -105,11 +104,11 @@ func (s *UserService) GetCurrentProfile(ctx context.Context, authCtx authctx.Aut
 	var result ProfileResult
 	switch account.Type {
 	case authctx.AccountTypeCustomer:
-		user, err := s.userRepo.GetByID(ctx, s.executor, authCtx.UserID)
+		u, err := s.userRepo.GetByID(ctx, s.executor, authCtx.UserID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve user profile: %w", err)
 		}
-		if user == nil {
+		if u == nil {
 			return nil, apperror.NewNotFound("user not found")
 		}
 
@@ -118,16 +117,16 @@ func (s *UserService) GetCurrentProfile(ctx context.Context, authCtx authctx.Aut
 			customerID = *authCtx.CustomerID
 		}
 
-		result.Customer = &userdomain.CustomerProfile{
+		result.Customer = &user.CustomerProfile{
 			ID:          customerID,
-			UserID:      user.ID,
-			Name:        user.Name,
-			Username:    user.Username,
-			Phone:       user.Phone,
-			AvatarURL:   user.AvatarURL,
+			UserID:      u.ID,
+			Name:        u.Name,
+			Username:    u.Username,
+			Phone:       u.Phone,
+			AvatarURL:   u.AvatarURL,
 			LastLoginAt: lastActivityAt,
-			CreatedAt:   user.CreatedAt,
-			UpdatedAt:   user.UpdatedAt,
+			CreatedAt:   u.CreatedAt,
+			UpdatedAt:   u.UpdatedAt,
 		}
 	case authctx.AccountTypeStaff:
 		staffProfile, err := s.staffProfileProvider.GetProfileByUserID(
@@ -174,7 +173,7 @@ func (s *UserService) UpdateCurrentProfile(
 			if err := s.userRepo.SaveProfile(
 				ctx,
 				exec,
-				userrepo.SaveProfileProps{
+				user.SaveProfileProps{
 					UserID:    authCtx.UserID,
 					Name:      input.Name,
 					Phone:     input.Phone,
@@ -187,11 +186,11 @@ func (s *UserService) UpdateCurrentProfile(
 
 			switch account.Type {
 			case authctx.AccountTypeCustomer:
-				user, err := s.userRepo.GetByID(ctx, exec, authCtx.UserID)
+				u, err := s.userRepo.GetByID(ctx, exec, authCtx.UserID)
 				if err != nil {
 					return fmt.Errorf("failed to retrieve user profile: %w", err)
 				}
-				if user == nil {
+				if u == nil {
 					return apperror.NewNotFound("user not found")
 				}
 
@@ -200,15 +199,15 @@ func (s *UserService) UpdateCurrentProfile(
 					customerID = *authCtx.CustomerID
 				}
 
-				result.Customer = &userdomain.CustomerProfile{
+				result.Customer = &user.CustomerProfile{
 					ID:        customerID,
-					UserID:    user.ID,
-					Name:      user.Name,
-					Username:  user.Username,
-					Phone:     user.Phone,
-					AvatarURL: user.AvatarURL,
-					CreatedAt: user.CreatedAt,
-					UpdatedAt: user.UpdatedAt,
+					UserID:    u.ID,
+					Name:      u.Name,
+					Username:  u.Username,
+					Phone:     u.Phone,
+					AvatarURL: u.AvatarURL,
+					CreatedAt: u.CreatedAt,
+					UpdatedAt: u.UpdatedAt,
 				}
 
 			case authctx.AccountTypeStaff:

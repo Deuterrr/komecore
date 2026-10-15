@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
+	"komecore/internal/modules/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,7 +18,7 @@ func NewRefreshTokenRepository() *RefreshTokenRepository {
 	return &RefreshTokenRepository{}
 }
 
-func (r *RefreshTokenRepository) GetBySessionID(ctx context.Context, exec transaction.Executor, sessionID uuid.UUID) (*authdomain.RefreshToken, error) {
+func (r *RefreshTokenRepository) GetBySessionID(ctx context.Context, exec transaction.Executor, sessionID uuid.UUID) (*auth.RefreshToken, error) {
 	query := `
 		SELECT
 			id,
@@ -34,7 +34,7 @@ func (r *RefreshTokenRepository) GetBySessionID(ctx context.Context, exec transa
 		LIMIT 1
 	`
 
-	var tkn authdomain.RefreshToken
+	var tkn auth.RefreshToken
 	err := exec.QueryRow(ctx, query, sessionID).Scan(
 		&tkn.ID,
 		&tkn.SessionID,
@@ -72,7 +72,7 @@ func (r *RefreshTokenRepository) RevokeBySessionID(ctx context.Context, exec tra
 	return nil
 }
 
-func (r *RefreshTokenRepository) Save(ctx context.Context, exec transaction.Executor, refreshToken authdomain.RefreshToken) error {
+func (r *RefreshTokenRepository) Save(ctx context.Context, exec transaction.Executor, refreshToken auth.RefreshToken) error {
 	query := `
 		INSERT INTO refresh_tokens (
 			id,

@@ -7,11 +7,9 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/user"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 )
@@ -20,18 +18,18 @@ const meWriteInterval = 5 * time.Minute
 
 type MeUsecase struct {
 	exec        transaction.Executor
-	accountRepo authrepo.AccountRepository
-	userRepo    userrepo.UserRepository
-	oauthRepo   authrepo.OAuthConnectionRepository
+	accountRepo auth.AccountRepository
+	userRepo    user.Repository
+	oauthRepo   auth.OAuthConnectionRepository
 	auditLogger applogger.AuditLogger
 	sysLogger   applogger.Logger
 }
 
 func NewMeUsecase(
 	exec transaction.Executor,
-	accountRepo authrepo.AccountRepository,
-	userRepo userrepo.UserRepository,
-	oauthRepo authrepo.OAuthConnectionRepository,
+	accountRepo auth.AccountRepository,
+	userRepo user.Repository,
+	oauthRepo auth.OAuthConnectionRepository,
 ) *MeUsecase {
 	return &MeUsecase{
 		exec:        exec,
@@ -50,13 +48,13 @@ func (u *MeUsecase) SetSysLogger(sysLogger applogger.Logger) {
 }
 
 type MeResult struct {
-	Account authdomain.Account
-	Actor   authdomain.Actor
-	User    *userdomain.User
-	OAuth   *authdomain.OAuthConnection
+	Account auth.Account
+	Actor   auth.Actor
+	User    *user.User
+	OAuth   *auth.OAuthConnection
 }
 
-func (u *MeUsecase) Execute(ctx context.Context, authCtx authdomain.AuthContext) (result *MeResult, err error) {
+func (u *MeUsecase) Execute(ctx context.Context, authCtx auth.AuthContext) (result *MeResult, err error) {
 	account, err := u.accountRepo.GetByUserID(ctx, u.exec, authCtx.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
@@ -65,8 +63,8 @@ func (u *MeUsecase) Execute(ctx context.Context, authCtx authdomain.AuthContext)
 		return nil, apperror.NewNotFound("account not found")
 	}
 
-	if account.Status != authdomain.AccountActive {
-		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+	if account.Status != auth.AccountActive {
+		return nil, apperror.NewForbidden(auth.ErrEmailNotVerified.Error())
 	}
 
 	now := appclock.Now()
@@ -83,7 +81,7 @@ func (u *MeUsecase) Execute(ctx context.Context, authCtx authdomain.AuthContext)
 
 	actor := authsvc.ActorFromAuthContext(&authCtx)
 	if actor == nil {
-		actor = &authdomain.Actor{}
+		actor = &auth.Actor{}
 	}
 
 	user, err := u.userRepo.GetByID(ctx, u.exec, authCtx.UserID)
@@ -91,7 +89,7 @@ func (u *MeUsecase) Execute(ctx context.Context, authCtx authdomain.AuthContext)
 		return nil, fmt.Errorf("failed to retrieve user: %w", err)
 	}
 
-	var oauthConn *authdomain.OAuthConnection
+	var oauthConn *auth.OAuthConnection
 	if u.oauthRepo != nil {
 		oauthConn, err = u.oauthRepo.GetByUserID(ctx, u.exec, authCtx.UserID)
 		if err != nil {

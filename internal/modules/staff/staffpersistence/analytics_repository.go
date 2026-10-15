@@ -6,7 +6,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 )
 
 type AnalyticsRepository struct{}
@@ -20,7 +20,7 @@ func (r *AnalyticsRepository) GetRevenueOverTime(
 	exec transaction.Executor,
 	interval string,
 	since time.Time,
-) ([]staffdomain.RevenueBucket, error) {
+) ([]staff.RevenueBucket, error) {
 	if interval == "" {
 		interval = "day"
 	}
@@ -42,13 +42,13 @@ func (r *AnalyticsRepository) GetRevenueOverTime(
 		return nil, fmt.Errorf("failed to query revenue over time: %w", err)
 	}
 	if rows == nil {
-		return []staffdomain.RevenueBucket{}, nil
+		return []staff.RevenueBucket{}, nil
 	}
 	defer rows.Close()
 
-	var buckets []staffdomain.RevenueBucket
+	var buckets []staff.RevenueBucket
 	for rows.Next() {
-		var b staffdomain.RevenueBucket
+		var b staff.RevenueBucket
 		if err := rows.Scan(&b.Bucket, &b.Revenue, &b.Count); err != nil {
 			return nil, fmt.Errorf("failed to scan revenue bucket: %w", err)
 		}
@@ -60,7 +60,7 @@ func (r *AnalyticsRepository) GetRevenueOverTime(
 	}
 
 	if buckets == nil {
-		buckets = []staffdomain.RevenueBucket{}
+		buckets = []staff.RevenueBucket{}
 	}
 
 	return buckets, nil
@@ -69,7 +69,7 @@ func (r *AnalyticsRepository) GetRevenueOverTime(
 func (r *AnalyticsRepository) GetOrderPipeline(
 	ctx context.Context,
 	exec transaction.Executor,
-) ([]staffdomain.OrderStatusCount, error) {
+) ([]staff.OrderStatusCount, error) {
 	query := `
 		SELECT
 			status,
@@ -85,13 +85,13 @@ func (r *AnalyticsRepository) GetOrderPipeline(
 		return nil, fmt.Errorf("failed to query order pipeline: %w", err)
 	}
 	if rows == nil {
-		return []staffdomain.OrderStatusCount{}, nil
+		return []staff.OrderStatusCount{}, nil
 	}
 	defer rows.Close()
 
-	var pipeline []staffdomain.OrderStatusCount
+	var pipeline []staff.OrderStatusCount
 	for rows.Next() {
-		var p staffdomain.OrderStatusCount
+		var p staff.OrderStatusCount
 		if err := rows.Scan(&p.Status, &p.Count, &p.TotalAmount); err != nil {
 			return nil, fmt.Errorf("failed to scan order status count: %w", err)
 		}
@@ -103,7 +103,7 @@ func (r *AnalyticsRepository) GetOrderPipeline(
 	}
 
 	if pipeline == nil {
-		pipeline = []staffdomain.OrderStatusCount{}
+		pipeline = []staff.OrderStatusCount{}
 	}
 
 	return pipeline, nil
@@ -113,7 +113,7 @@ func (r *AnalyticsRepository) GetTopProducts(
 	ctx context.Context,
 	exec transaction.Executor,
 	limit int,
-) ([]staffdomain.TopProduct, error) {
+) ([]staff.TopProduct, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -137,13 +137,13 @@ func (r *AnalyticsRepository) GetTopProducts(
 		return nil, fmt.Errorf("failed to query top products: %w", err)
 	}
 	if rows == nil {
-		return []staffdomain.TopProduct{}, nil
+		return []staff.TopProduct{}, nil
 	}
 	defer rows.Close()
 
-	var products []staffdomain.TopProduct
+	var products []staff.TopProduct
 	for rows.Next() {
-		var p staffdomain.TopProduct
+		var p staff.TopProduct
 		if err := rows.Scan(&p.ProductID, &p.ProductName, &p.QuantitySold, &p.TotalRevenue); err != nil {
 			return nil, fmt.Errorf("failed to scan top product: %w", err)
 		}
@@ -155,7 +155,7 @@ func (r *AnalyticsRepository) GetTopProducts(
 	}
 
 	if products == nil {
-		products = []staffdomain.TopProduct{}
+		products = []staff.TopProduct{}
 	}
 
 	return products, nil

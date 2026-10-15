@@ -8,7 +8,7 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
-	"komecore/internal/modules/user/userdomain"
+	"komecore/internal/modules/user"
 	"komecore/internal/modules/user/userusecase"
 
 	"github.com/google/uuid"
@@ -30,7 +30,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		account := &userusecase.UserAccount{
 			Type: authctx.AccountTypeCustomer,
 		}
-		user := &userdomain.User{
+		user := &user.User{
 			ID:        userID,
 			Name:      "Customer John",
 			Username:  "john_customer",
@@ -69,7 +69,7 @@ func TestGetCurrentProfileUsecase_Execute(t *testing.T) {
 		account := &userusecase.UserAccount{
 			Type: authctx.AccountTypeStaff,
 		}
-		staffProfile := &userdomain.StaffProfile{
+		staffProfile := &user.StaffProfile{
 			ID:        staffID,
 			UserID:    userID,
 			Name:      "Staff Sarah",

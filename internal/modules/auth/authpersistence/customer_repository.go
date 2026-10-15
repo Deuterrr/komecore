@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -19,7 +19,7 @@ func NewCustomerRepository() *CustomerRepository {
 	return &CustomerRepository{}
 }
 
-func (r *CustomerRepository) Create(ctx context.Context, exec transaction.Executor, customer authdomain.Customer) error {
+func (r *CustomerRepository) Create(ctx context.Context, exec transaction.Executor, customer auth.Customer) error {
 	query := `
 		INSERT INTO customers (
 			id,
@@ -40,7 +40,7 @@ func (r *CustomerRepository) Create(ctx context.Context, exec transaction.Execut
 	return nil
 }
 
-func (r *CustomerRepository) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*authdomain.Customer, error) {
+func (r *CustomerRepository) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*auth.Customer, error) {
 	query := `
 		SELECT
 			id,
@@ -54,7 +54,7 @@ func (r *CustomerRepository) GetByUserID(ctx context.Context, exec transaction.E
 		LIMIT 1
 	`
 
-	var c authdomain.Customer
+	var c auth.Customer
 	err := exec.QueryRow(ctx, query, userID).Scan(
 		&c.ID,
 		&c.UserID,

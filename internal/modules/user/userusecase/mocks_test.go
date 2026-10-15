@@ -5,8 +5,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/user"
 	"komecore/internal/modules/user/userusecase"
 
 	"github.com/google/uuid"
@@ -32,15 +31,15 @@ func (m *mockTransactor) WithinTransaction(
 }
 
 type mockUserRepo struct {
-	user             *userdomain.User
+	user             *user.User
 	getByIDError     error
 	saveProfileError error
-	savedProps       *userrepo.SaveProfileProps
+	savedProps       *user.SaveProfileProps
 	getByIDCalls     int
 	saveProfileCalls int
 }
 
-func (m *mockUserRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*userdomain.User, error) {
+func (m *mockUserRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*user.User, error) {
 	m.getByIDCalls++
 	if m.getByIDError != nil {
 		return nil, m.getByIDError
@@ -48,7 +47,7 @@ func (m *mockUserRepo) GetByID(ctx context.Context, exec transaction.Executor, i
 	return m.user, nil
 }
 
-func (m *mockUserRepo) SaveProfile(ctx context.Context, exec transaction.Executor, props userrepo.SaveProfileProps) error {
+func (m *mockUserRepo) SaveProfile(ctx context.Context, exec transaction.Executor, props user.SaveProfileProps) error {
 	m.saveProfileCalls++
 	m.savedProps = &props
 	return m.saveProfileError
@@ -69,12 +68,12 @@ func (m *mockAccountRepo) GetByUserID(ctx context.Context, exec transaction.Exec
 }
 
 type mockStaffRepo struct {
-	profile         *userdomain.StaffProfile
+	profile         *user.StaffProfile
 	getProfileErr   error
 	getProfileCalls int
 }
 
-func (m *mockStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*userdomain.StaffProfile, error) {
+func (m *mockStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*user.StaffProfile, error) {
 	m.getProfileCalls++
 	if m.getProfileErr != nil {
 		return nil, m.getProfileErr

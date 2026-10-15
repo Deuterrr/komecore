@@ -7,21 +7,21 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 
 	"github.com/google/uuid"
 )
 
 type mockAnalyticsRepo struct {
-	revenueBuckets []staffdomain.RevenueBucket
-	pipeline       []staffdomain.OrderStatusCount
-	topProducts    []staffdomain.TopProduct
+	revenueBuckets []staff.RevenueBucket
+	pipeline       []staff.OrderStatusCount
+	topProducts    []staff.TopProduct
 	err            error
 	lastInterval   string
 	lastLimit      int
 }
 
-func (m *mockAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transaction.Executor, interval string, _ time.Time) ([]staffdomain.RevenueBucket, error) {
+func (m *mockAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transaction.Executor, interval string, _ time.Time) ([]staff.RevenueBucket, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -29,14 +29,14 @@ func (m *mockAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transaction.
 	return m.revenueBuckets, nil
 }
 
-func (m *mockAnalyticsRepo) GetOrderPipeline(_ context.Context, _ transaction.Executor) ([]staffdomain.OrderStatusCount, error) {
+func (m *mockAnalyticsRepo) GetOrderPipeline(_ context.Context, _ transaction.Executor) ([]staff.OrderStatusCount, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.pipeline, nil
 }
 
-func (m *mockAnalyticsRepo) GetTopProducts(_ context.Context, _ transaction.Executor, limit int) ([]staffdomain.TopProduct, error) {
+func (m *mockAnalyticsRepo) GetTopProducts(_ context.Context, _ transaction.Executor, limit int) ([]staff.TopProduct, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -47,7 +47,7 @@ func (m *mockAnalyticsRepo) GetTopProducts(_ context.Context, _ transaction.Exec
 func TestStaffService_GetRevenueAnalytics_Success(t *testing.T) {
 	now := time.Now()
 	repo := &mockAnalyticsRepo{
-		revenueBuckets: []staffdomain.RevenueBucket{
+		revenueBuckets: []staff.RevenueBucket{
 			{Bucket: now.AddDate(0, 0, -2), Revenue: 500000, Count: 5},
 			{Bucket: now.AddDate(0, 0, -1), Revenue: 750000, Count: 8},
 		},
@@ -116,7 +116,7 @@ func TestStaffService_GetRevenueAnalytics_ErrorPropagation(t *testing.T) {
 
 func TestStaffService_GetOrderPipelineAnalytics_Success(t *testing.T) {
 	repo := &mockAnalyticsRepo{
-		pipeline: []staffdomain.OrderStatusCount{
+		pipeline: []staff.OrderStatusCount{
 			{Status: "pending", Count: 10, TotalAmount: 1000000},
 			{Status: "confirmed", Count: 25, TotalAmount: 2500000},
 			{Status: "delivered", Count: 100, TotalAmount: 10000000},
@@ -147,7 +147,7 @@ func TestStaffService_GetOrderPipelineAnalytics_Success(t *testing.T) {
 
 func TestStaffService_GetTopProductsAnalytics_Bounds(t *testing.T) {
 	repo := &mockAnalyticsRepo{
-		topProducts: []staffdomain.TopProduct{
+		topProducts: []staff.TopProduct{
 			{ProductID: uuid.New(), ProductName: "Coffee Beans", QuantitySold: 50, TotalRevenue: 5000000},
 		},
 	}

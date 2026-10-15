@@ -1,15 +1,12 @@
-package authrepo
+package auth
 
 import (
 	"context"
 	"time"
 
-	appcookie "komecore/internal/httpx/cookie"
-	appmiddleware "komecore/internal/httpx/middleware"
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
 )
 
 type AccountRepository interface {
@@ -17,17 +14,17 @@ type AccountRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		email string,
-	) (*authdomain.Account, error)
+	) (*Account, error)
 	GetByID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*authdomain.Account, error)
+	) (*Account, error)
 	GetByUserID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*authdomain.Account, error)
+	) (*Account, error)
 
 	ActivateByUserID(
 		ctx context.Context,
@@ -45,7 +42,7 @@ type AccountRepository interface {
 	Create(
 		ctx context.Context,
 		exec transaction.Executor,
-		account authdomain.Account,
+		account Account,
 	) error
 
 	DeleteByUserID(
@@ -67,7 +64,7 @@ type SessionRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*authdomain.Session, error)
+	) (*Session, error)
 
 	RevokeByID(
 		ctx context.Context,
@@ -90,7 +87,7 @@ type SessionRepository interface {
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		session authdomain.Session,
+		session Session,
 	) error
 }
 
@@ -99,12 +96,12 @@ type VerificationChallengeRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*authdomain.VerificationChallenge, error)
+	) (*VerificationChallenge, error)
 
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		challenge authdomain.VerificationChallenge,
+		challenge VerificationChallenge,
 	) error
 }
 
@@ -113,7 +110,7 @@ type RefreshTokenRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		sessionID uuid.UUID,
-	) (*authdomain.RefreshToken, error)
+	) (*RefreshToken, error)
 
 	RevokeBySessionID(
 		ctx context.Context,
@@ -124,18 +121,13 @@ type RefreshTokenRepository interface {
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		challenge authdomain.RefreshToken,
+		challenge RefreshToken,
 	) error
 }
 
 type TokenService interface {
 	Generate(params GenerateTokenParams) (GeneratedToken, error)
-	Validate(token string) (*authdomain.TokenClaims, error)
-}
-
-type PasswordHasher interface {
-	Hash(password string) (string, error)
-	Compare(hash string, password string) error
+	Validate(token string) (*TokenClaims, error)
 }
 
 type TokenHasher interface {
@@ -143,50 +135,24 @@ type TokenHasher interface {
 	Compare(hash string, token string) bool
 }
 
-type Authenticator interface {
-	RequireAuth(
-		exec transaction.Executor,
-		tran transaction.Transactor,
-		cookie appcookie.CookieName,
-	) appmiddleware.Middleware
-
-	RequireAnyAuth(
-		exec transaction.Executor,
-		tran transaction.Transactor,
-		cookies ...appcookie.CookieName,
-	) appmiddleware.Middleware
-
-	RequireMultiAuth(
-		exec transaction.Executor,
-		tran transaction.Transactor,
-		cookies ...appcookie.CookieName,
-	) appmiddleware.Middleware
-
-	OptionalAuth(
-		exec transaction.Executor,
-		tran transaction.Transactor,
-		cookies ...appcookie.CookieName,
-	) appmiddleware.Middleware
-}
-
 type OAuthConnectionRepository interface {
 	GetByProviderAndSubject(
 		ctx context.Context,
 		exec transaction.Executor,
-		provider authdomain.OAuthProvider,
+		provider OAuthProvider,
 		subject string,
-	) (*authdomain.OAuthConnection, error)
+	) (*OAuthConnection, error)
 
 	GetByUserID(
 		ctx context.Context,
 		exec transaction.Executor,
 		userID uuid.UUID,
-	) (*authdomain.OAuthConnection, error)
+	) (*OAuthConnection, error)
 
 	Create(
 		ctx context.Context,
 		exec transaction.Executor,
-		conn authdomain.OAuthConnection,
+		conn OAuthConnection,
 	) error
 
 	UpdateLastLogin(
@@ -211,28 +177,6 @@ type UserDeletionService interface {
 	) error
 }
 
-type Authorizer interface {
-	RequireAccountType(
-		allowedTypes ...authdomain.AccountType,
-	) appmiddleware.Middleware
-
-	RequireStaffRole(
-		allowedRoles ...authdomain.RoleCode,
-	) appmiddleware.Middleware
-
-	RequirePermission(
-		permission string,
-	) appmiddleware.Middleware
-
-	LoadActor(
-		exec transaction.Executor,
-	) appmiddleware.Middleware
-
-	OptionalLoadActor(
-		exec transaction.Executor,
-	) appmiddleware.Middleware
-}
-
 type IssueSessionParams struct {
 	UserID     uuid.UUID
 	AccountID  uuid.UUID
@@ -240,7 +184,7 @@ type IssueSessionParams struct {
 	IPAddress  *string
 	StaffID    *uuid.UUID
 	CustomerID *uuid.UUID
-	Roles      []authdomain.RoleCode
+	Roles      []RoleCode
 }
 
 type IssueSessionResult struct {
@@ -259,7 +203,7 @@ type SessionIssuerService interface {
 type CreateChallengeParams struct {
 	UserID   *uuid.UUID
 	Email    string
-	Purpose  authdomain.OTPPurpose
+	Purpose  OTPPurpose
 	Duration time.Duration
 }
 
@@ -274,14 +218,14 @@ type CustomerRepository interface {
 	Create(
 		ctx context.Context,
 		exec transaction.Executor,
-		customer authdomain.Customer,
+		customer Customer,
 	) error
 
 	GetByUserID(
 		ctx context.Context,
 		exec transaction.Executor,
 		userID uuid.UUID,
-	) (*authdomain.Customer, error)
+	) (*Customer, error)
 
 	Delete(
 		ctx context.Context,

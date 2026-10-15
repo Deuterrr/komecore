@@ -6,21 +6,20 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
-	"komecore/internal/modules/staff/staffrepo"
+	"komecore/internal/modules/staff"
 	applogger "komecore/pkg/logger"
 )
 
 type LoginStaffUsecase struct {
 	executor       transaction.Executor
 	transactor     transaction.Transactor
-	accountRepo    authrepo.AccountRepository
-	pwHasher       authrepo.PasswordHasher
-	staffRepo      staffrepo.StaffRepository
-	membershipRepo staffrepo.StaffMembershipRepository
-	sessionIssuer  authrepo.SessionIssuerService
+	accountRepo    auth.AccountRepository
+	pwHasher       auth.PasswordHasher
+	staffRepo      staff.Repository
+	membershipRepo staff.MembershipRepository
+	sessionIssuer  auth.SessionIssuerService
 	auditLogger    applogger.AuditLogger
 	sysLogger      applogger.Logger
 }
@@ -28,14 +27,14 @@ type LoginStaffUsecase struct {
 func NewLoginStaffUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	pwHasher authrepo.PasswordHasher,
-	tokenHasher authrepo.TokenHasher,
-	tokenSvc authrepo.TokenService,
-	sessionRepo authrepo.SessionRepository,
-	refreshTokenRepo authrepo.RefreshTokenRepository,
-	staffRepo staffrepo.StaffRepository,
-	membershipRepo staffrepo.StaffMembershipRepository,
+	accountRepo auth.AccountRepository,
+	pwHasher auth.PasswordHasher,
+	tokenHasher auth.TokenHasher,
+	tokenSvc auth.TokenService,
+	sessionRepo auth.SessionRepository,
+	refreshTokenRepo auth.RefreshTokenRepository,
+	staffRepo staff.Repository,
+	membershipRepo staff.MembershipRepository,
 	auditLogger applogger.AuditLogger,
 ) *LoginStaffUsecase {
 	sessionIssuer := authsvc.NewSessionIssuerService(
@@ -59,7 +58,7 @@ func NewLoginStaffUsecase(
 	}
 }
 
-func (u *LoginStaffUsecase) SetSessionIssuer(sessionIssuer authrepo.SessionIssuerService) {
+func (u *LoginStaffUsecase) SetSessionIssuer(sessionIssuer auth.SessionIssuerService) {
 	u.sessionIssuer = sessionIssuer
 }
 
@@ -80,17 +79,17 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, fmt.Errorf("failed to retrieve account: %w", err)
 	}
 	if existing == nil {
-		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, auth.ErrInvalidCredentials.Error())
 	}
-	if existing.Type != authdomain.AccountTypeStaff {
-		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
+	if existing.Type != auth.AccountTypeStaff {
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, auth.ErrInvalidCredentials.Error())
 	}
-	if existing.Status != authdomain.AccountActive {
-		return nil, apperror.NewForbidden(authdomain.ErrEmailNotVerified.Error())
+	if existing.Status != auth.AccountActive {
+		return nil, apperror.NewForbidden(auth.ErrEmailNotVerified.Error())
 	}
 
 	if err := u.pwHasher.Compare(existing.Password, input.Password); err != nil {
-		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, auth.ErrInvalidCredentials.Error())
 	}
 
 	memberStaff, err := u.membershipRepo.GetByAccountID(ctx, u.executor, existing.ID)
@@ -98,7 +97,7 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, fmt.Errorf("failed to retrieve membership: %w", err)
 	}
 	if memberStaff == nil {
-		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, authdomain.ErrInvalidCredentials.Error())
+		return nil, apperror.NewUnauthorizedWithCode(apperror.CodeAuthInvalidCredentials, auth.ErrInvalidCredentials.Error())
 	}
 
 	roles, err := u.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, u.executor,
@@ -112,12 +111,12 @@ func (u *LoginStaffUsecase) Execute(ctx context.Context, input LoginStaffParams)
 		return nil, apperror.NewForbidden("no role associated with this account")
 	}
 
-	roleCodes := make([]authdomain.RoleCode, len(roles))
+	roleCodes := make([]auth.RoleCode, len(roles))
 	for i, r := range roles {
-		roleCodes[i] = authdomain.RoleCode(r.Code)
+		roleCodes[i] = auth.RoleCode(r.Code)
 	}
 
-	sessionRes, err := u.sessionIssuer.Issue(ctx, authrepo.IssueSessionParams{
+	sessionRes, err := u.sessionIssuer.Issue(ctx, auth.IssueSessionParams{
 		UserID:    existing.UserID,
 		AccountID: existing.ID,
 		UserAgent: input.UserAgent,

@@ -6,10 +6,8 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/auth"
+	"komecore/internal/modules/user"
 	applogger "komecore/pkg/logger"
 
 	"github.com/google/uuid"
@@ -40,19 +38,19 @@ func (m *mockTokenHasher) Compare(hash string, token string) bool { return hash 
 
 type mockTokenService struct{}
 
-func (m *mockTokenService) Generate(params authrepo.GenerateTokenParams) (authrepo.GeneratedToken, error) {
-	return authrepo.GeneratedToken{
+func (m *mockTokenService) Generate(params auth.GenerateTokenParams) (auth.GeneratedToken, error) {
+	return auth.GeneratedToken{
 		Token:     "mock-token-" + string(params.Type),
 		ExpiresAt: time.Now().Add(params.Duration),
 	}, nil
 }
-func (m *mockTokenService) Validate(token string) (*authdomain.TokenClaims, error) {
-	return &authdomain.TokenClaims{UserID: uuid.New()}, nil
+func (m *mockTokenService) Validate(token string) (*auth.TokenClaims, error) {
+	return &auth.TokenClaims{UserID: uuid.New()}, nil
 }
 
 type mockSessionRepo struct{}
 
-func (m *mockSessionRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.Session, error) {
+func (m *mockSessionRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.Session, error) {
 	return nil, nil
 }
 func (m *mockSessionRepo) RevokeByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
@@ -64,30 +62,30 @@ func (m *mockSessionRepo) RevokeAllByUserID(_ context.Context, _ transaction.Exe
 func (m *mockSessionRepo) UpdateLastActivityByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
 	return nil
 }
-func (m *mockSessionRepo) Save(_ context.Context, _ transaction.Executor, _ authdomain.Session) error {
+func (m *mockSessionRepo) Save(_ context.Context, _ transaction.Executor, _ auth.Session) error {
 	return nil
 }
 
 type mockRefreshTokenRepo struct{}
 
-func (m *mockRefreshTokenRepo) GetBySessionID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.RefreshToken, error) {
+func (m *mockRefreshTokenRepo) GetBySessionID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.RefreshToken, error) {
 	return nil, nil
 }
 func (m *mockRefreshTokenRepo) RevokeBySessionID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
 	return nil
 }
-func (m *mockRefreshTokenRepo) Save(_ context.Context, _ transaction.Executor, _ authdomain.RefreshToken) error {
+func (m *mockRefreshTokenRepo) Save(_ context.Context, _ transaction.Executor, _ auth.RefreshToken) error {
 	return nil
 }
 
 type mockCustomerRepo struct {
-	customer *authdomain.Customer
+	customer *auth.Customer
 }
 
-func (m *mockCustomerRepo) Create(_ context.Context, _ transaction.Executor, _ authdomain.Customer) error {
+func (m *mockCustomerRepo) Create(_ context.Context, _ transaction.Executor, _ auth.Customer) error {
 	return nil
 }
-func (m *mockCustomerRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.Customer, error) {
+func (m *mockCustomerRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.Customer, error) {
 	return m.customer, nil
 }
 func (m *mockCustomerRepo) Delete(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
@@ -96,20 +94,20 @@ func (m *mockCustomerRepo) Delete(_ context.Context, _ transaction.Executor, _ u
 
 // User Repo Mock
 type mockUserRepo struct {
-	user        *userdomain.User
-	saveProfile func(props userrepo.SaveProfileProps) error
+	user        *user.User
+	saveProfile func(props user.SaveProfileProps) error
 }
 
-func (m *mockUserRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*userdomain.User, error) {
+func (m *mockUserRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*user.User, error) {
 	return m.user, nil
 }
-func (m *mockUserRepo) GetByUsername(_ context.Context, _ transaction.Executor, _ string) (*userdomain.User, error) {
+func (m *mockUserRepo) GetByUsername(_ context.Context, _ transaction.Executor, _ string) (*user.User, error) {
 	return m.user, nil
 }
-func (m *mockUserRepo) CreateUser(_ context.Context, _ transaction.Executor, _ userrepo.CreateUserProps) error {
+func (m *mockUserRepo) CreateUser(_ context.Context, _ transaction.Executor, _ user.CreateUserProps) error {
 	return nil
 }
-func (m *mockUserRepo) SaveProfile(_ context.Context, _ transaction.Executor, props userrepo.SaveProfileProps) error {
+func (m *mockUserRepo) SaveProfile(_ context.Context, _ transaction.Executor, props user.SaveProfileProps) error {
 	if m.saveProfile != nil {
 		return m.saveProfile(props)
 	}
@@ -121,7 +119,7 @@ func (m *mockUserRepo) Delete(_ context.Context, _ transaction.Executor, _ uuid.
 
 // Account Repo Mock
 type mockAccountRepo struct {
-	account                *authdomain.Account
+	account                *auth.Account
 	activateCalls          int
 	updatePasswordCalls    int
 	lastPasswordUpdateHash string
@@ -129,20 +127,20 @@ type mockAccountRepo struct {
 	lastLoginAtRecorded    time.Time
 }
 
-func (m *mockAccountRepo) GetByEmail(_ context.Context, _ transaction.Executor, _ string) (*authdomain.Account, error) {
+func (m *mockAccountRepo) GetByEmail(_ context.Context, _ transaction.Executor, _ string) (*auth.Account, error) {
 	return m.account, nil
 }
-func (m *mockAccountRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.Account, error) {
+func (m *mockAccountRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.Account, error) {
 	return m.account, nil
 }
-func (m *mockAccountRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.Account, error) {
+func (m *mockAccountRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.Account, error) {
 	return m.account, nil
 }
 func (m *mockAccountRepo) ActivateByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
 	m.activateCalls++
 	return nil
 }
-func (m *mockAccountRepo) Create(_ context.Context, _ transaction.Executor, _ authdomain.Account) error {
+func (m *mockAccountRepo) Create(_ context.Context, _ transaction.Executor, _ auth.Account) error {
 	return nil
 }
 func (m *mockAccountRepo) UpdatePasswordByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID, hash string) error {
@@ -164,18 +162,18 @@ func (m *mockAccountRepo) UpdateLastLoginAt(_ context.Context, _ transaction.Exe
 
 // OAuth connection mock
 type mockOAuthRepo struct {
-	connection           *authdomain.OAuthConnection
+	connection           *auth.OAuthConnection
 	createCalls          int
 	updateLastLoginCalls int
 }
 
-func (m *mockOAuthRepo) GetByProviderAndSubject(_ context.Context, _ transaction.Executor, _ authdomain.OAuthProvider, _ string) (*authdomain.OAuthConnection, error) {
+func (m *mockOAuthRepo) GetByProviderAndSubject(_ context.Context, _ transaction.Executor, _ auth.OAuthProvider, _ string) (*auth.OAuthConnection, error) {
 	return m.connection, nil
 }
-func (m *mockOAuthRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.OAuthConnection, error) {
+func (m *mockOAuthRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.OAuthConnection, error) {
 	return m.connection, nil
 }
-func (m *mockOAuthRepo) Create(_ context.Context, _ transaction.Executor, _ authdomain.OAuthConnection) error {
+func (m *mockOAuthRepo) Create(_ context.Context, _ transaction.Executor, _ auth.OAuthConnection) error {
 	m.createCalls++
 	return nil
 }
@@ -212,7 +210,7 @@ func TestAuthenticateOAuth_NewUserRegistration(t *testing.T) {
 	)
 
 	input := AuthenticateOAuthParams{
-		Provider:  authdomain.OAuthProviderGoogle,
+		Provider:  auth.OAuthProviderGoogle,
 		Subject:   "google-sub-123",
 		Email:     "newuser@gmail.com",
 		Name:      "New User",
@@ -235,27 +233,27 @@ func TestAuthenticateOAuth_NewUserRegistration(t *testing.T) {
 func TestAuthenticateOAuth_ExistingLinkedAccount_UpdatesLastLoginAndDoesNotSyncProfile(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
-	existingConn := &authdomain.OAuthConnection{
+	existingConn := &auth.OAuthConnection{
 		ID:       uuid.New(),
 		UserID:   userID,
-		Provider: authdomain.OAuthProviderGoogle,
+		Provider: auth.OAuthProviderGoogle,
 		Subject:  "google-sub-123",
 	}
 
 	oauthRepoMock := &mockOAuthRepo{connection: existingConn}
 	accountRepoMock := &mockAccountRepo{
-		account: &authdomain.Account{
+		account: &auth.Account{
 			UserID:   userID,
 			Email:    "existing@gmail.com",
 			Password: "hashedpassword123",
-			Status:   authdomain.AccountActive,
+			Status:   auth.AccountActive,
 		},
 	}
 
 	var saveProfileCalled bool
 	userRepoMock := &mockUserRepo{
-		user: &userdomain.User{ID: userID, Name: "Old Name"},
-		saveProfile: func(props userrepo.SaveProfileProps) error {
+		user: &user.User{ID: userID, Name: "Old Name"},
+		saveProfile: func(props user.SaveProfileProps) error {
 			saveProfileCalled = true
 			return nil
 		},
@@ -277,7 +275,7 @@ func TestAuthenticateOAuth_ExistingLinkedAccount_UpdatesLastLoginAndDoesNotSyncP
 
 	avatar := "http://example.com/new-pic.jpg"
 	input := AuthenticateOAuthParams{
-		Provider:  authdomain.OAuthProviderGoogle,
+		Provider:  auth.OAuthProviderGoogle,
 		Subject:   "google-sub-123",
 		Email:     "existing@gmail.com",
 		Name:      "New Name",
@@ -305,19 +303,19 @@ func TestAuthenticateOAuth_ExistingLocalAccount_LinksAndDoesNotSyncProfile(t *te
 	ctx := context.Background()
 	userID := uuid.New()
 	accountRepoMock := &mockAccountRepo{
-		account: &authdomain.Account{
+		account: &auth.Account{
 			UserID:   userID,
 			Email:    "localuser@gmail.com",
 			Password: "hashedlocalpassword",
-			Status:   authdomain.AccountPending,
+			Status:   auth.AccountPending,
 		},
 	}
 	oauthRepoMock := &mockOAuthRepo{connection: nil} // No OAuth connection initially
 
 	var saveProfileCalled bool
 	userRepoMock := &mockUserRepo{
-		user: &userdomain.User{ID: userID, Name: "Local Name"},
-		saveProfile: func(props userrepo.SaveProfileProps) error {
+		user: &user.User{ID: userID, Name: "Local Name"},
+		saveProfile: func(props user.SaveProfileProps) error {
 			saveProfileCalled = true
 			return nil
 		},
@@ -338,7 +336,7 @@ func TestAuthenticateOAuth_ExistingLocalAccount_LinksAndDoesNotSyncProfile(t *te
 	)
 
 	input := AuthenticateOAuthParams{
-		Provider:  authdomain.OAuthProviderGoogle,
+		Provider:  auth.OAuthProviderGoogle,
 		Subject:   "google-sub-123",
 		Email:     "localuser@gmail.com",
 		Name:      "Google Name",
@@ -368,7 +366,7 @@ func TestAuthenticateOAuth_ExistingLocalAccount_AlreadyLinkedToOtherProvider(t *
 	ctx := context.Background()
 	userID := uuid.New()
 	accountRepoMock := &mockAccountRepo{
-		account: &authdomain.Account{
+		account: &auth.Account{
 			UserID: userID,
 			Email:  "user@gmail.com",
 		},
@@ -376,7 +374,7 @@ func TestAuthenticateOAuth_ExistingLocalAccount_AlreadyLinkedToOtherProvider(t *
 
 	// This user already has an OAuth connection (e.g., github)
 	oauthRepoMock := &mockOAuthRepo{
-		connection: &authdomain.OAuthConnection{
+		connection: &auth.OAuthConnection{
 			ID:       uuid.New(),
 			UserID:   userID,
 			Provider: "github",
@@ -398,7 +396,7 @@ func TestAuthenticateOAuth_ExistingLocalAccount_AlreadyLinkedToOtherProvider(t *
 	)
 
 	input := AuthenticateOAuthParams{
-		Provider: authdomain.OAuthProviderGoogle,
+		Provider: auth.OAuthProviderGoogle,
 		Subject:  "google-sub-123",
 		Email:    "user@gmail.com",
 	}

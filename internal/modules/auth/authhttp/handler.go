@@ -13,7 +13,7 @@ import (
 	appconfig "komecore/internal/config"
 	"komecore/internal/httpx"
 	appcookie "komecore/internal/httpx/cookie"
-	"komecore/internal/modules/auth/authdomain"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authusecase"
 	appclock "komecore/pkg/clock"
 
@@ -508,7 +508,7 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 	params := authusecase.AuthenticateOAuthParams{
 		UserAgent: &userAgent,
 		IPAddress: &ipAddress,
-		Provider:  authdomain.OAuthProviderGoogle,
+		Provider:  auth.OAuthProviderGoogle,
 		Subject:   googleUser.Sub,
 		Email:     googleUser.Email,
 		Name:      googleUser.Name,
@@ -557,7 +557,7 @@ func (h *authHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Requ
 
 	input := authusecase.RequestPasswordResetParams{
 		Email:       req.Email,
-		AccountType: authdomain.AccountTypeCustomer,
+		AccountType: auth.AccountTypeCustomer,
 	}
 	challengeID, err := h.requestPasswordReset.Execute(r.Context(), input)
 	if err != nil {
@@ -584,7 +584,7 @@ func (h *authHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request
 
 	input := authusecase.RequestPasswordResetParams{
 		Email:       req.Email,
-		AccountType: authdomain.AccountTypeStaff,
+		AccountType: auth.AccountTypeStaff,
 	}
 	challengeID, err := h.requestPasswordReset.Execute(r.Context(), input)
 	if err != nil {
@@ -679,7 +679,7 @@ func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) er
 
 	res, err := h.refreshToken.Execute(r.Context(), authusecase.RefreshTokenParams{
 		RefreshToken: refreshToken,
-		AccountType:  authdomain.AccountTypeCustomer,
+		AccountType:  auth.AccountTypeCustomer,
 	})
 	if err != nil {
 		return err
@@ -710,7 +710,7 @@ func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error
 
 	res, err := h.refreshToken.Execute(r.Context(), authusecase.RefreshTokenParams{
 		RefreshToken: refreshToken,
-		AccountType:  authdomain.AccountTypeStaff,
+		AccountType:  auth.AccountTypeStaff,
 	})
 	if err != nil {
 		return err

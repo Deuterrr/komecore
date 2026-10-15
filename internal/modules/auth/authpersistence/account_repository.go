@@ -8,7 +8,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
+	"komecore/internal/modules/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -24,7 +24,7 @@ func (r *AccountRepository) GetByEmail(
 	ctx context.Context,
 	exec transaction.Executor,
 	email string,
-) (*authdomain.Account, error) {
+) (*auth.Account, error) {
 	query := `
 		SELECT
 			id,
@@ -43,7 +43,7 @@ func (r *AccountRepository) GetByEmail(
 		LIMIT 1
 	`
 
-	var m authdomain.Account
+	var m auth.Account
 	err := exec.QueryRow(ctx, query, email).Scan(
 		&m.ID,
 		&m.UserID,
@@ -69,7 +69,7 @@ func (r *AccountRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*authdomain.Account, error) {
+) (*auth.Account, error) {
 	query := `
 		SELECT
 			id,
@@ -88,7 +88,7 @@ func (r *AccountRepository) GetByID(
 		LIMIT 1
 	`
 
-	var m authdomain.Account
+	var m auth.Account
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&m.ID,
 		&m.UserID,
@@ -114,7 +114,7 @@ func (r *AccountRepository) GetByUserID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*authdomain.Account, error) {
+) (*auth.Account, error) {
 	query := `
 		SELECT
 			id,
@@ -133,7 +133,7 @@ func (r *AccountRepository) GetByUserID(
 		LIMIT 1
 	`
 
-	var m authdomain.Account
+	var m auth.Account
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&m.ID,
 		&m.UserID,
@@ -177,7 +177,7 @@ func (r *AccountRepository) ActivateByUserID(
 
 	if result.RowsAffected() == 0 {
 		return apperror.NewNotFound(
-			authdomain.ErrNotFoundAccount.Error(),
+			auth.ErrNotFoundAccount.Error(),
 		)
 	}
 
@@ -187,7 +187,7 @@ func (r *AccountRepository) ActivateByUserID(
 func (r *AccountRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	acc authdomain.Account,
+	acc auth.Account,
 ) error {
 	query := `
 		INSERT INTO accounts (
@@ -238,7 +238,7 @@ func (r *AccountRepository) UpdatePasswordByUserID(
 	}
 
 	if result.RowsAffected() == 0 {
-		return apperror.NewNotFound(authdomain.ErrNotFoundAccount.Error())
+		return apperror.NewNotFound(auth.ErrNotFoundAccount.Error())
 	}
 
 	return nil
@@ -287,7 +287,7 @@ func (r *AccountRepository) UpdateLastLoginAt(
 	}
 
 	if res.RowsAffected() == 0 {
-		return apperror.NewNotFound(authdomain.ErrNotFoundAccount.Error())
+		return apperror.NewNotFound(auth.ErrNotFoundAccount.Error())
 	}
 
 	return nil

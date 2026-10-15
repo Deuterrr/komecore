@@ -11,11 +11,9 @@ import (
 
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
-	"komecore/internal/modules/staff/staffrepo"
+	"komecore/internal/modules/staff"
 	"komecore/internal/modules/staff/staffusecase"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/user"
 	applogger "komecore/pkg/logger"
 
 	"github.com/go-chi/chi/v5"
@@ -49,19 +47,19 @@ type mockAuditor struct{}
 func (m *mockAuditor) Log(ctx context.Context, event applogger.AuditEvent) {}
 
 type testStaffRepo struct {
-	staff *staffdomain.Staff
+	staff *staff.Staff
 }
 
-func (r *testStaffRepo) Create(ctx context.Context, exec transaction.Executor, staff staffdomain.Staff) error {
+func (r *testStaffRepo) Create(ctx context.Context, exec transaction.Executor, staff staff.Staff) error {
 	return nil
 }
-func (r *testStaffRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staffdomain.Staff, error) {
+func (r *testStaffRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staff.Staff, error) {
 	return r.staff, nil
 }
-func (r *testStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*staffdomain.StaffProfile, error) {
+func (r *testStaffRepo) GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*staff.StaffProfile, error) {
 	return nil, nil
 }
-func (r *testStaffRepo) FindStaff(ctx context.Context, exec transaction.Executor, params staffrepo.FindStaffParams) ([]staffdomain.StaffProfile, int, error) {
+func (r *testStaffRepo) FindStaff(ctx context.Context, exec transaction.Executor, params staff.FindStaffParams) ([]staff.StaffProfile, int, error) {
 	return nil, 0, nil
 }
 func (r *testStaffRepo) Update(ctx context.Context, exec transaction.Executor, staffID uuid.UUID, name string, logoUrl *string, bannerUrl *string) error {
@@ -72,24 +70,24 @@ func (r *testStaffRepo) Delete(ctx context.Context, exec transaction.Executor, s
 }
 
 type testMembershipRepo struct {
-	membership *staffdomain.StaffMembership
-	roles      []staffdomain.Role
-	accounts   []staffdomain.StaffAccountMember
+	membership *staff.StaffMembership
+	roles      []staff.Role
+	accounts   []staff.StaffAccountMember
 }
 
-func (r *testMembershipRepo) GetByAccountID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID) (*staffdomain.StaffMembership, error) {
+func (r *testMembershipRepo) GetByAccountID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID) (*staff.StaffMembership, error) {
 	return r.membership, nil
 }
-func (r *testMembershipRepo) GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staffdomain.StaffMembership, error) {
+func (r *testMembershipRepo) GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) (*staff.StaffMembership, error) {
 	return r.membership, nil
 }
-func (r *testMembershipRepo) ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staffdomain.Role, error) {
+func (r *testMembershipRepo) ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staff.Role, error) {
 	return r.roles, nil
 }
-func (r *testMembershipRepo) Save(ctx context.Context, exec transaction.Executor, membership staffdomain.StaffMembership) error {
+func (r *testMembershipRepo) Save(ctx context.Context, exec transaction.Executor, membership staff.StaffMembership) error {
 	return nil
 }
-func (r *testMembershipRepo) ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]staffdomain.StaffAccountMember, error) {
+func (r *testMembershipRepo) ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]staff.StaffAccountMember, error) {
 	return r.accounts, nil
 }
 func (r *testMembershipRepo) DeleteByAccountID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID) error {
@@ -127,19 +125,19 @@ func (r *testAccountRepo) RevokeSessionsByUserID(ctx context.Context, exec trans
 }
 
 type testUserRepo struct {
-	user *userdomain.User
+	user *user.User
 }
 
-func (r *testUserRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*userdomain.User, error) {
+func (r *testUserRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*user.User, error) {
 	return r.user, nil
 }
-func (r *testUserRepo) GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*userdomain.User, error) {
+func (r *testUserRepo) GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*user.User, error) {
 	return nil, nil
 }
-func (r *testUserRepo) CreateUser(ctx context.Context, exec transaction.Executor, props userrepo.CreateUserProps) error {
+func (r *testUserRepo) CreateUser(ctx context.Context, exec transaction.Executor, props user.CreateUserProps) error {
 	return nil
 }
-func (r *testUserRepo) SaveProfile(ctx context.Context, exec transaction.Executor, props userrepo.SaveProfileProps) error {
+func (r *testUserRepo) SaveProfile(ctx context.Context, exec transaction.Executor, props user.SaveProfileProps) error {
 	return nil
 }
 func (r *testUserRepo) Delete(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
@@ -153,16 +151,16 @@ func (s *testUserDeletionService) DeleteUserRecord(ctx context.Context, exec tra
 }
 
 type testRoleRepo struct {
-	role *staffdomain.Role
+	role *staff.Role
 }
 
-func (r *testRoleRepo) GetByCode(ctx context.Context, exec transaction.Executor, code staffdomain.RoleCode) (*staffdomain.Role, error) {
+func (r *testRoleRepo) GetByCode(ctx context.Context, exec transaction.Executor, code staff.RoleCode) (*staff.Role, error) {
 	return r.role, nil
 }
 
-func (r *testRoleRepo) GetRolesByAccountAndStaff(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staffdomain.Role, error) {
+func (r *testRoleRepo) GetRolesByAccountAndStaff(ctx context.Context, exec transaction.Executor, accountID, staffID uuid.UUID) ([]staff.Role, error) {
 	if r.role != nil {
-		return []staffdomain.Role{*r.role}, nil
+		return []staff.Role{*r.role}, nil
 	}
 	return nil, nil
 }
@@ -174,30 +172,30 @@ func (h *testHasher) Compare(hash, p string) error  { return nil }
 
 func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRepo, *testMembershipRepo) {
 	sRepo := &testStaffRepo{
-		staff: &staffdomain.Staff{
+		staff: &staff.Staff{
 			ID:     staffID,
 			UserID: uuid.New(),
 		},
 	}
 	mRepo := &testMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   staffID,
 			AccountID: accountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
-		accounts: []staffdomain.StaffAccountMember{
+		accounts: []staff.StaffAccountMember{
 			{
 				AccountID: accountID,
 				UserID:    uuid.New(),
 				Email:     "jane@example.com",
 				Name:      "Jane Doe",
 				Username:  "janedoe",
-				Role: staffdomain.Role{
+				Role: staff.Role{
 					ID:   uuid.New(),
-					Code: staffdomain.RoleStaffAdmin,
+					Code: staff.RoleStaffAdmin,
 					Name: "Staff Admin",
 				},
 				CreatedAt: time.Now(),
@@ -212,7 +210,7 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRe
 	}
 	uRepo := &testUserRepo{}
 	rRepo := &testRoleRepo{
-		role: &staffdomain.Role{ID: uuid.New(), Code: staffdomain.RoleStaff, Name: "Staff"},
+		role: &staff.Role{ID: uuid.New(), Code: staff.RoleStaff, Name: "Staff"},
 	}
 	hasher := &testHasher{}
 

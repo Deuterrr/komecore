@@ -6,8 +6,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -16,16 +15,16 @@ import (
 
 type VerifyPasswordResetUsecase struct {
 	executor      transaction.Executor
-	challengeRepo authrepo.VerificationChallengeRepository
-	pwHasher      authrepo.PasswordHasher
+	challengeRepo auth.VerificationChallengeRepository
+	pwHasher      auth.PasswordHasher
 	auditLogger   applogger.AuditLogger
 	sysLogger     applogger.Logger
 }
 
 func NewVerifyPasswordResetUsecase(
 	executor transaction.Executor,
-	challengeRepo authrepo.VerificationChallengeRepository,
-	pwHasher authrepo.PasswordHasher,
+	challengeRepo auth.VerificationChallengeRepository,
+	pwHasher auth.PasswordHasher,
 	auditLogger applogger.AuditLogger,
 ) *VerifyPasswordResetUsecase {
 	return &VerifyPasswordResetUsecase{
@@ -57,27 +56,27 @@ func (u *VerifyPasswordResetUsecase) Execute(
 	}
 
 	if challenge == nil {
-		return nil, apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+		return nil, apperror.NewNotFound(auth.ErrNotFoundChallenge.Error())
 	}
 
-	if challenge.Purpose != authdomain.OTPPurposePasswordReset {
-		return nil, apperror.NewNotFound(authdomain.ErrNotFoundChallenge.Error())
+	if challenge.Purpose != auth.OTPPurposePasswordReset {
+		return nil, apperror.NewNotFound(auth.ErrNotFoundChallenge.Error())
 	}
 
 	if challenge.ConsumedAt != nil {
-		return nil, apperror.NewConflict(authdomain.ErrConsumedChallenge.Error())
+		return nil, apperror.NewConflict(auth.ErrConsumedChallenge.Error())
 	}
 
 	if challenge.VerifiedAt != nil {
-		return nil, apperror.NewConflict(authdomain.ErrVerifiedChallenge.Error())
+		return nil, apperror.NewConflict(auth.ErrVerifiedChallenge.Error())
 	}
 
 	if challenge.ExpiresAt.Before(now) {
-		return nil, apperror.NewConflict(authdomain.ErrExpiredChallenge.Error())
+		return nil, apperror.NewConflict(auth.ErrExpiredChallenge.Error())
 	}
 
 	if challenge.AttemptCount >= 5 {
-		return nil, apperror.NewConflict(authdomain.ErrMaxAttemptReached.Error())
+		return nil, apperror.NewConflict(auth.ErrMaxAttemptReached.Error())
 	}
 
 	if err := u.pwHasher.Compare(challenge.CodeHash, input.OTP); err != nil {
@@ -87,7 +86,7 @@ func (u *VerifyPasswordResetUsecase) Execute(
 			return nil, fmt.Errorf("failed to update challenge attempts: %w", err)
 		}
 
-		return nil, apperror.NewUnauthorized(authdomain.ErrInvalidOTP.Error())
+		return nil, apperror.NewUnauthorized(auth.ErrInvalidOTP.Error())
 	}
 
 	challenge.VerifiedAt = &now

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
+	"komecore/internal/modules/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,9 +20,9 @@ func NewOAuthConnectionRepository() *OAuthConnectionRepository {
 }
 
 func (r *OAuthConnectionRepository) GetByProviderAndSubject(ctx context.Context, exec transaction.Executor,
-	provider authdomain.OAuthProvider,
+	provider auth.OAuthProvider,
 	subject string,
-) (*authdomain.OAuthConnection, error) {
+) (*auth.OAuthConnection, error) {
 	query := `
 		SELECT
 			id,
@@ -39,7 +39,7 @@ func (r *OAuthConnectionRepository) GetByProviderAndSubject(ctx context.Context,
 		LIMIT 1
 	`
 
-	var m authdomain.OAuthConnection
+	var m auth.OAuthConnection
 	err := exec.QueryRow(ctx, query, string(provider), subject).Scan(
 		&m.ID,
 		&m.UserID,
@@ -59,7 +59,7 @@ func (r *OAuthConnectionRepository) GetByProviderAndSubject(ctx context.Context,
 	return &m, nil
 }
 
-func (r *OAuthConnectionRepository) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*authdomain.OAuthConnection, error) {
+func (r *OAuthConnectionRepository) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*auth.OAuthConnection, error) {
 	query := `
 		SELECT
 			id,
@@ -76,7 +76,7 @@ func (r *OAuthConnectionRepository) GetByUserID(ctx context.Context, exec transa
 		LIMIT 1
 	`
 
-	var m authdomain.OAuthConnection
+	var m auth.OAuthConnection
 	err := exec.QueryRow(ctx, query, userID).Scan(
 		&m.ID,
 		&m.UserID,
@@ -96,7 +96,7 @@ func (r *OAuthConnectionRepository) GetByUserID(ctx context.Context, exec transa
 	return &m, nil
 }
 
-func (r *OAuthConnectionRepository) Create(ctx context.Context, exec transaction.Executor, conn authdomain.OAuthConnection) error {
+func (r *OAuthConnectionRepository) Create(ctx context.Context, exec transaction.Executor, conn auth.OAuthConnection) error {
 	query := `
 		INSERT INTO oauth_connections (
 			id,

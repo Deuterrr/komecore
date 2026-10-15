@@ -2,14 +2,14 @@ package authsvc
 
 import (
 	"fmt"
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/auth"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type bcryptHasher struct{}
 
-func NewBcryptHasher() authrepo.PasswordHasher {
+func NewBcryptHasher() auth.PasswordHasher {
 	return &bcryptHasher{}
 }
 

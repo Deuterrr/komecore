@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,7 +23,7 @@ func (r *RoleRepository) GetRolesByAccountAndStaff(
 	exec transaction.Executor,
 	accountID uuid.UUID,
 	staffID uuid.UUID,
-) ([]staffdomain.Role, error) {
+) ([]staff.Role, error) {
 	query := `
 		SELECT
 			ro.id,
@@ -45,9 +45,9 @@ func (r *RoleRepository) GetRolesByAccountAndStaff(
 	}
 	defer rows.Close()
 
-	var roles []staffdomain.Role
+	var roles []staff.Role
 	for rows.Next() {
-		var role staffdomain.Role
+		var role staff.Role
 		if err := rows.Scan(&role.ID, &role.Code, &role.Name); err != nil {
 			return nil, fmt.Errorf("scan role failed: %w", err)
 		}
@@ -64,8 +64,8 @@ func (r *RoleRepository) GetRolesByAccountAndStaff(
 func (r *RoleRepository) GetByCode(
 	ctx context.Context,
 	exec transaction.Executor,
-	code staffdomain.RoleCode,
-) (*staffdomain.Role, error) {
+	code staff.RoleCode,
+) (*staff.Role, error) {
 	query := `
 		SELECT
 			id,
@@ -78,7 +78,7 @@ func (r *RoleRepository) GetByCode(
 		LIMIT 1
 	`
 
-	var role staffdomain.Role
+	var role staff.Role
 	err := exec.QueryRow(ctx, query, string(code)).Scan(
 		&role.ID,
 		&role.Code,

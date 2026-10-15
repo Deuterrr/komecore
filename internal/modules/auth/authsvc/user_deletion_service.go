@@ -5,25 +5,25 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authrepo"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/auth"
+	"komecore/internal/modules/user"
 
 	"github.com/google/uuid"
 )
 
 type userDeletionServiceImpl struct {
-	accountRepo authrepo.AccountRepository
-	oauthRepo   authrepo.OAuthConnectionRepository
-	sessionRepo authrepo.SessionRepository
-	userRepo    userrepo.UserRepository
+	accountRepo auth.AccountRepository
+	oauthRepo   auth.OAuthConnectionRepository
+	sessionRepo auth.SessionRepository
+	userRepo    user.Repository
 }
 
 func NewUserDeletionService(
-	accountRepo authrepo.AccountRepository,
-	oauthRepo authrepo.OAuthConnectionRepository,
-	sessionRepo authrepo.SessionRepository,
-	userRepo userrepo.UserRepository,
-) authrepo.UserDeletionService {
+	accountRepo auth.AccountRepository,
+	oauthRepo auth.OAuthConnectionRepository,
+	sessionRepo auth.SessionRepository,
+	userRepo user.Repository,
+) auth.UserDeletionService {
 	return &userDeletionServiceImpl{
 		accountRepo: accountRepo,
 		oauthRepo:   oauthRepo,

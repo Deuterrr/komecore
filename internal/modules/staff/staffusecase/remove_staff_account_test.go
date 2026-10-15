@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/staff/staffdomain"
+	"komecore/internal/modules/staff"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -21,23 +21,23 @@ func TestRemoveStaffAccount_Success(t *testing.T) {
 	staffID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   staffID,
 			AccountID: actorAccountID,
 		},
-		targetMembership: &staffdomain.StaffMembership{
+		targetMembership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   staffID,
 			AccountID: targetAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 
 	staffRepo := &mockStaffRepo{
-		staff: &staffdomain.Staff{
+		staff: &staff.Staff{
 			ID:     staffID,
 			UserID: staffOwnerUserID,
 		},
@@ -120,13 +120,13 @@ func TestRemoveStaffAccount_NonAdminForbidden(t *testing.T) {
 	staffID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   staffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaff, Name: "Staff"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaff, Name: "Staff"},
 		},
 	}
 
@@ -163,13 +163,13 @@ func TestRemoveStaffAccount_StaffNotFound(t *testing.T) {
 	staffID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   staffID,
 			AccountID: actorAccountID,
 		},
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 
@@ -210,19 +210,19 @@ func TestRemoveStaffAccount_TargetMembershipNotFound(t *testing.T) {
 	staffID := uuid.New()
 
 	membershipRepo := &mockStaffMembershipRepo{
-		membership: &staffdomain.StaffMembership{
+		membership: &staff.StaffMembership{
 			ID:        uuid.New(),
 			StaffID:   staffID,
 			AccountID: actorAccountID,
 		},
 		targetMembership: nil,
-		roles: []staffdomain.Role{
-			{ID: uuid.New(), Code: staffdomain.RoleStaffAdmin, Name: "Staff Admin"},
+		roles: []staff.Role{
+			{ID: uuid.New(), Code: staff.RoleStaffAdmin, Name: "Staff Admin"},
 		},
 	}
 
 	staffRepo := &mockStaffRepo{
-		staff: &staffdomain.Staff{
+		staff: &staff.Staff{
 			ID:     staffID,
 			UserID: uuid.New(),
 		},

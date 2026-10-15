@@ -1,4 +1,4 @@
-package staffdomain
+package staff
 
 import "errors"
 
