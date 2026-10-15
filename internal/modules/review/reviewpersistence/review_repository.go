@@ -7,8 +7,7 @@ import (
 	"math"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/review/reviewdomain"
-	"komecore/internal/modules/review/reviewrepo"
+	"komecore/internal/modules/review"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,7 +22,7 @@ func NewReviewRepository() *ReviewRepository {
 func (r *ReviewRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	review *reviewdomain.Review,
+	review *review.Review,
 ) error {
 	query := `
 		INSERT INTO product_reviews (
@@ -56,7 +55,7 @@ func (r *ReviewRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*reviewdomain.Review, error) {
+) (*review.Review, error) {
 	query := `
 		SELECT
 			id, product_id, customer_id, order_id, rating, title, comment, created_at, updated_at
@@ -65,7 +64,7 @@ func (r *ReviewRepository) GetByID(
 		LIMIT 1
 	`
 
-	var item reviewdomain.Review
+	var item review.Review
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&item.ID,
 		&item.ProductID,
@@ -109,8 +108,8 @@ func (r *ReviewRepository) Delete(
 func (r *ReviewRepository) ListByProductID(
 	ctx context.Context,
 	exec transaction.Executor,
-	params reviewrepo.ListReviewsParams,
-) ([]reviewdomain.ReviewWithCustomer, int, error) {
+	params review.ListReviewsParams,
+) ([]review.ReviewWithCustomer, int, error) {
 	countQuery := `
 		SELECT COUNT(*)
 		FROM product_reviews
@@ -159,9 +158,9 @@ func (r *ReviewRepository) ListByProductID(
 	}
 	defer rows.Close()
 
-	var results []reviewdomain.ReviewWithCustomer
+	var results []review.ReviewWithCustomer
 	for rows.Next() {
-		var item reviewdomain.ReviewWithCustomer
+		var item review.ReviewWithCustomer
 		if err := rows.Scan(
 			&item.Review.ID,
 			&item.Review.ProductID,
@@ -191,7 +190,7 @@ func (r *ReviewRepository) GetRatingSummary(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
-) (*reviewdomain.ProductRatingSummary, error) {
+) (*review.ProductRatingSummary, error) {
 	query := `
 		SELECT
 			COALESCE(AVG(rating::float8), 0.0),
@@ -206,7 +205,7 @@ func (r *ReviewRepository) GetRatingSummary(
 		return nil, fmt.Errorf("query rating summary failed: %w", err)
 	}
 
-	summary := &reviewdomain.ProductRatingSummary{
+	summary := &review.ProductRatingSummary{
 		AverageRating: math.Round(rawAvg*100) / 100,
 		ReviewCount:   count,
 	}

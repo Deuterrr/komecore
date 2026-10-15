@@ -6,9 +6,9 @@ import (
 
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/product/productdomain"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
 	image "komecore/pkg/imageutil"
 
 	"github.com/google/uuid"
@@ -16,7 +16,7 @@ import (
 
 // Mocks
 type mockCartRepository struct {
-	cart *cartdomain.Cart
+	cart *cart.Cart
 	err  error
 }
 
@@ -24,7 +24,7 @@ func (m *mockCartRepository) GetWithItemsByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) (*cartdomain.Cart, error) {
+) (*cart.Cart, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -35,25 +35,25 @@ func (m *mockCartRepository) NewCart(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) (*cartdomain.Cart, error) {
-	return &cartdomain.Cart{
+) (*cart.Cart, error) {
+	return &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}, nil
 }
 
 func (m *mockCartRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	cart *cartdomain.Cart,
+	cart *cart.Cart,
 ) error {
 	m.cart = cart
 	return nil
 }
 
 type mockInventoryRepository struct {
-	inventories map[uuid.UUID][]inventorydomain.Inventory
+	inventories map[uuid.UUID][]inventory.Inventory
 	err         error
 }
 
@@ -61,7 +61,7 @@ func (m *mockInventoryRepository) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]inventorydomain.Inventory, error) {
+) (map[uuid.UUID][]inventory.Inventory, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -72,12 +72,12 @@ func (m *mockInventoryRepository) GetByProductIDAndShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID, shopID uuid.UUID,
-) (*inventorydomain.Inventory, error) {
+) (*inventory.Inventory, error) {
 	return nil, nil
 }
 
 type mockProductRepository struct {
-	products []productdomain.Product
+	products []product.Product
 	err      error
 }
 
@@ -85,7 +85,7 @@ func (m *mockProductRepository) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	IDs []uuid.UUID,
-) ([]productdomain.Product, error) {
+) ([]product.Product, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -96,7 +96,7 @@ func (m *mockProductRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*productdomain.Product, error) {
+) (*product.Product, error) {
 	for i := range m.products {
 		if m.products[i].ID == id {
 			return &m.products[i], nil
@@ -106,7 +106,7 @@ func (m *mockProductRepository) GetByID(
 }
 
 type mockProductImageRepository struct {
-	images map[uuid.UUID][]productdomain.ProductImage
+	images map[uuid.UUID][]product.ProductImage
 	err    error
 }
 
@@ -114,7 +114,7 @@ func (m *mockProductImageRepository) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]productdomain.ProductImage, error) {
+) (map[uuid.UUID][]product.ProductImage, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -141,10 +141,10 @@ func TestGetCart_Success_NoDeletedProducts(t *testing.T) {
 	productID2 := uuid.New()
 	shopID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{
 				ID:        uuid.New(),
 				ProductID: productID1,
@@ -160,7 +160,7 @@ func TestGetCart_Success_NoDeletedProducts(t *testing.T) {
 		},
 	}
 
-	products := []productdomain.Product{
+	products := []product.Product{
 		{
 			ID:    productID1,
 			SKU:   "SKU1",
@@ -175,7 +175,7 @@ func TestGetCart_Success_NoDeletedProducts(t *testing.T) {
 		},
 	}
 
-	inventories := map[uuid.UUID][]inventorydomain.Inventory{
+	inventories := map[uuid.UUID][]inventory.Inventory{
 		productID1: {
 			{
 				ProductID:     productID1,
@@ -186,14 +186,14 @@ func TestGetCart_Success_NoDeletedProducts(t *testing.T) {
 		},
 	}
 
-	images := map[uuid.UUID][]productdomain.ProductImage{
+	images := map[uuid.UUID][]product.ProductImage{
 		productID1: {
 			{
 				ID:        uuid.New(),
 				ProductID: productID1,
-				Variants: map[image.ResolutionType]productdomain.ImageVariant{
-					productdomain.ResolutionThumbnail: {
-						Type: productdomain.ResolutionThumbnail,
+				Variants: map[image.ResolutionType]product.ImageVariant{
+					product.ResolutionThumbnail: {
+						Type: product.ResolutionThumbnail,
 						Key:  "thumb1",
 					},
 				},
@@ -238,10 +238,10 @@ func TestGetCart_Success_WithDeletedProducts(t *testing.T) {
 	productIDDeleted := uuid.New()
 	shopID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{
 				ID:        uuid.New(),
 				ProductID: productIDActive,
@@ -259,7 +259,7 @@ func TestGetCart_Success_WithDeletedProducts(t *testing.T) {
 
 	// In the persistence layer, FindByIDs filters `WHERE deleted_at IS NULL`,
 	// so soft-deleted products are excluded from the returned slice.
-	products := []productdomain.Product{
+	products := []product.Product{
 		{
 			ID:    productIDActive,
 			SKU:   "ACTIVE-SKU",
@@ -268,8 +268,8 @@ func TestGetCart_Success_WithDeletedProducts(t *testing.T) {
 		},
 	}
 
-	inventories := map[uuid.UUID][]inventorydomain.Inventory{}
-	images := map[uuid.UUID][]productdomain.ProductImage{}
+	inventories := map[uuid.UUID][]inventory.Inventory{}
+	images := map[uuid.UUID][]product.ProductImage{}
 
 	cartR := &mockCartRepository{cart: cart}
 	invR := &mockInventoryRepository{inventories: inventories}
@@ -308,10 +308,10 @@ func TestGetCart_Success_ProductNotFound(t *testing.T) {
 	productIDNotFound := uuid.New()
 	shopID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{
 				ID:        uuid.New(),
 				ProductID: productIDNotFound,
@@ -321,9 +321,9 @@ func TestGetCart_Success_ProductNotFound(t *testing.T) {
 		},
 	}
 
-	products := []productdomain.Product{}
-	inventories := map[uuid.UUID][]inventorydomain.Inventory{}
-	images := map[uuid.UUID][]productdomain.ProductImage{}
+	products := []product.Product{}
+	inventories := map[uuid.UUID][]inventory.Inventory{}
+	images := map[uuid.UUID][]product.ProductImage{}
 
 	cartR := &mockCartRepository{cart: cart}
 	invR := &mockInventoryRepository{inventories: inventories}

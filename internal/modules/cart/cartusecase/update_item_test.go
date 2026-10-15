@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/product/productdomain"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
 
 	"github.com/google/uuid"
 )
@@ -17,27 +17,27 @@ func TestUpdateItemByID_Success(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}
-	_ = cart.AddItem(productID, shopID, 2, cartdomain.ItemOptions{"size": "small", "color": "blue"})
-	cartItemID := cart.Items[0].ID
+	_ = c.AddItem(productID, shopID, 2, cart.ItemOptions{"size": "small", "color": "blue"})
+	cartItemID := c.Items[0].ID
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 20,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Mechanical Keyboard",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -45,7 +45,7 @@ func TestUpdateItemByID_Success(t *testing.T) {
 
 	uc := NewCartService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
-	opt := cartdomain.ItemOptions{"size": "large", "color": "red"}
+	opt := cart.ItemOptions{"size": "large", "color": "red"}
 	err := uc.UpdateItemByID(ctx, UpdateItemByIDInput{
 		CustomerID:  customerID,
 		CartItemID:  cartItemID,
@@ -61,11 +61,11 @@ func TestUpdateItemByID_Success(t *testing.T) {
 		t.Errorf("expected cart to be saved")
 	}
 
-	if cart.Items[0].Quantity != 4 {
-		t.Errorf("expected quantity 4, got %d", cart.Items[0].Quantity)
+	if c.Items[0].Quantity != 4 {
+		t.Errorf("expected quantity 4, got %d", c.Items[0].Quantity)
 	}
-	if !cart.Items[0].ItemOptions.Equals(opt) {
-		t.Errorf("expected options %+v, got %+v", opt, cart.Items[0].ItemOptions)
+	if !c.Items[0].ItemOptions.Equals(opt) {
+		t.Errorf("expected options %+v, got %+v", opt, c.Items[0].ItemOptions)
 	}
 }
 
@@ -74,29 +74,29 @@ func TestUpdateItemByID_NilOptions_PreservesExistingOptions(t *testing.T) {
 	customerID := uuid.New()
 	shopID := uuid.New()
 	productID := uuid.New()
-	optLarge := cartdomain.ItemOptions{"size": "large", "color": "red"}
+	optLarge := cart.ItemOptions{"size": "large", "color": "red"}
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}
-	_ = cart.AddItem(productID, shopID, 2, optLarge)
-	cartItemID := cart.Items[0].ID
+	_ = c.AddItem(productID, shopID, 2, optLarge)
+	cartItemID := c.Items[0].ID
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 20,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Papan Bunga",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -116,11 +116,11 @@ func TestUpdateItemByID_NilOptions_PreservesExistingOptions(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if cart.Items[0].Quantity != 6 {
-		t.Errorf("expected quantity 6, got %d", cart.Items[0].Quantity)
+	if c.Items[0].Quantity != 6 {
+		t.Errorf("expected quantity 6, got %d", c.Items[0].Quantity)
 	}
-	if !cart.Items[0].ItemOptions.Equals(optLarge) {
-		t.Errorf("expected options %+v to be preserved, got %+v", optLarge, cart.Items[0].ItemOptions)
+	if !c.Items[0].ItemOptions.Equals(optLarge) {
+		t.Errorf("expected options %+v to be preserved, got %+v", optLarge, c.Items[0].ItemOptions)
 	}
 }
 
@@ -130,28 +130,28 @@ func TestUpdateItemByID_MultiStyle_StockExceeded(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}
-	_ = cart.AddItem(productID, shopID, 2, cartdomain.ItemOptions{"size": "small", "color": "blue"})
-	_ = cart.AddItem(productID, shopID, 3, cartdomain.ItemOptions{"size": "large", "color": "red"})
-	largeItemID := cart.Items[1].ID
+	_ = c.AddItem(productID, shopID, 2, cart.ItemOptions{"size": "small", "color": "blue"})
+	_ = c.AddItem(productID, shopID, 3, cart.ItemOptions{"size": "large", "color": "red"})
+	largeItemID := c.Items[1].ID
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 6, // Total available stock is 6 across all styles
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Mechanical Keyboard",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -178,27 +178,27 @@ func TestUpdateItemByID_InsufficientStock(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}
-	_ = cart.AddItem(productID, shopID, 2)
-	cartItemID := cart.Items[0].ID
+	_ = c.AddItem(productID, shopID, 2)
+	cartItemID := c.Items[0].ID
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 3,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Papan Bunga",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -221,13 +221,13 @@ func TestUpdateItemByID_CartItemNotFound(t *testing.T) {
 	ctx := context.Background()
 	customerID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	invR := &mockAddItemInvRepo{}
 	prodR := &mockAddItemProdRepo{}
 	tx := &mockTransactor{}
@@ -251,12 +251,12 @@ func TestUpdateItem_Execute_NoOptions_PreservesOptions(t *testing.T) {
 	customerID := uuid.New()
 	shopID := uuid.New()
 	productID := uuid.New()
-	optLarge := cartdomain.ItemOptions{"size": "large", "color": "red"}
+	optLarge := cart.ItemOptions{"size": "large", "color": "red"}
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{
 				ID:          uuid.New(),
 				ProductID:   productID,
@@ -267,19 +267,19 @@ func TestUpdateItem_Execute_NoOptions_PreservesOptions(t *testing.T) {
 		},
 	}
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 20,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Papan Bunga",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -299,13 +299,13 @@ func TestUpdateItem_Execute_NoOptions_PreservesOptions(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(cart.Items) != 1 {
-		t.Fatalf("expected 1 item in cart, got %d (duplicated)", len(cart.Items))
+	if len(c.Items) != 1 {
+		t.Fatalf("expected 1 item in cart, got %d (duplicated)", len(c.Items))
 	}
-	if cart.Items[0].Quantity != 5 {
-		t.Errorf("expected quantity 5, got %d", cart.Items[0].Quantity)
+	if c.Items[0].Quantity != 5 {
+		t.Errorf("expected quantity 5, got %d", c.Items[0].Quantity)
 	}
-	if !cart.Items[0].ItemOptions.Equals(optLarge) {
-		t.Errorf("expected options %+v to be preserved, got %+v", optLarge, cart.Items[0].ItemOptions)
+	if !c.Items[0].ItemOptions.Equals(optLarge) {
+		t.Errorf("expected options %+v to be preserved, got %+v", optLarge, c.Items[0].ItemOptions)
 	}
 }

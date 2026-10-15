@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/product/productdomain"
+	"komecore/internal/modules/product"
 	"komecore/internal/modules/wishlist/wishlistusecase"
 
 	"github.com/google/uuid"
@@ -20,8 +20,8 @@ func TestAddToWishlist_Success(t *testing.T) {
 	custID := uuid.New()
 
 	pRepo := &mockProductRepo{
-		products: map[uuid.UUID]*productdomain.Product{
-			prodID: {ID: prodID, Name: "Sneakers", Status: productdomain.ProductStatusActive, Price: 500000},
+		products: map[uuid.UUID]*product.Product{
+			prodID: {ID: prodID, Name: "Sneakers", Status: product.ProductStatusActive, Price: 500000},
 		},
 	}
 
@@ -43,7 +43,7 @@ func TestAddToWishlist_DuplicateRejected(t *testing.T) {
 	custID := uuid.New()
 
 	pRepo := &mockProductRepo{
-		products: map[uuid.UUID]*productdomain.Product{
+		products: map[uuid.UUID]*product.Product{
 			prodID: {ID: prodID, Name: "Sneakers"},
 		},
 	}
@@ -62,7 +62,7 @@ func TestAddToWishlist_ProductNotFound(t *testing.T) {
 	ctx := context.Background()
 	wishlistRepo := newMockWishlistRepo()
 	pRepo := &mockProductRepo{
-		products: map[uuid.UUID]*productdomain.Product{},
+		products: map[uuid.UUID]*product.Product{},
 	}
 
 	svc := wishlistusecase.NewWishlistService(wishlistRepo, pRepo, nil, nil, nil, nil)

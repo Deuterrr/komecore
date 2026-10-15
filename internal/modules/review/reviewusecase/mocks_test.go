@@ -4,11 +4,9 @@ import (
 	"context"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/review/reviewdomain"
-	"komecore/internal/modules/review/reviewrepo"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/review"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +18,7 @@ func (m *mockTransactor) WithinTransaction(ctx context.Context, fn func(transact
 }
 
 type mockReviewRepo struct {
-	reviews        map[uuid.UUID]*reviewdomain.Review
+	reviews        map[uuid.UUID]*review.Review
 	deletedReviews map[uuid.UUID]bool
 	createErr      error
 	getErr         error
@@ -31,12 +29,12 @@ type mockReviewRepo struct {
 
 func newMockReviewRepo() *mockReviewRepo {
 	return &mockReviewRepo{
-		reviews:        make(map[uuid.UUID]*reviewdomain.Review),
+		reviews:        make(map[uuid.UUID]*review.Review),
 		deletedReviews: make(map[uuid.UUID]bool),
 	}
 }
 
-func (m *mockReviewRepo) Create(_ context.Context, _ transaction.Executor, review *reviewdomain.Review) error {
+func (m *mockReviewRepo) Create(_ context.Context, _ transaction.Executor, review *review.Review) error {
 	if m.createErr != nil {
 		return m.createErr
 	}
@@ -44,7 +42,7 @@ func (m *mockReviewRepo) Create(_ context.Context, _ transaction.Executor, revie
 	return nil
 }
 
-func (m *mockReviewRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*reviewdomain.Review, error) {
+func (m *mockReviewRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*review.Review, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -62,14 +60,14 @@ func (m *mockReviewRepo) Delete(_ context.Context, _ transaction.Executor, id uu
 	return nil
 }
 
-func (m *mockReviewRepo) ListByProductID(_ context.Context, _ transaction.Executor, params reviewrepo.ListReviewsParams) ([]reviewdomain.ReviewWithCustomer, int, error) {
+func (m *mockReviewRepo) ListByProductID(_ context.Context, _ transaction.Executor, params review.ListReviewsParams) ([]review.ReviewWithCustomer, int, error) {
 	if m.listErr != nil {
 		return nil, 0, m.listErr
 	}
-	var res []reviewdomain.ReviewWithCustomer
+	var res []review.ReviewWithCustomer
 	for _, r := range m.reviews {
 		if r.ProductID == params.ProductID && !m.deletedReviews[r.ID] {
-			res = append(res, reviewdomain.ReviewWithCustomer{
+			res = append(res, review.ReviewWithCustomer{
 				Review:       *r,
 				CustomerName: "Test Customer",
 			})
@@ -78,7 +76,7 @@ func (m *mockReviewRepo) ListByProductID(_ context.Context, _ transaction.Execut
 	return res, len(res), nil
 }
 
-func (m *mockReviewRepo) GetRatingSummary(_ context.Context, _ transaction.Executor, productID uuid.UUID) (*reviewdomain.ProductRatingSummary, error) {
+func (m *mockReviewRepo) GetRatingSummary(_ context.Context, _ transaction.Executor, productID uuid.UUID) (*review.ProductRatingSummary, error) {
 	if m.summaryErr != nil {
 		return nil, m.summaryErr
 	}
@@ -94,7 +92,7 @@ func (m *mockReviewRepo) GetRatingSummary(_ context.Context, _ transaction.Execu
 	if count > 0 {
 		rawAvg = sum / float64(count)
 	}
-	summary := reviewdomain.NewProductRatingSummary(rawAvg, count)
+	summary := review.NewProductRatingSummary(rawAvg, count)
 	return &summary, nil
 }
 
@@ -118,20 +116,20 @@ func (m *mockReviewRepo) GetReviewedOrderIDs(_ context.Context, _ transaction.Ex
 }
 
 type mockProductRepo struct {
-	products           map[uuid.UUID]*productdomain.Product
+	products           map[uuid.UUID]*product.Product
 	updatedRatings     map[uuid.UUID]float64
 	updatedReviewCount map[uuid.UUID]int
 }
 
 func newMockProductRepo() *mockProductRepo {
 	return &mockProductRepo{
-		products:           make(map[uuid.UUID]*productdomain.Product),
+		products:           make(map[uuid.UUID]*product.Product),
 		updatedRatings:     make(map[uuid.UUID]float64),
 		updatedReviewCount: make(map[uuid.UUID]int),
 	}
 }
 
-func (m *mockProductRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*productdomain.Product, error) {
+func (m *mockProductRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*product.Product, error) {
 	return m.products[id], nil
 }
 
@@ -146,15 +144,15 @@ func (m *mockProductRepo) UpdateRating(_ context.Context, _ transaction.Executor
 }
 
 type mockOrderRepo struct {
-	orders map[uuid.UUID]*orderdomain.Order
+	orders map[uuid.UUID]*order.Order
 }
 
-func (m *mockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*orderdomain.Order, error) {
+func (m *mockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*order.Order, error) {
 	return m.orders[id], nil
 }
 
-func (m *mockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, params orderrepo.FindOrderParams) ([]orderdomain.Order, int, error) {
-	var res []orderdomain.Order
+func (m *mockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, params order.FindOrderParams) ([]order.Order, int, error) {
+	var res []order.Order
 	for _, o := range m.orders {
 		if params.CustomerID != nil && o.CustomerID != *params.CustomerID {
 			continue
@@ -177,15 +175,15 @@ func (m *mockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, pa
 }
 
 type mockOrderItemRepo struct {
-	items map[uuid.UUID][]orderdomain.OrderItem
+	items map[uuid.UUID][]order.OrderItem
 }
 
-func (m *mockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *mockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]order.OrderItem, error) {
 	return m.items[orderID], nil
 }
 
-func (m *mockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, orderIDs []uuid.UUID) ([]orderdomain.OrderItem, error) {
-	var res []orderdomain.OrderItem
+func (m *mockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, orderIDs []uuid.UUID) ([]order.OrderItem, error) {
+	var res []order.OrderItem
 	for _, oID := range orderIDs {
 		res = append(res, m.items[oID]...)
 	}

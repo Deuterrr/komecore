@@ -1,31 +1,30 @@
-package cartrepo
+package cart
 
 import (
 	"context"
 
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/cart/cartdomain"
-
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
 )
 
-type CartRepository interface {
+type Repository interface {
 	GetWithItemsByCustomerID(
 		ctx context.Context,
 		exec transaction.Executor,
 		customerID uuid.UUID,
-	) (*cartdomain.Cart, error)
+	) (*Cart, error)
 
 	NewCart(
 		ctx context.Context,
 		exec transaction.Executor,
 		customerID uuid.UUID,
-	) (*cartdomain.Cart, error)
+	) (*Cart, error)
 
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		cart *cartdomain.Cart,
+		cart *Cart,
 	) error
 
 	DeleteByCustomerID(
@@ -34,3 +33,5 @@ type CartRepository interface {
 		customerID uuid.UUID,
 	) error
 }
+
+type CartRepository = Repository

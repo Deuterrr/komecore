@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"komecore/internal/modules/cart/cartdomain"
+	"komecore/internal/modules/cart"
 
 	"github.com/google/uuid"
 )
@@ -16,16 +16,16 @@ func TestRemoveItemByID_Success(t *testing.T) {
 	productID := uuid.New()
 	cartItemID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{
 				ID:          cartItemID,
 				ProductID:   productID,
 				ShopID:      shopID,
 				Quantity:    2,
-				ItemOptions: cartdomain.ItemOptions{"size": "small", "color": "blue"},
+				ItemOptions: cart.ItemOptions{"size": "small", "color": "blue"},
 			},
 		},
 	}
@@ -60,10 +60,10 @@ func TestRemoveItemByID_NotFound_ItemDoesNotExist(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{
 				ID:        uuid.New(),
 				ProductID: productID,
@@ -115,13 +115,13 @@ func TestRemoveItem_Execute_WithOptions(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	optSmall := cartdomain.ItemOptions{"size": "small", "color": "blue"}
-	optLarge := cartdomain.ItemOptions{"size": "large", "color": "white"}
+	optSmall := cart.ItemOptions{"size": "small", "color": "blue"}
+	optLarge := cart.ItemOptions{"size": "large", "color": "white"}
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{
 				ID:          uuid.New(),
 				ProductID:   productID,

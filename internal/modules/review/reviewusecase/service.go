@@ -9,39 +9,37 @@ import (
 	"komecore/internal/authctx"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/review/reviewdomain"
-	"komecore/internal/modules/review/reviewrepo"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/review"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 type ReviewRepository interface {
-	Create(ctx context.Context, exec transaction.Executor, review *reviewdomain.Review) error
-	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*reviewdomain.Review, error)
+	Create(ctx context.Context, exec transaction.Executor, review *review.Review) error
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*review.Review, error)
 	Delete(ctx context.Context, exec transaction.Executor, id uuid.UUID) error
-	ListByProductID(ctx context.Context, exec transaction.Executor, params reviewrepo.ListReviewsParams) ([]reviewdomain.ReviewWithCustomer, int, error)
-	GetRatingSummary(ctx context.Context, exec transaction.Executor, productID uuid.UUID) (*reviewdomain.ProductRatingSummary, error)
+	ListByProductID(ctx context.Context, exec transaction.Executor, params review.ListReviewsParams) ([]review.ReviewWithCustomer, int, error)
+	GetRatingSummary(ctx context.Context, exec transaction.Executor, productID uuid.UUID) (*review.ProductRatingSummary, error)
 	HasReviewedOrder(ctx context.Context, exec transaction.Executor, customerID, productID, orderID uuid.UUID) (bool, error)
 	GetReviewedOrderIDs(ctx context.Context, exec transaction.Executor, customerID, productID uuid.UUID) ([]uuid.UUID, error)
 }
 
 type ProductRatingUpdater interface {
-	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*productdomain.Product, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*product.Product, error)
 	UpdateRating(ctx context.Context, exec transaction.Executor, id uuid.UUID, averageRating float64, reviewCount int) error
 }
 
 type OrderReader interface {
-	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*orderdomain.Order, error)
-	FindOrders(ctx context.Context, exec transaction.Executor, params orderrepo.FindOrderParams) ([]orderdomain.Order, int, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*order.Order, error)
+	FindOrders(ctx context.Context, exec transaction.Executor, params order.FindOrderParams) ([]order.Order, int, error)
 }
 
 type OrderItemReader interface {
-	ListByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]orderdomain.OrderItem, error)
-	ListByOrderIDs(ctx context.Context, exec transaction.Executor, orderIDs []uuid.UUID) ([]orderdomain.OrderItem, error)
+	ListByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]order.OrderItem, error)
+	ListByOrderIDs(ctx context.Context, exec transaction.Executor, orderIDs []uuid.UUID) ([]order.OrderItem, error)
 }
 
 type CreateReviewInput struct {
@@ -60,7 +58,7 @@ type ListReviewsInput struct {
 }
 
 type ListReviewsResult struct {
-	Reviews       []reviewdomain.ReviewWithCustomer
+	Reviews       []review.ReviewWithCustomer
 	Total         int
 	Page          int
 	Limit         int
@@ -103,9 +101,9 @@ func NewReviewService(
 	}
 }
 
-func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInput) (*reviewdomain.Review, error) {
+func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInput) (*review.Review, error) {
 	if input.Rating < 1 || input.Rating > 5 {
-		return nil, apperror.NewBadRequest(reviewdomain.ErrInvalidRating.Error())
+		return nil, apperror.NewBadRequest(review.ErrInvalidRating.Error())
 	}
 	if input.CustomerID == uuid.Nil {
 		return nil, apperror.NewBadRequest("invalid customer id")
@@ -125,18 +123,18 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 	var targetOrderID uuid.UUID
 
 	if input.OrderID != nil {
-		order, err := s.orderRepo.GetByID(ctx, s.executor, *input.OrderID)
+		ord, err := s.orderRepo.GetByID(ctx, s.executor, *input.OrderID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve order: %w", err)
 		}
-		if order == nil || order.CustomerID != input.CustomerID {
-			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
+		if ord == nil || ord.CustomerID != input.CustomerID {
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, review.ErrUnverifiedPurchase.Error())
 		}
-		if order.Status != orderdomain.OrderStatusDelivered && string(order.Status) != "completed" {
-			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
+		if ord.Status != order.OrderStatusDelivered && string(ord.Status) != "completed" {
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, review.ErrUnverifiedPurchase.Error())
 		}
 
-		items, err := s.orderItemRepo.ListByOrderID(ctx, s.executor, order.ID)
+		items, err := s.orderItemRepo.ListByOrderID(ctx, s.executor, ord.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list order items: %w", err)
 		}
@@ -148,20 +146,20 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			}
 		}
 		if !hasProduct {
-			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, review.ErrUnverifiedPurchase.Error())
 		}
 
-		hasReviewed, err := s.reviewRepo.HasReviewedOrder(ctx, s.executor, input.CustomerID, input.ProductID, order.ID)
+		hasReviewed, err := s.reviewRepo.HasReviewedOrder(ctx, s.executor, input.CustomerID, input.ProductID, ord.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check order review status: %w", err)
 		}
 		if hasReviewed {
-			return nil, apperror.NewConflictWithCode(apperror.CodeDuplicateReview, reviewdomain.ErrDuplicateReview.Error())
+			return nil, apperror.NewConflictWithCode(apperror.CodeDuplicateReview, review.ErrDuplicateReview.Error())
 		}
 
-		targetOrderID = order.ID
+		targetOrderID = ord.ID
 	} else {
-		orders, _, err := s.orderRepo.FindOrders(ctx, s.executor, orderrepo.FindOrderParams{
+		orders, _, err := s.orderRepo.FindOrders(ctx, s.executor, order.FindOrderParams{
 			CustomerID: &input.CustomerID,
 			Statuses:   []string{"delivered", "completed"},
 			Pagination: pagination.Pagination{Limit: 100},
@@ -170,7 +168,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			return nil, fmt.Errorf("failed to find eligible customer orders: %w", err)
 		}
 		if len(orders) == 0 {
-			return nil, apperror.NewForbidden(reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbidden(review.ErrUnverifiedPurchase.Error())
 		}
 
 		orderIDs := make([]uuid.UUID, len(orders))
@@ -190,7 +188,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 			}
 		}
 		if len(eligibleOrderIDsMap) == 0 {
-			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, reviewdomain.ErrUnverifiedPurchase.Error())
+			return nil, apperror.NewForbiddenWithCode(apperror.CodeUnverifiedPurchase, review.ErrUnverifiedPurchase.Error())
 		}
 
 		reviewedIDs, err := s.reviewRepo.GetReviewedOrderIDs(ctx, s.executor, input.CustomerID, input.ProductID)
@@ -211,13 +209,13 @@ func (s *ReviewService) CreateReview(ctx context.Context, input CreateReviewInpu
 		}
 
 		if chosenID == nil {
-			return nil, apperror.NewConflictWithCode(apperror.CodeDuplicateReview, reviewdomain.ErrDuplicateReview.Error())
+			return nil, apperror.NewConflictWithCode(apperror.CodeDuplicateReview, review.ErrDuplicateReview.Error())
 		}
 
 		targetOrderID = *chosenID
 	}
 
-	review := &reviewdomain.Review{
+	review := &review.Review{
 		ID:         uuid.New(),
 		ProductID:  input.ProductID,
 		CustomerID: input.CustomerID,
@@ -282,7 +280,7 @@ func (s *ReviewService) ListReviews(ctx context.Context, input ListReviewsInput)
 		limit = 10
 	}
 
-	reviews, total, err := s.reviewRepo.ListByProductID(ctx, s.executor, reviewrepo.ListReviewsParams{
+	reviews, total, err := s.reviewRepo.ListByProductID(ctx, s.executor, review.ListReviewsParams{
 		ProductID: input.ProductID,
 		Page:      page,
 		Limit:     limit,

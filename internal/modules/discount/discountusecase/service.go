@@ -6,21 +6,20 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/discount/discountdomain"
-	"komecore/internal/modules/discount/discountrepo"
+	"komecore/internal/modules/discount"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
 )
 
 type CouponRepository interface {
-	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*discountdomain.Coupon, error)
-	GetByCode(ctx context.Context, exec transaction.Executor, code string) (*discountdomain.Coupon, error)
-	Save(ctx context.Context, exec transaction.Executor, coupon discountdomain.Coupon) error
-	List(ctx context.Context, exec transaction.Executor, params discountrepo.ListCouponsParams) ([]discountdomain.Coupon, int, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*discount.Coupon, error)
+	GetByCode(ctx context.Context, exec transaction.Executor, code string) (*discount.Coupon, error)
+	Save(ctx context.Context, exec transaction.Executor, coupon discount.Coupon) error
+	List(ctx context.Context, exec transaction.Executor, params discount.ListCouponsParams) ([]discount.Coupon, int, error)
 	DecrementQuota(ctx context.Context, exec transaction.Executor, id uuid.UUID) error
-	SaveRedemption(ctx context.Context, exec transaction.Executor, redemption discountdomain.CouponRedemption) error
-	GetRedemptionByOrder(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*discountdomain.CouponRedemption, error)
+	SaveRedemption(ctx context.Context, exec transaction.Executor, redemption discount.CouponRedemption) error
+	GetRedemptionByOrder(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*discount.CouponRedemption, error)
 }
 
 type ValidateCouponInput struct {
@@ -31,7 +30,7 @@ type ValidateCouponInput struct {
 }
 
 type ValidateCouponResult struct {
-	Coupon         discountdomain.Coupon
+	Coupon         discount.Coupon
 	DiscountAmount int64
 	Subtotal       int64
 	ShippingFee    int64
@@ -49,7 +48,7 @@ type RedeemCouponInput struct {
 type CreateCouponInput struct {
 	Code          string
 	Description   *string
-	Type          discountdomain.CouponType
+	Type          discount.CouponType
 	DiscountValue int64
 	MinSpend      int64
 	MaxDiscount   *int64
@@ -91,9 +90,9 @@ func (s *DiscountService) ValidateCoupon(
 	ctx context.Context,
 	input ValidateCouponInput,
 ) (*ValidateCouponResult, error) {
-	code := discountdomain.NormalizeCode(input.Code)
+	code := discount.NormalizeCode(input.Code)
 	if code == "" {
-		return nil, discountdomain.ErrCouponNotFound
+		return nil, discount.ErrCouponNotFound
 	}
 
 	coupon, err := s.couponRepo.GetByCode(ctx, s.executor, code)
@@ -101,7 +100,7 @@ func (s *DiscountService) ValidateCoupon(
 		return nil, fmt.Errorf("failed to lookup coupon: %w", err)
 	}
 	if coupon == nil {
-		return nil, discountdomain.ErrCouponNotFound
+		return nil, discount.ErrCouponNotFound
 	}
 
 	now := s.clock.Now()
@@ -132,10 +131,10 @@ func (s *DiscountService) RedeemCoupon(
 	ctx context.Context,
 	exec transaction.Executor,
 	input RedeemCouponInput,
-) (*discountdomain.CouponRedemption, error) {
-	code := discountdomain.NormalizeCode(input.Code)
+) (*discount.CouponRedemption, error) {
+	code := discount.NormalizeCode(input.Code)
 	if code == "" {
-		return nil, discountdomain.ErrCouponNotFound
+		return nil, discount.ErrCouponNotFound
 	}
 
 	if exec == nil {
@@ -147,7 +146,7 @@ func (s *DiscountService) RedeemCoupon(
 		return nil, fmt.Errorf("failed to lookup coupon: %w", err)
 	}
 	if coupon == nil {
-		return nil, discountdomain.ErrCouponNotFound
+		return nil, discount.ErrCouponNotFound
 	}
 
 	// Validate status, date, quota, min spend
@@ -161,7 +160,7 @@ func (s *DiscountService) RedeemCoupon(
 		return nil, fmt.Errorf("failed to check existing redemption: %w", err)
 	}
 	if existing != nil {
-		return nil, discountdomain.ErrCouponAlreadyRedeemed
+		return nil, discount.ErrCouponAlreadyRedeemed
 	}
 
 	// Atomically decrement quota
@@ -171,7 +170,7 @@ func (s *DiscountService) RedeemCoupon(
 
 	discountAmount := coupon.CalculateDiscount(input.Subtotal, input.ShippingFee)
 
-	redemption := discountdomain.CouponRedemption{
+	redemption := discount.CouponRedemption{
 		ID:             uuid.New(),
 		CouponID:       coupon.ID,
 		CustomerID:     input.CustomerID,
@@ -190,30 +189,30 @@ func (s *DiscountService) RedeemCoupon(
 func (s *DiscountService) CreateCoupon(
 	ctx context.Context,
 	input CreateCouponInput,
-) (*discountdomain.Coupon, error) {
-	code := discountdomain.NormalizeCode(input.Code)
+) (*discount.Coupon, error) {
+	code := discount.NormalizeCode(input.Code)
 	if code == "" {
 		return nil, fmt.Errorf("coupon code cannot be empty")
 	}
 
 	if !input.Type.IsValid() {
-		return nil, discountdomain.ErrInvalidCouponType
+		return nil, discount.ErrInvalidCouponType
 	}
 
 	if input.DiscountValue <= 0 {
-		return nil, discountdomain.ErrInvalidDiscountValue
+		return nil, discount.ErrInvalidDiscountValue
 	}
 
-	if input.Type == discountdomain.CouponTypePercentage && input.DiscountValue > 100 {
-		return nil, fmt.Errorf("percentage discount cannot exceed 100%%: %w", discountdomain.ErrInvalidDiscountValue)
+	if input.Type == discount.CouponTypePercentage && input.DiscountValue > 100 {
+		return nil, fmt.Errorf("percentage discount cannot exceed 100%%: %w", discount.ErrInvalidDiscountValue)
 	}
 
 	if input.QuotaTotal <= 0 {
-		return nil, discountdomain.ErrInvalidQuota
+		return nil, discount.ErrInvalidQuota
 	}
 
 	if !input.ExpiresAt.After(input.StartsAt) {
-		return nil, discountdomain.ErrInvalidDates
+		return nil, discount.ErrInvalidDates
 	}
 
 	existing, err := s.couponRepo.GetByCode(ctx, s.executor, code)
@@ -221,11 +220,11 @@ func (s *DiscountService) CreateCoupon(
 		return nil, fmt.Errorf("failed to verify code uniqueness: %w", err)
 	}
 	if existing != nil {
-		return nil, discountdomain.ErrDuplicateCouponCode
+		return nil, discount.ErrDuplicateCouponCode
 	}
 
 	now := s.clock.Now()
-	coupon := discountdomain.Coupon{
+	coupon := discount.Coupon{
 		ID:             uuid.New(),
 		Code:           code,
 		Description:    input.Description,
@@ -251,8 +250,8 @@ func (s *DiscountService) CreateCoupon(
 func (s *DiscountService) ListCoupons(
 	ctx context.Context,
 	input ListCouponsInput,
-) ([]discountdomain.Coupon, int, error) {
-	params := discountrepo.ListCouponsParams{
+) ([]discount.Coupon, int, error) {
+	params := discount.ListCouponsParams{
 		Code:     input.Code,
 		IsActive: input.IsActive,
 	}

@@ -5,7 +5,7 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/cart/cartdomain"
+	"komecore/internal/modules/cart"
 	"komecore/internal/modules/cart/cartusecase"
 
 	"github.com/google/uuid"
@@ -125,9 +125,9 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 		return apperror.NewBadRequest("invalid quantity")
 	}
 
-	var opt cartdomain.ItemOptions
+	var opt cart.ItemOptions
 	if req.ItemOptions != nil {
-		opt = cartdomain.ItemOptions(req.ItemOptions)
+		opt = cart.ItemOptions(req.ItemOptions)
 	}
 
 	input := cartusecase.AddItemInput{
@@ -174,9 +174,9 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 		return apperror.NewBadRequest("invalid quantity")
 	}
 
-	var opt *cartdomain.ItemOptions
+	var opt *cart.ItemOptions
 	if req.ItemOptions != nil {
-		norm := cartdomain.ItemOptions(req.ItemOptions).Normalized()
+		norm := cart.ItemOptions(req.ItemOptions).Normalized()
 		opt = &norm
 	}
 
@@ -220,9 +220,9 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 		return apperror.NewBadRequest("invalid quantity")
 	}
 
-	var opt *cartdomain.ItemOptions
+	var opt *cart.ItemOptions
 	if req.ItemOptions != nil {
-		norm := cartdomain.ItemOptions(req.ItemOptions).Normalized()
+		norm := cart.ItemOptions(req.ItemOptions).Normalized()
 		opt = &norm
 	}
 

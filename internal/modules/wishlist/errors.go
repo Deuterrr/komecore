@@ -1,4 +1,4 @@
-package wishlistdomain
+package wishlist
 
 import "errors"
 

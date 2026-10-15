@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/product/productdomain"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/product"
 	"komecore/internal/modules/review/reviewusecase"
 
 	"github.com/google/uuid"
@@ -19,18 +19,18 @@ func TestCreateReview_SuccessWithDeliveredOrder(t *testing.T) {
 	revRepo := newMockReviewRepo()
 	pRepo := newMockProductRepo()
 	prodID := uuid.New()
-	pRepo.products[prodID] = &productdomain.Product{ID: prodID, Name: "Book", Slug: "book"}
+	pRepo.products[prodID] = &product.Product{ID: prodID, Name: "Book", Slug: "book"}
 
 	custID := uuid.New()
 	orderID := uuid.New()
 
 	oRepo := &mockOrderRepo{
-		orders: map[uuid.UUID]*orderdomain.Order{
-			orderID: {ID: orderID, CustomerID: custID, Status: orderdomain.OrderStatusDelivered},
+		orders: map[uuid.UUID]*order.Order{
+			orderID: {ID: orderID, CustomerID: custID, Status: order.OrderStatusDelivered},
 		},
 	}
 	oiRepo := &mockOrderItemRepo{
-		items: map[uuid.UUID][]orderdomain.OrderItem{
+		items: map[uuid.UUID][]order.OrderItem{
 			orderID: {{ID: uuid.New(), OrderID: orderID, ProductID: prodID}},
 		},
 	}
@@ -78,10 +78,10 @@ func TestCreateReview_UnverifiedPurchase_NoOrders(t *testing.T) {
 	revRepo := newMockReviewRepo()
 	pRepo := newMockProductRepo()
 	prodID := uuid.New()
-	pRepo.products[prodID] = &productdomain.Product{ID: prodID, Name: "Book"}
+	pRepo.products[prodID] = &product.Product{ID: prodID, Name: "Book"}
 
-	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}}
-	oiRepo := &mockOrderItemRepo{items: map[uuid.UUID][]orderdomain.OrderItem{}}
+	oRepo := &mockOrderRepo{orders: map[uuid.UUID]*order.Order{}}
+	oiRepo := &mockOrderItemRepo{items: map[uuid.UUID][]order.OrderItem{}}
 
 	svc := reviewusecase.NewReviewService(revRepo, pRepo, oRepo, oiRepo, nil, nil, &mockTransactor{})
 	_, err := svc.CreateReview(ctx, reviewusecase.CreateReviewInput{
@@ -100,18 +100,18 @@ func TestCreateReview_UnverifiedPurchase_OrderNotDelivered(t *testing.T) {
 	revRepo := newMockReviewRepo()
 	pRepo := newMockProductRepo()
 	prodID := uuid.New()
-	pRepo.products[prodID] = &productdomain.Product{ID: prodID, Name: "Book"}
+	pRepo.products[prodID] = &product.Product{ID: prodID, Name: "Book"}
 
 	custID := uuid.New()
 	orderID := uuid.New()
 
 	oRepo := &mockOrderRepo{
-		orders: map[uuid.UUID]*orderdomain.Order{
-			orderID: {ID: orderID, CustomerID: custID, Status: orderdomain.OrderStatusShipped},
+		orders: map[uuid.UUID]*order.Order{
+			orderID: {ID: orderID, CustomerID: custID, Status: order.OrderStatusShipped},
 		},
 	}
 	oiRepo := &mockOrderItemRepo{
-		items: map[uuid.UUID][]orderdomain.OrderItem{
+		items: map[uuid.UUID][]order.OrderItem{
 			orderID: {{ID: uuid.New(), OrderID: orderID, ProductID: prodID}},
 		},
 	}
@@ -133,18 +133,18 @@ func TestCreateReview_DuplicateReviewPrevented(t *testing.T) {
 	revRepo := newMockReviewRepo()
 	pRepo := newMockProductRepo()
 	prodID := uuid.New()
-	pRepo.products[prodID] = &productdomain.Product{ID: prodID, Name: "Book"}
+	pRepo.products[prodID] = &product.Product{ID: prodID, Name: "Book"}
 
 	custID := uuid.New()
 	orderID := uuid.New()
 
 	oRepo := &mockOrderRepo{
-		orders: map[uuid.UUID]*orderdomain.Order{
-			orderID: {ID: orderID, CustomerID: custID, Status: orderdomain.OrderStatusDelivered},
+		orders: map[uuid.UUID]*order.Order{
+			orderID: {ID: orderID, CustomerID: custID, Status: order.OrderStatusDelivered},
 		},
 	}
 	oiRepo := &mockOrderItemRepo{
-		items: map[uuid.UUID][]orderdomain.OrderItem{
+		items: map[uuid.UUID][]order.OrderItem{
 			orderID: {{ID: uuid.New(), OrderID: orderID, ProductID: prodID}},
 		},
 	}

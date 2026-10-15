@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/discount/discountdomain"
-	"komecore/internal/modules/discount/discountrepo"
+	"komecore/internal/modules/discount"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -24,7 +23,7 @@ func (r *CouponRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*discountdomain.Coupon, error) {
+) (*discount.Coupon, error) {
 	query := `
 		SELECT
 			id, code, description, type, discount_value, min_spend, max_discount,
@@ -35,7 +34,7 @@ func (r *CouponRepository) GetByID(
 		LIMIT 1
 	`
 
-	var coupon discountdomain.Coupon
+	var coupon discount.Coupon
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&coupon.ID,
 		&coupon.Code,
@@ -66,7 +65,7 @@ func (r *CouponRepository) GetByCode(
 	ctx context.Context,
 	exec transaction.Executor,
 	code string,
-) (*discountdomain.Coupon, error) {
+) (*discount.Coupon, error) {
 	query := `
 		SELECT
 			id, code, description, type, discount_value, min_spend, max_discount,
@@ -77,7 +76,7 @@ func (r *CouponRepository) GetByCode(
 		LIMIT 1
 	`
 
-	var coupon discountdomain.Coupon
+	var coupon discount.Coupon
 	err := exec.QueryRow(ctx, query, strings.TrimSpace(code)).Scan(
 		&coupon.ID,
 		&coupon.Code,
@@ -107,7 +106,7 @@ func (r *CouponRepository) GetByCode(
 func (r *CouponRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	coupon discountdomain.Coupon,
+	coupon discount.Coupon,
 ) error {
 	query := `
 		INSERT INTO coupons (
@@ -136,7 +135,7 @@ func (r *CouponRepository) Save(
 		ctx,
 		query,
 		coupon.ID,
-		discountdomain.NormalizeCode(coupon.Code),
+		discount.NormalizeCode(coupon.Code),
 		coupon.Description,
 		coupon.Type,
 		coupon.DiscountValue,
@@ -160,8 +159,8 @@ func (r *CouponRepository) Save(
 func (r *CouponRepository) List(
 	ctx context.Context,
 	exec transaction.Executor,
-	params discountrepo.ListCouponsParams,
-) ([]discountdomain.Coupon, int, error) {
+	params discount.ListCouponsParams,
+) ([]discount.Coupon, int, error) {
 	baseQuery := " FROM coupons c"
 	whereClause := ""
 
@@ -224,9 +223,9 @@ func (r *CouponRepository) List(
 	}
 	defer rows.Close()
 
-	var coupons []discountdomain.Coupon
+	var coupons []discount.Coupon
 	for rows.Next() {
-		var c discountdomain.Coupon
+		var c discount.Coupon
 		if err := rows.Scan(
 			&c.ID,
 			&c.Code,
@@ -272,7 +271,7 @@ func (r *CouponRepository) DecrementQuota(
 	}
 
 	if res.RowsAffected() == 0 {
-		return discountdomain.ErrCouponQuotaExceeded
+		return discount.ErrCouponQuotaExceeded
 	}
 
 	return nil
@@ -281,7 +280,7 @@ func (r *CouponRepository) DecrementQuota(
 func (r *CouponRepository) SaveRedemption(
 	ctx context.Context,
 	exec transaction.Executor,
-	redemption discountdomain.CouponRedemption,
+	redemption discount.CouponRedemption,
 ) error {
 	query := `
 		INSERT INTO coupon_redemptions (
@@ -312,7 +311,7 @@ func (r *CouponRepository) GetRedemptionByOrder(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) (*discountdomain.CouponRedemption, error) {
+) (*discount.CouponRedemption, error) {
 	query := `
 		SELECT id, coupon_id, customer_id, order_id, discount_amount, redeemed_at
 		FROM coupon_redemptions
@@ -320,7 +319,7 @@ func (r *CouponRepository) GetRedemptionByOrder(
 		LIMIT 1
 	`
 
-	var red discountdomain.CouponRedemption
+	var red discount.CouponRedemption
 	err := exec.QueryRow(ctx, query, orderID).Scan(
 		&red.ID,
 		&red.CouponID,

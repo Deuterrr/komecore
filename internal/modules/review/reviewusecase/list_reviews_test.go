@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/review/reviewdomain"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/review"
 	"komecore/internal/modules/review/reviewusecase"
 
 	"github.com/google/uuid"
@@ -18,14 +18,14 @@ func TestListReviews_Success(t *testing.T) {
 	revRepo := newMockReviewRepo()
 	pRepo := newMockProductRepo()
 	prodID := uuid.New()
-	pRepo.products[prodID] = &productdomain.Product{ID: prodID}
+	pRepo.products[prodID] = &product.Product{ID: prodID}
 
-	revRepo.reviews[uuid.New()] = &reviewdomain.Review{
+	revRepo.reviews[uuid.New()] = &review.Review{
 		ID:        uuid.New(),
 		ProductID: prodID,
 		Rating:    5,
 	}
-	revRepo.reviews[uuid.New()] = &reviewdomain.Review{
+	revRepo.reviews[uuid.New()] = &review.Review{
 		ID:        uuid.New(),
 		ProductID: prodID,
 		Rating:    4,

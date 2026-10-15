@@ -8,7 +8,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/cart/cartdomain"
+	"komecore/internal/modules/cart"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -24,7 +24,7 @@ func (r *CartRepository) GetWithItemsByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) (*cartdomain.Cart, error) {
+) (*cart.Cart, error) {
 	query := `
 		SELECT
 			c.id,
@@ -53,7 +53,7 @@ func (r *CartRepository) GetWithItemsByCustomerID(
 	}
 	defer rows.Close()
 
-	var cart *cartdomain.Cart
+	var c *cart.Cart
 	for rows.Next() {
 		var (
 			cID        uuid.UUID
@@ -82,18 +82,18 @@ func (r *CartRepository) GetWithItemsByCustomerID(
 			return nil, fmt.Errorf("mapping cart with items model to domain failed: %w", err)
 		}
 
-		if cart == nil {
-			cart = &cartdomain.Cart{
+		if c == nil {
+			c = &cart.Cart{
 				ID:         cID,
 				CustomerID: custID,
 				CreatedAt:  createdAt,
 				UpdatedAt:  updatedAt,
-				Items:      []cartdomain.CartItem{},
+				Items:      []cart.CartItem{},
 			}
 		}
 
 		if itemID != nil {
-			var itemOptions cartdomain.ItemOptions
+			var itemOptions cart.ItemOptions
 			if len(rawOptions) > 0 {
 				_ = json.Unmarshal(rawOptions, &itemOptions)
 			}
@@ -103,7 +103,7 @@ func (r *CartRepository) GetWithItemsByCustomerID(
 				pID = *productID
 			}
 
-			cart.Items = append(cart.Items, cartdomain.CartItem{
+			c.Items = append(c.Items, cart.CartItem{
 				ID:          *itemID,
 				ProductID:   pID,
 				ShopID:      *shopID,
@@ -113,18 +113,18 @@ func (r *CartRepository) GetWithItemsByCustomerID(
 		}
 	}
 
-	if cart == nil {
+	if c == nil {
 		return nil, nil
 	}
 
-	return cart, nil
+	return c, nil
 }
 
 func (r *CartRepository) NewCart(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) (*cartdomain.Cart, error) {
+) (*cart.Cart, error) {
 	query := `
 		INSERT INTO carts (
 			customer_id
@@ -137,26 +137,26 @@ func (r *CartRepository) NewCart(
 			updated_at
 	`
 
-	var cart cartdomain.Cart
+	var c cart.Cart
 	err := exec.QueryRow(ctx, query, customerID).Scan(
-		&cart.ID,
-		&cart.CustomerID,
-		&cart.CreatedAt,
-		&cart.UpdatedAt,
+		&c.ID,
+		&c.CustomerID,
+		&c.CreatedAt,
+		&c.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert cart failed: %w", err)
 	}
 
-	cart.Items = []cartdomain.CartItem{}
+	c.Items = []cart.CartItem{}
 
-	return &cart, nil
+	return &c, nil
 }
 
 func (r *CartRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	cart *cartdomain.Cart,
+	cart *cart.Cart,
 ) error {
 	const insertItemQuery = `
 		INSERT INTO cart_items (

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/wishlist/wishlistdomain"
+	"komecore/internal/modules/wishlist"
 	"komecore/internal/modules/wishlist/wishlistusecase"
 
 	"github.com/google/uuid"
@@ -20,7 +20,7 @@ func TestRemoveFromWishlist_Success(t *testing.T) {
 	custID := uuid.New()
 	prodID := uuid.New()
 
-	_ = wishlistRepo.Add(ctx, nil, wishlistdomain.WishlistItem{
+	_ = wishlistRepo.Add(ctx, nil, wishlist.WishlistItem{
 		CustomerID: custID,
 		ProductID:  prodID,
 		CreatedAt:  time.Now(),

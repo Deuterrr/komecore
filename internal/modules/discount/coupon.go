@@ -1,4 +1,4 @@
-package discountdomain
+package discount
 
 import (
 	"strings"

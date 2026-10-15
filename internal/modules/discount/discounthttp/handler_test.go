@@ -10,9 +10,8 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/discount/discountdomain"
+	"komecore/internal/modules/discount"
 	"komecore/internal/modules/discount/discounthttp"
-	"komecore/internal/modules/discount/discountrepo"
 	"komecore/internal/modules/discount/discountusecase"
 	"komecore/pkg/clock"
 
@@ -22,27 +21,27 @@ import (
 )
 
 type mockRepo struct {
-	coupon     *discountdomain.Coupon
+	coupon     *discount.Coupon
 	saveErr    error
-	listResult []discountdomain.Coupon
+	listResult []discount.Coupon
 	listTotal  int
 }
 
-func (m *mockRepo) GetByCode(_ context.Context, _ transaction.Executor, code string) (*discountdomain.Coupon, error) {
+func (m *mockRepo) GetByCode(_ context.Context, _ transaction.Executor, code string) (*discount.Coupon, error) {
 	if m.coupon != nil && m.coupon.Code == code {
 		return m.coupon, nil
 	}
 	return nil, nil
 }
 
-func (m *mockRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*discountdomain.Coupon, error) {
+func (m *mockRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*discount.Coupon, error) {
 	if m.coupon != nil && m.coupon.ID == id {
 		return m.coupon, nil
 	}
 	return nil, nil
 }
 
-func (m *mockRepo) Save(_ context.Context, _ transaction.Executor, c discountdomain.Coupon) error {
+func (m *mockRepo) Save(_ context.Context, _ transaction.Executor, c discount.Coupon) error {
 	if m.saveErr != nil {
 		return m.saveErr
 	}
@@ -50,7 +49,7 @@ func (m *mockRepo) Save(_ context.Context, _ transaction.Executor, c discountdom
 	return nil
 }
 
-func (m *mockRepo) List(_ context.Context, _ transaction.Executor, _ discountrepo.ListCouponsParams) ([]discountdomain.Coupon, int, error) {
+func (m *mockRepo) List(_ context.Context, _ transaction.Executor, _ discount.ListCouponsParams) ([]discount.Coupon, int, error) {
 	return m.listResult, m.listTotal, nil
 }
 
@@ -58,11 +57,11 @@ func (m *mockRepo) DecrementQuota(_ context.Context, _ transaction.Executor, _ u
 	return nil
 }
 
-func (m *mockRepo) SaveRedemption(_ context.Context, _ transaction.Executor, _ discountdomain.CouponRedemption) error {
+func (m *mockRepo) SaveRedemption(_ context.Context, _ transaction.Executor, _ discount.CouponRedemption) error {
 	return nil
 }
 
-func (m *mockRepo) GetRedemptionByOrder(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*discountdomain.CouponRedemption, error) {
+func (m *mockRepo) GetRedemptionByOrder(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*discount.CouponRedemption, error) {
 	return nil, nil
 }
 
@@ -74,10 +73,10 @@ func setupHandler(repo *mockRepo, now time.Time) *discounthttp.DiscountHandler {
 func TestDiscountHandler_ValidateCoupon_Success(t *testing.T) {
 	now := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
 	repo := &mockRepo{
-		coupon: &discountdomain.Coupon{
+		coupon: &discount.Coupon{
 			ID:             uuid.New(),
 			Code:           "SAVE10",
-			Type:           discountdomain.CouponTypePercentage,
+			Type:           discount.CouponTypePercentage,
 			DiscountValue:  10,
 			MinSpend:       100000,
 			QuotaTotal:     10,
@@ -153,7 +152,7 @@ func TestDiscountHandler_CreateCoupon(t *testing.T) {
 
 	body, _ := json.Marshal(discounthttp.CreateCouponRequest{
 		Code:          "NEWCOUPON",
-		Type:          discountdomain.CouponTypeFixedAmount,
+		Type:          discount.CouponTypeFixedAmount,
 		DiscountValue: 25000,
 		MinSpend:      50000,
 		QuotaTotal:    50,
@@ -181,11 +180,11 @@ func TestDiscountHandler_CreateCoupon(t *testing.T) {
 func TestDiscountHandler_ListCoupons(t *testing.T) {
 	now := time.Now()
 	repo := &mockRepo{
-		listResult: []discountdomain.Coupon{
+		listResult: []discount.Coupon{
 			{
 				ID:             uuid.New(),
 				Code:           "COUPON1",
-				Type:           discountdomain.CouponTypeFreeShipping,
+				Type:           discount.CouponTypeFreeShipping,
 				QuotaTotal:     100,
 				QuotaRemaining: 100,
 				StartsAt:       now,

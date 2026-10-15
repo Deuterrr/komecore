@@ -1,38 +1,46 @@
-package discountrepo
+package discount
 
 import (
 	"context"
 
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/discount/discountdomain"
-
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/pagination"
 )
 
-type CouponRepository interface {
+type ListCouponsParams struct {
+	Code     *string
+	IsActive *bool
+
+	pagination.Pagination
+	pagination.Sorts
+}
+
+type Repository interface {
 	GetByID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*discountdomain.Coupon, error)
+	) (*Coupon, error)
 
 	GetByCode(
 		ctx context.Context,
 		exec transaction.Executor,
 		code string,
-	) (*discountdomain.Coupon, error)
+	) (*Coupon, error)
 
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		coupon discountdomain.Coupon,
+		coupon Coupon,
 	) error
 
 	List(
 		ctx context.Context,
 		exec transaction.Executor,
 		params ListCouponsParams,
-	) ([]discountdomain.Coupon, int, error)
+	) ([]Coupon, int, error)
 
 	DecrementQuota(
 		ctx context.Context,
@@ -43,12 +51,14 @@ type CouponRepository interface {
 	SaveRedemption(
 		ctx context.Context,
 		exec transaction.Executor,
-		redemption discountdomain.CouponRedemption,
+		redemption CouponRedemption,
 	) error
 
 	GetRedemptionByOrder(
 		ctx context.Context,
 		exec transaction.Executor,
 		orderID uuid.UUID,
-	) (*discountdomain.CouponRedemption, error)
+	) (*CouponRedemption, error)
 }
+
+type CouponRepository = Repository

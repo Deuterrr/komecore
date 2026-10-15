@@ -6,8 +6,8 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/review/reviewdomain"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/review"
 	"komecore/internal/modules/review/reviewusecase"
 
 	"github.com/google/uuid"
@@ -23,8 +23,8 @@ func TestDeleteReview_CustomerOwner_Success(t *testing.T) {
 	custID := uuid.New()
 	reviewID := uuid.New()
 
-	pRepo.products[prodID] = &productdomain.Product{ID: prodID, AverageRating: 5.0, ReviewCount: 1}
-	revRepo.reviews[reviewID] = &reviewdomain.Review{
+	pRepo.products[prodID] = &product.Product{ID: prodID, AverageRating: 5.0, ReviewCount: 1}
+	revRepo.reviews[reviewID] = &review.Review{
 		ID:         reviewID,
 		ProductID:  prodID,
 		CustomerID: custID,
@@ -57,7 +57,7 @@ func TestDeleteReview_CustomerNotOwner_Forbidden(t *testing.T) {
 	attackerCustID := uuid.New()
 	reviewID := uuid.New()
 
-	revRepo.reviews[reviewID] = &reviewdomain.Review{
+	revRepo.reviews[reviewID] = &review.Review{
 		ID:         reviewID,
 		ProductID:  prodID,
 		CustomerID: ownerCustID,
@@ -86,8 +86,8 @@ func TestDeleteReview_StaffAdmin_Success(t *testing.T) {
 	ownerCustID := uuid.New()
 	reviewID := uuid.New()
 
-	pRepo.products[prodID] = &productdomain.Product{ID: prodID}
-	revRepo.reviews[reviewID] = &reviewdomain.Review{
+	pRepo.products[prodID] = &product.Product{ID: prodID}
+	revRepo.reviews[reviewID] = &review.Review{
 		ID:         reviewID,
 		ProductID:  prodID,
 		CustomerID: ownerCustID,

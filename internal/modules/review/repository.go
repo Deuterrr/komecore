@@ -1,12 +1,11 @@
-package reviewrepo
+package review
 
 import (
 	"context"
 
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/review/reviewdomain"
-
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
 )
 
 type ListReviewsParams struct {
@@ -15,18 +14,18 @@ type ListReviewsParams struct {
 	Limit     int
 }
 
-type ReviewRepository interface {
+type Repository interface {
 	Create(
 		ctx context.Context,
 		exec transaction.Executor,
-		review *reviewdomain.Review,
+		review *Review,
 	) error
 
 	GetByID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*reviewdomain.Review, error)
+	) (*Review, error)
 
 	Delete(
 		ctx context.Context,
@@ -38,13 +37,13 @@ type ReviewRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		params ListReviewsParams,
-	) ([]reviewdomain.ReviewWithCustomer, int, error)
+	) ([]ReviewWithCustomer, int, error)
 
 	GetRatingSummary(
 		ctx context.Context,
 		exec transaction.Executor,
 		productID uuid.UUID,
-	) (*reviewdomain.ProductRatingSummary, error)
+	) (*ProductRatingSummary, error)
 
 	HasReviewedOrder(
 		ctx context.Context,
@@ -61,3 +60,5 @@ type ReviewRepository interface {
 		productID uuid.UUID,
 	) ([]uuid.UUID, error)
 }
+
+type ReviewRepository = Repository

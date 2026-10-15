@@ -4,15 +4,15 @@ import (
 	"context"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/wishlist/wishlistdomain"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/wishlist"
 
 	"github.com/google/uuid"
 )
 
 type mockWishlistRepo struct {
-	items     map[string]wishlistdomain.WishlistItem
+	items     map[string]wishlist.WishlistItem
 	addErr    error
 	removeErr error
 	listErr   error
@@ -21,7 +21,7 @@ type mockWishlistRepo struct {
 
 func newMockWishlistRepo() *mockWishlistRepo {
 	return &mockWishlistRepo{
-		items: make(map[string]wishlistdomain.WishlistItem),
+		items: make(map[string]wishlist.WishlistItem),
 	}
 }
 
@@ -29,7 +29,7 @@ func (m *mockWishlistRepo) key(customerID, productID uuid.UUID) string {
 	return customerID.String() + ":" + productID.String()
 }
 
-func (m *mockWishlistRepo) Add(_ context.Context, _ transaction.Executor, item wishlistdomain.WishlistItem) error {
+func (m *mockWishlistRepo) Add(_ context.Context, _ transaction.Executor, item wishlist.WishlistItem) error {
 	if m.addErr != nil {
 		return m.addErr
 	}
@@ -45,11 +45,11 @@ func (m *mockWishlistRepo) Remove(_ context.Context, _ transaction.Executor, cus
 	return nil
 }
 
-func (m *mockWishlistRepo) ListByCustomerID(_ context.Context, _ transaction.Executor, customerID uuid.UUID) ([]wishlistdomain.WishlistItem, error) {
+func (m *mockWishlistRepo) ListByCustomerID(_ context.Context, _ transaction.Executor, customerID uuid.UUID) ([]wishlist.WishlistItem, error) {
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
-	var res []wishlistdomain.WishlistItem
+	var res []wishlist.WishlistItem
 	for _, item := range m.items {
 		if item.CustomerID == customerID {
 			res = append(res, item)
@@ -67,23 +67,23 @@ func (m *mockWishlistRepo) Exists(_ context.Context, _ transaction.Executor, cus
 }
 
 type mockProductRepo struct {
-	products map[uuid.UUID]*productdomain.Product
+	products map[uuid.UUID]*product.Product
 	getErr   error
 	findErr  error
 }
 
-func (m *mockProductRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*productdomain.Product, error) {
+func (m *mockProductRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*product.Product, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
 	return m.products[id], nil
 }
 
-func (m *mockProductRepo) FindByIDs(_ context.Context, _ transaction.Executor, ids []uuid.UUID) ([]productdomain.Product, error) {
+func (m *mockProductRepo) FindByIDs(_ context.Context, _ transaction.Executor, ids []uuid.UUID) ([]product.Product, error) {
 	if m.findErr != nil {
 		return nil, m.findErr
 	}
-	var res []productdomain.Product
+	var res []product.Product
 	for _, id := range ids {
 		if p, ok := m.products[id]; ok {
 			res = append(res, *p)
@@ -93,9 +93,9 @@ func (m *mockProductRepo) FindByIDs(_ context.Context, _ transaction.Executor, i
 }
 
 type mockInventoryRepo struct {
-	inventories map[uuid.UUID][]inventorydomain.Inventory
+	inventories map[uuid.UUID][]inventory.Inventory
 }
 
-func (m *mockInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, ids []uuid.UUID) (map[uuid.UUID][]inventorydomain.Inventory, error) {
+func (m *mockInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, ids []uuid.UUID) (map[uuid.UUID][]inventory.Inventory, error) {
 	return m.inventories, nil
 }

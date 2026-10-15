@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"komecore/internal/modules/discount/discountdomain"
+	"komecore/internal/modules/discount"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -31,10 +31,10 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 
 	// Seed coupons
 	maxCap := int64(20000)
-	pctCoupon := discountdomain.Coupon{
+	pctCoupon := discount.Coupon{
 		ID:             uuid.New(),
 		Code:           "SAVE10",
-		Type:           discountdomain.CouponTypePercentage,
+		Type:           discount.CouponTypePercentage,
 		DiscountValue:  10, // 10%
 		MinSpend:       50000,
 		MaxDiscount:    &maxCap,
@@ -47,10 +47,10 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 	}
 	require.NoError(t, repo.Save(ctx, exec, pctCoupon))
 
-	fixedCoupon := discountdomain.Coupon{
+	fixedCoupon := discount.Coupon{
 		ID:             uuid.New(),
 		Code:           "FLAT25K",
-		Type:           discountdomain.CouponTypeFixedAmount,
+		Type:           discount.CouponTypeFixedAmount,
 		DiscountValue:  25000,
 		MinSpend:       30000,
 		QuotaTotal:     50,
@@ -62,10 +62,10 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 	}
 	require.NoError(t, repo.Save(ctx, exec, fixedCoupon))
 
-	freeShipCoupon := discountdomain.Coupon{
+	freeShipCoupon := discount.Coupon{
 		ID:             uuid.New(),
 		Code:           "FREESHIP",
-		Type:           discountdomain.CouponTypeFreeShipping,
+		Type:           discount.CouponTypeFreeShipping,
 		DiscountValue:  0,
 		MinSpend:       20000,
 		QuotaTotal:     10,
@@ -77,10 +77,10 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 	}
 	require.NoError(t, repo.Save(ctx, exec, freeShipCoupon))
 
-	expiredCoupon := discountdomain.Coupon{
+	expiredCoupon := discount.Coupon{
 		ID:             uuid.New(),
 		Code:           "OLDPROMO",
-		Type:           discountdomain.CouponTypeFixedAmount,
+		Type:           discount.CouponTypeFixedAmount,
 		DiscountValue:  10000,
 		MinSpend:       0,
 		QuotaTotal:     10,
@@ -120,7 +120,7 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 			Subtotal:    30000, // min spend is 50,000
 			ShippingFee: 10000,
 		})
-		require.ErrorIs(t, err, discountdomain.ErrCouponMinSpendNotMet)
+		require.ErrorIs(t, err, discount.ErrCouponMinSpendNotMet)
 	})
 
 	t.Run("fixed amount coupon applied correctly", func(t *testing.T) {
@@ -141,7 +141,7 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 			ShippingFee: 10000,
 		})
 		// But wait: min spend for FLAT25K is 30,000! So subtotal 20000 fails min spend!
-		assert.ErrorIs(t, err, discountdomain.ErrCouponMinSpendNotMet)
+		assert.ErrorIs(t, err, discount.ErrCouponMinSpendNotMet)
 		assert.Nil(t, res)
 	})
 
@@ -161,7 +161,7 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 			Code:     "OLDPROMO",
 			Subtotal: 100000,
 		})
-		require.ErrorIs(t, err, discountdomain.ErrCouponExpired)
+		require.ErrorIs(t, err, discount.ErrCouponExpired)
 	})
 
 	t.Run("unknown coupon code fails validation", func(t *testing.T) {
@@ -169,7 +169,7 @@ func TestDiscountService_ValidateCoupon(t *testing.T) {
 			Code:     "NONEXISTENT",
 			Subtotal: 100000,
 		})
-		require.ErrorIs(t, err, discountdomain.ErrCouponNotFound)
+		require.ErrorIs(t, err, discount.ErrCouponNotFound)
 	})
 }
 
@@ -183,10 +183,10 @@ func TestDiscountService_RedeemCoupon_AtomicQuota(t *testing.T) {
 	svc := NewDiscountService(repo, exec, clock)
 
 	// Coupon with exactly quota_remaining = 1
-	coupon := discountdomain.Coupon{
+	coupon := discount.Coupon{
 		ID:             uuid.New(),
 		Code:           "LASTONE",
-		Type:           discountdomain.CouponTypeFixedAmount,
+		Type:           discount.CouponTypeFixedAmount,
 		DiscountValue:  10000,
 		MinSpend:       0,
 		QuotaTotal:     1,
@@ -224,7 +224,7 @@ func TestDiscountService_RedeemCoupon_AtomicQuota(t *testing.T) {
 		Subtotal:    50000,
 		ShippingFee: 10000,
 	})
-	require.ErrorIs(t, err, discountdomain.ErrCouponQuotaExceeded)
+	require.ErrorIs(t, err, discount.ErrCouponQuotaExceeded)
 	assert.Nil(t, redemp2)
 
 	// Duplicate redemption for same order fails
@@ -251,7 +251,7 @@ func TestDiscountService_CreateCoupon(t *testing.T) {
 		c, err := svc.CreateCoupon(ctx, CreateCouponInput{
 			Code:          "welcome15",
 			Description:   &desc,
-			Type:          discountdomain.CouponTypePercentage,
+			Type:          discount.CouponTypePercentage,
 			DiscountValue: 15,
 			MinSpend:      50000,
 			QuotaTotal:    500,
@@ -267,7 +267,7 @@ func TestDiscountService_CreateCoupon(t *testing.T) {
 	t.Run("reject percentage over 100", func(t *testing.T) {
 		_, err := svc.CreateCoupon(ctx, CreateCouponInput{
 			Code:          "OVER100",
-			Type:          discountdomain.CouponTypePercentage,
+			Type:          discount.CouponTypePercentage,
 			DiscountValue: 105,
 			QuotaTotal:    10,
 			StartsAt:      now,
@@ -280,26 +280,26 @@ func TestDiscountService_CreateCoupon(t *testing.T) {
 	t.Run("reject expiry before start date", func(t *testing.T) {
 		_, err := svc.CreateCoupon(ctx, CreateCouponInput{
 			Code:          "TIMETRAVEL",
-			Type:          discountdomain.CouponTypeFixedAmount,
+			Type:          discount.CouponTypeFixedAmount,
 			DiscountValue: 10000,
 			QuotaTotal:    10,
 			StartsAt:      now,
 			ExpiresAt:     now.Add(-24 * time.Hour),
 			IsActive:      true,
 		})
-		require.ErrorIs(t, err, discountdomain.ErrInvalidDates)
+		require.ErrorIs(t, err, discount.ErrInvalidDates)
 	})
 
 	t.Run("reject duplicate coupon code", func(t *testing.T) {
 		_, err := svc.CreateCoupon(ctx, CreateCouponInput{
 			Code:          "WELCOME15",
-			Type:          discountdomain.CouponTypeFixedAmount,
+			Type:          discount.CouponTypeFixedAmount,
 			DiscountValue: 10000,
 			QuotaTotal:    10,
 			StartsAt:      now,
 			ExpiresAt:     now.Add(24 * time.Hour),
 			IsActive:      true,
 		})
-		require.ErrorIs(t, err, discountdomain.ErrDuplicateCouponCode)
+		require.ErrorIs(t, err, discount.ErrDuplicateCouponCode)
 	})
 }

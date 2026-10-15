@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/wishlist/wishlistdomain"
+	"komecore/internal/modules/wishlist"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +19,7 @@ func NewWishlistRepository() *WishlistRepository {
 func (r *WishlistRepository) Add(
 	ctx context.Context,
 	exec transaction.Executor,
-	item wishlistdomain.WishlistItem,
+	item wishlist.WishlistItem,
 ) error {
 	query := `
 		INSERT INTO wishlists (customer_id, product_id, created_at)
@@ -57,7 +57,7 @@ func (r *WishlistRepository) ListByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) ([]wishlistdomain.WishlistItem, error) {
+) ([]wishlist.WishlistItem, error) {
 	query := `
 		SELECT customer_id, product_id, created_at
 		FROM wishlists
@@ -71,9 +71,9 @@ func (r *WishlistRepository) ListByCustomerID(
 	}
 	defer rows.Close()
 
-	var items []wishlistdomain.WishlistItem
+	var items []wishlist.WishlistItem
 	for rows.Next() {
-		var item wishlistdomain.WishlistItem
+		var item wishlist.WishlistItem
 		if err := rows.Scan(&item.CustomerID, &item.ProductID, &item.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan wishlist item failed: %w", err)
 		}

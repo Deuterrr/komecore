@@ -1,19 +1,18 @@
-package wishlistrepo
+package wishlist
 
 import (
 	"context"
 
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/wishlist/wishlistdomain"
-
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
 )
 
-type WishlistRepository interface {
+type Repository interface {
 	Add(
 		ctx context.Context,
 		exec transaction.Executor,
-		item wishlistdomain.WishlistItem,
+		item WishlistItem,
 	) error
 
 	Remove(
@@ -27,7 +26,7 @@ type WishlistRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		customerID uuid.UUID,
-	) ([]wishlistdomain.WishlistItem, error)
+	) ([]WishlistItem, error)
 
 	Exists(
 		ctx context.Context,
@@ -36,3 +35,5 @@ type WishlistRepository interface {
 		productID uuid.UUID,
 	) (bool, error)
 }
+
+type WishlistRepository = Repository

@@ -1,4 +1,4 @@
-package reviewdomain
+package review
 
 import (
 	"errors"

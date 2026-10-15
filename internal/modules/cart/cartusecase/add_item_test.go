@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/shop/shopdomain"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shop"
 
 	"github.com/google/uuid"
 )
@@ -20,32 +20,32 @@ func (m *mockTransactor) WithinTransaction(ctx context.Context, fn func(transact
 }
 
 type mockCartShopRepo struct {
-	shop *shopdomain.Shop
+	shop *shop.Shop
 	err  error
 }
 
-func (m *mockCartShopRepo) FindByIDs(ctx context.Context, exec transaction.Executor, ids []uuid.UUID) ([]shopdomain.Shop, error) {
+func (m *mockCartShopRepo) FindByIDs(ctx context.Context, exec transaction.Executor, ids []uuid.UUID) ([]shop.Shop, error) {
 	return nil, nil
 }
 
-func (m *mockCartShopRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*shopdomain.Shop, error) {
+func (m *mockCartShopRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*shop.Shop, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	if m.shop != nil {
 		return m.shop, nil
 	}
-	return &shopdomain.Shop{
+	return &shop.Shop{
 		ID:             id,
 		Name:           "Mock Shop",
 		Slug:           "mock-shop",
 		IsActive:       true,
-		ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+		ApprovalStatus: shop.ShopApprovalStatusApproved,
 	}, nil
 }
 
 type mockSaveCartRepository struct {
-	cart    *cartdomain.Cart
+	cart    *cart.Cart
 	saved   bool
 	saveErr error
 	getErr  error
@@ -55,7 +55,7 @@ func (m *mockSaveCartRepository) GetWithItemsByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) (*cartdomain.Cart, error) {
+) (*cart.Cart, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -66,18 +66,18 @@ func (m *mockSaveCartRepository) NewCart(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) (*cartdomain.Cart, error) {
-	return &cartdomain.Cart{
+) (*cart.Cart, error) {
+	return &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}, nil
 }
 
 func (m *mockSaveCartRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	cart *cartdomain.Cart,
+	cart *cart.Cart,
 ) error {
 	if m.saveErr != nil {
 		return m.saveErr
@@ -88,14 +88,14 @@ func (m *mockSaveCartRepository) Save(
 }
 
 type mockAddItemInvRepo struct {
-	inv *inventorydomain.Inventory
+	inv *inventory.Inventory
 }
 
 func (m *mockAddItemInvRepo) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]inventorydomain.Inventory, error) {
+) (map[uuid.UUID][]inventory.Inventory, error) {
 	return nil, nil
 }
 
@@ -103,19 +103,19 @@ func (m *mockAddItemInvRepo) GetByProductIDAndShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID, shopID uuid.UUID,
-) (*inventorydomain.Inventory, error) {
+) (*inventory.Inventory, error) {
 	return m.inv, nil
 }
 
 type mockAddItemProdRepo struct {
-	prod *productdomain.Product
+	prod *product.Product
 }
 
 func (m *mockAddItemProdRepo) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	ids []uuid.UUID,
-) ([]productdomain.Product, error) {
+) ([]product.Product, error) {
 	return nil, nil
 }
 
@@ -123,7 +123,7 @@ func (m *mockAddItemProdRepo) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*productdomain.Product, error) {
+) (*product.Product, error) {
 	return m.prod, nil
 }
 
@@ -134,32 +134,32 @@ func TestAddItem_Success(t *testing.T) {
 	productID := uuid.New()
 
 	cartR := &mockSaveCartRepository{
-		cart: &cartdomain.Cart{
+		cart: &cart.Cart{
 			ID:         uuid.New(),
 			CustomerID: customerID,
-			Items:      []cartdomain.CartItem{},
+			Items:      []cart.CartItem{},
 		},
 	}
 	shopR := &mockCartShopRepo{
-		shop: &shopdomain.Shop{
+		shop: &shop.Shop{
 			ID:             shopID,
 			Name:           "Operable Shop",
 			IsActive:       true,
-			ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+			ApprovalStatus: shop.ShopApprovalStatusApproved,
 		},
 	}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 10,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Cotton T-Shirt",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -191,11 +191,11 @@ func TestAddItem_RejectInactiveShop(t *testing.T) {
 
 	cartR := &mockSaveCartRepository{}
 	shopR := &mockCartShopRepo{
-		shop: &shopdomain.Shop{
+		shop: &shop.Shop{
 			ID:             shopID,
 			Name:           "Inactive Shop",
 			IsActive:       false,
-			ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+			ApprovalStatus: shop.ShopApprovalStatusApproved,
 		},
 	}
 	invR := &mockAddItemInvRepo{}
@@ -225,11 +225,11 @@ func TestAddItem_RejectPendingShop(t *testing.T) {
 
 	cartR := &mockSaveCartRepository{}
 	shopR := &mockCartShopRepo{
-		shop: &shopdomain.Shop{
+		shop: &shop.Shop{
 			ID:             shopID,
 			Name:           "Pending Shop",
 			IsActive:       true,
-			ApprovalStatus: shopdomain.ShopApprovalStatusPending,
+			ApprovalStatus: shop.ShopApprovalStatusPending,
 		},
 	}
 	invR := &mockAddItemInvRepo{}
@@ -258,32 +258,32 @@ func TestAddItem_RejectInactiveProduct(t *testing.T) {
 	productID := uuid.New()
 
 	cartR := &mockSaveCartRepository{
-		cart: &cartdomain.Cart{
+		cart: &cart.Cart{
 			ID:         uuid.New(),
 			CustomerID: customerID,
-			Items:      []cartdomain.CartItem{},
+			Items:      []cart.CartItem{},
 		},
 	}
 	shopR := &mockCartShopRepo{
-		shop: &shopdomain.Shop{
+		shop: &shop.Shop{
 			ID:             shopID,
 			Name:           "Active Shop",
 			IsActive:       true,
-			ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+			ApprovalStatus: shop.ShopApprovalStatusApproved,
 		},
 	}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 10,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Inactive Item",
-			Status: productdomain.ProductStatusInactive,
+			Status: product.ProductStatusInactive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -310,32 +310,32 @@ func TestAddItem_RejectArchivedProduct(t *testing.T) {
 	productID := uuid.New()
 
 	cartR := &mockSaveCartRepository{
-		cart: &cartdomain.Cart{
+		cart: &cart.Cart{
 			ID:         uuid.New(),
 			CustomerID: customerID,
-			Items:      []cartdomain.CartItem{},
+			Items:      []cart.CartItem{},
 		},
 	}
 	shopR := &mockCartShopRepo{
-		shop: &shopdomain.Shop{
+		shop: &shop.Shop{
 			ID:             shopID,
 			Name:           "Active Shop",
 			IsActive:       true,
-			ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+			ApprovalStatus: shop.ShopApprovalStatusApproved,
 		},
 	}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 10,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Archived Item",
-			Status: productdomain.ProductStatusArchived,
+			Status: product.ProductStatusArchived,
 		},
 	}
 	tx := &mockTransactor{}
@@ -361,35 +361,35 @@ func TestAddItem_MultiStyle_StockExceeded(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}
 	// Already has 3 of Small in cart
-	_ = cart.AddItem(productID, shopID, 3, cartdomain.ItemOptions{"size": "small", "color": "blue"})
+	_ = c.AddItem(productID, shopID, 3, cart.ItemOptions{"size": "small", "color": "blue"})
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	shopR := &mockCartShopRepo{
-		shop: &shopdomain.Shop{
+		shop: &shop.Shop{
 			ID:             shopID,
 			Name:           "Active Shop",
 			IsActive:       true,
-			ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+			ApprovalStatus: shop.ShopApprovalStatusApproved,
 		},
 	}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 5, // Total stock available is 5
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Mechanical Keyboard",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -403,7 +403,7 @@ func TestAddItem_MultiStyle_StockExceeded(t *testing.T) {
 		ShopID:      shopID,
 		ProductID:   productID,
 		Quantity:    3,
-		ItemOptions: cartdomain.ItemOptions{"size": "large", "color": "red"},
+		ItemOptions: cart.ItemOptions{"size": "large", "color": "red"},
 	})
 
 	if err == nil {
@@ -417,35 +417,35 @@ func TestAddItem_MultiStyle_Success(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	cart := &cartdomain.Cart{
+	c := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items:      []cartdomain.CartItem{},
+		Items:      []cart.CartItem{},
 	}
 	// Already has 2 of Small in cart
-	_ = cart.AddItem(productID, shopID, 2, cartdomain.ItemOptions{"size": "small", "color": "blue"})
+	_ = c.AddItem(productID, shopID, 2, cart.ItemOptions{"size": "small", "color": "blue"})
 
-	cartR := &mockSaveCartRepository{cart: cart}
+	cartR := &mockSaveCartRepository{cart: c}
 	shopR := &mockCartShopRepo{
-		shop: &shopdomain.Shop{
+		shop: &shop.Shop{
 			ID:             shopID,
 			Name:           "Active Shop",
 			IsActive:       true,
-			ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+			ApprovalStatus: shop.ShopApprovalStatusApproved,
 		},
 	}
 	invR := &mockAddItemInvRepo{
-		inv: &inventorydomain.Inventory{
+		inv: &inventory.Inventory{
 			ProductID:  productID,
 			ShopID:     shopID,
 			TotalStock: 5,
 		},
 	}
 	prodR := &mockAddItemProdRepo{
-		prod: &productdomain.Product{
+		prod: &product.Product{
 			ID:     productID,
 			Name:   "Mechanical Keyboard",
-			Status: productdomain.ProductStatusActive,
+			Status: product.ProductStatusActive,
 		},
 	}
 	tx := &mockTransactor{}
@@ -459,17 +459,17 @@ func TestAddItem_MultiStyle_Success(t *testing.T) {
 		ShopID:      shopID,
 		ProductID:   productID,
 		Quantity:    2,
-		ItemOptions: cartdomain.ItemOptions{"size": "large", "color": "red"},
+		ItemOptions: cart.ItemOptions{"size": "large", "color": "red"},
 	})
 
 	if err != nil {
 		t.Fatalf("unexpected error adding second style: %v", err)
 	}
 
-	if len(cart.Items) != 2 {
-		t.Fatalf("expected 2 separate style items in cart, got %d", len(cart.Items))
+	if len(c.Items) != 2 {
+		t.Fatalf("expected 2 separate style items in cart, got %d", len(c.Items))
 	}
-	if cart.Items[0].Quantity != 2 || cart.Items[1].Quantity != 2 {
-		t.Errorf("expected quantities (2, 2), got (%d, %d)", cart.Items[0].Quantity, cart.Items[1].Quantity)
+	if c.Items[0].Quantity != 2 || c.Items[1].Quantity != 2 {
+		t.Errorf("expected quantities (2, 2), got (%d, %d)", c.Items[0].Quantity, c.Items[1].Quantity)
 	}
 }

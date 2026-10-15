@@ -1,12 +1,12 @@
 package wishlisthttp
 
 import (
-	"komecore/internal/modules/wishlist/wishlistdomain"
+	"komecore/internal/modules/wishlist"
 )
 
 type wishlistResponse struct {
-	Items []wishlistdomain.WishlistProductView `json:"items"`
-	Total int                                  `json:"total"`
+	Items []wishlist.WishlistProductView `json:"items"`
+	Total int                            `json:"total"`
 }
 
 type messageResponse struct {

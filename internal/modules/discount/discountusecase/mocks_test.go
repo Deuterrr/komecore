@@ -4,24 +4,23 @@ import (
 	"context"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/discount/discountdomain"
-	"komecore/internal/modules/discount/discountrepo"
+	"komecore/internal/modules/discount"
 
 	"github.com/google/uuid"
 )
 
 type mockCouponRepo struct {
-	coupons      map[string]*discountdomain.Coupon
-	couponsByID  map[uuid.UUID]*discountdomain.Coupon
-	redemptions  map[uuid.UUID]*discountdomain.CouponRedemption // orderID -> redemption
-	savedRedemps []discountdomain.CouponRedemption
+	coupons      map[string]*discount.Coupon
+	couponsByID  map[uuid.UUID]*discount.Coupon
+	redemptions  map[uuid.UUID]*discount.CouponRedemption // orderID -> redemption
+	savedRedemps []discount.CouponRedemption
 }
 
 func newMockCouponRepo() *mockCouponRepo {
 	return &mockCouponRepo{
-		coupons:     make(map[string]*discountdomain.Coupon),
-		couponsByID: make(map[uuid.UUID]*discountdomain.Coupon),
-		redemptions: make(map[uuid.UUID]*discountdomain.CouponRedemption),
+		coupons:     make(map[string]*discount.Coupon),
+		couponsByID: make(map[uuid.UUID]*discount.Coupon),
+		redemptions: make(map[uuid.UUID]*discount.CouponRedemption),
 	}
 }
 
@@ -29,7 +28,7 @@ func (m *mockCouponRepo) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*discountdomain.Coupon, error) {
+) (*discount.Coupon, error) {
 	c, exists := m.couponsByID[id]
 	if !exists {
 		return nil, nil
@@ -42,8 +41,8 @@ func (m *mockCouponRepo) GetByCode(
 	ctx context.Context,
 	exec transaction.Executor,
 	code string,
-) (*discountdomain.Coupon, error) {
-	c, exists := m.coupons[discountdomain.NormalizeCode(code)]
+) (*discount.Coupon, error) {
+	c, exists := m.coupons[discount.NormalizeCode(code)]
 	if !exists {
 		return nil, nil
 	}
@@ -54,7 +53,7 @@ func (m *mockCouponRepo) GetByCode(
 func (m *mockCouponRepo) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	coupon discountdomain.Coupon,
+	coupon discount.Coupon,
 ) error {
 	m.coupons[coupon.Code] = &coupon
 	m.couponsByID[coupon.ID] = &coupon
@@ -64,9 +63,9 @@ func (m *mockCouponRepo) Save(
 func (m *mockCouponRepo) List(
 	ctx context.Context,
 	exec transaction.Executor,
-	params discountrepo.ListCouponsParams,
-) ([]discountdomain.Coupon, int, error) {
-	var results []discountdomain.Coupon
+	params discount.ListCouponsParams,
+) ([]discount.Coupon, int, error) {
+	var results []discount.Coupon
 	for _, c := range m.coupons {
 		if params.IsActive != nil && c.IsActive != *params.IsActive {
 			continue
@@ -83,10 +82,10 @@ func (m *mockCouponRepo) DecrementQuota(
 ) error {
 	c, exists := m.couponsByID[id]
 	if !exists {
-		return discountdomain.ErrCouponNotFound
+		return discount.ErrCouponNotFound
 	}
 	if c.QuotaRemaining <= 0 || !c.IsActive {
-		return discountdomain.ErrCouponQuotaExceeded
+		return discount.ErrCouponQuotaExceeded
 	}
 	c.QuotaRemaining--
 	return nil
@@ -95,7 +94,7 @@ func (m *mockCouponRepo) DecrementQuota(
 func (m *mockCouponRepo) SaveRedemption(
 	ctx context.Context,
 	exec transaction.Executor,
-	redemption discountdomain.CouponRedemption,
+	redemption discount.CouponRedemption,
 ) error {
 	m.redemptions[redemption.OrderID] = &redemption
 	m.savedRedemps = append(m.savedRedemps, redemption)
@@ -106,7 +105,7 @@ func (m *mockCouponRepo) GetRedemptionByOrder(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) (*discountdomain.CouponRedemption, error) {
+) (*discount.CouponRedemption, error) {
 	r, exists := m.redemptions[orderID]
 	if !exists {
 		return nil, nil

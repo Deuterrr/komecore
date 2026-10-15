@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/wishlist/wishlistdomain"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/wishlist"
 	"komecore/internal/modules/wishlist/wishlistusecase"
 
 	"github.com/google/uuid"
@@ -21,27 +21,27 @@ func TestGetWishlist_Success(t *testing.T) {
 	custID := uuid.New()
 	prodID := uuid.New()
 
-	_ = wishlistRepo.Add(ctx, nil, wishlistdomain.WishlistItem{
+	_ = wishlistRepo.Add(ctx, nil, wishlist.WishlistItem{
 		CustomerID: custID,
 		ProductID:  prodID,
 		CreatedAt:  time.Now(),
 	})
 
 	pRepo := &mockProductRepo{
-		products: map[uuid.UUID]*productdomain.Product{
+		products: map[uuid.UUID]*product.Product{
 			prodID: {
 				ID:     prodID,
 				SKU:    "SNK-001",
 				Name:   "Running Shoes",
 				Slug:   "running-shoes",
-				Status: productdomain.ProductStatusActive,
+				Status: product.ProductStatusActive,
 				Price:  750000,
 			},
 		},
 	}
 
 	invRepo := &mockInventoryRepo{
-		inventories: map[uuid.UUID][]inventorydomain.Inventory{
+		inventories: map[uuid.UUID][]inventory.Inventory{
 			prodID: {
 				{ProductID: prodID, TotalStock: 15, ReservedStock: 2},
 			},

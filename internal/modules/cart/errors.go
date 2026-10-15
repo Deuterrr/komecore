@@ -1,4 +1,4 @@
-package cartdomain
+package cart
 
 import "errors"
 

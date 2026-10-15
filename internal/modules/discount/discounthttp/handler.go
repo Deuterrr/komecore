@@ -6,7 +6,7 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/discount/discountdomain"
+	"komecore/internal/modules/discount"
 	"komecore/internal/modules/discount/discountusecase"
 	"komecore/internal/pagination"
 )
@@ -119,7 +119,7 @@ func (h *DiscountHandler) ListCoupons(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-func toCouponResponse(c discountdomain.Coupon) CouponResponse {
+func toCouponResponse(c discount.Coupon) CouponResponse {
 	return CouponResponse{
 		ID:             c.ID,
 		Code:           c.Code,
@@ -140,26 +140,26 @@ func toCouponResponse(c discountdomain.Coupon) CouponResponse {
 
 func mapDomainError(err error) error {
 	switch {
-	case errors.Is(err, discountdomain.ErrCouponNotFound):
+	case errors.Is(err, discount.ErrCouponNotFound):
 		return apperror.NewNotFoundWithCode(apperror.CodeCouponNotFound, err.Error())
-	case errors.Is(err, discountdomain.ErrCouponInactive):
+	case errors.Is(err, discount.ErrCouponInactive):
 		return apperror.NewBadRequest(err.Error())
-	case errors.Is(err, discountdomain.ErrCouponExpired):
+	case errors.Is(err, discount.ErrCouponExpired):
 		return apperror.NewBadRequestWithCode(apperror.CodeCouponExpired, err.Error())
-	case errors.Is(err, discountdomain.ErrCouponNotStarted):
+	case errors.Is(err, discount.ErrCouponNotStarted):
 		return apperror.NewBadRequest(err.Error())
-	case errors.Is(err, discountdomain.ErrCouponQuotaExceeded):
+	case errors.Is(err, discount.ErrCouponQuotaExceeded):
 		return apperror.NewConflictWithCode(apperror.CodeCouponQuotaExhausted, err.Error())
-	case errors.Is(err, discountdomain.ErrCouponMinSpendNotMet):
+	case errors.Is(err, discount.ErrCouponMinSpendNotMet):
 		return apperror.NewBadRequestWithCode(apperror.CodeCouponMinSpendNotMet, err.Error())
-	case errors.Is(err, discountdomain.ErrCouponAlreadyRedeemed):
+	case errors.Is(err, discount.ErrCouponAlreadyRedeemed):
 		return apperror.NewConflict(err.Error())
-	case errors.Is(err, discountdomain.ErrDuplicateCouponCode):
+	case errors.Is(err, discount.ErrDuplicateCouponCode):
 		return apperror.NewConflict(err.Error())
-	case errors.Is(err, discountdomain.ErrInvalidCouponType),
-		errors.Is(err, discountdomain.ErrInvalidDiscountValue),
-		errors.Is(err, discountdomain.ErrInvalidDates),
-		errors.Is(err, discountdomain.ErrInvalidQuota):
+	case errors.Is(err, discount.ErrInvalidCouponType),
+		errors.Is(err, discount.ErrInvalidDiscountValue),
+		errors.Is(err, discount.ErrInvalidDates),
+		errors.Is(err, discount.ErrInvalidQuota):
 		return apperror.NewBadRequest(err.Error())
 	default:
 		return err
