@@ -145,39 +145,31 @@ func TestDomainPurity(t *testing.T) {
 		if !entry.IsDir() {
 			continue
 		}
-		domainDir := filepath.Join(modulesDir, entry.Name(), entry.Name()+"domain")
-		if _, err := os.Stat(domainDir); os.IsNotExist(err) {
-			domainDir = filepath.Join(modulesDir, entry.Name(), "domain")
-			if _, err := os.Stat(domainDir); os.IsNotExist(err) {
-				continue
-			}
+		modDir := filepath.Join(modulesDir, entry.Name())
+		files, err := os.ReadDir(modDir)
+		if err != nil {
+			t.Fatalf("failed reading module dir %s: %v", entry.Name(), err)
 		}
 
-		err := filepath.WalkDir(domainDir, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-				return nil
+		for _, f := range files {
+			if f.IsDir() || !strings.HasSuffix(f.Name(), ".go") || strings.HasSuffix(f.Name(), "_test.go") {
+				continue
 			}
 
-			node, err := parser.ParseFile(fset, path, nil, parser.ImportsOnly)
+			filePath := filepath.Join(modDir, f.Name())
+			node, err := parser.ParseFile(fset, filePath, nil, parser.ImportsOnly)
 			if err != nil {
-				return err
+				t.Fatalf("failed parsing file %s: %v", filePath, err)
 			}
 
 			for _, imp := range node.Imports {
 				importPath := strings.Trim(imp.Path.Value, `"`)
 				for _, forbidden := range forbiddenPrefixes {
 					if importPath == forbidden || strings.HasPrefix(importPath, forbidden+"/") {
-						t.Errorf("domain package purity violation in %s: imports forbidden package %q", path, importPath)
+						t.Errorf("domain package purity violation in %s: imports forbidden package %q", filePath, importPath)
 					}
 				}
 			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("failed checking domain purity for %s: %v", entry.Name(), err)
 		}
 	}
 }

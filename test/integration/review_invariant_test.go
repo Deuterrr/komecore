@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"komecore/internal/infra/cache"
-	"komecore/internal/modules/order/orderdomain"
+	"komecore/internal/modules/order"
 	"komecore/internal/modules/order/orderpersistence"
 	"komecore/internal/modules/product/productpersistence"
-	"komecore/internal/modules/review/reviewdomain"
+	"komecore/internal/modules/review"
 	"komecore/internal/modules/review/reviewpersistence"
 	"komecore/internal/modules/review/reviewusecase"
 	"komecore/test/testutil/testdb"
@@ -91,16 +91,16 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 		Comment:    &comment,
 	})
 	require.Error(t, err, "review on pending order must fail")
-	assert.Contains(t, err.Error(), reviewdomain.ErrUnverifiedPurchase.Error())
+	assert.Contains(t, err.Error(), review.ErrUnverifiedPurchase.Error())
 
 	// 5. Update Order status to delivered
 	_, err = tdb.Pool.Exec(ctx, `
 		UPDATE orders SET status = $1, updated_at = $2 WHERE id = $3;
-	`, orderdomain.OrderStatusDelivered, now, orderID)
+	`, order.OrderStatusDelivered, now, orderID)
 	require.NoError(t, err)
 
 	// 6. Review submission on delivered order must succeed
-	review, err := reviewSvc.CreateReview(ctx, reviewusecase.CreateReviewInput{
+	rev, err := reviewSvc.CreateReview(ctx, reviewusecase.CreateReviewInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		OrderID:    &orderID,
@@ -109,10 +109,10 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 		Comment:    &comment,
 	})
 	require.NoError(t, err, "review on delivered order must succeed")
-	assert.NotNil(t, review)
-	assert.Equal(t, 5, review.Rating)
-	assert.Equal(t, productID, review.ProductID)
-	assert.Equal(t, customerID, review.CustomerID)
+	assert.NotNil(t, rev)
+	assert.Equal(t, 5, rev.Rating)
+	assert.Equal(t, productID, rev.ProductID)
+	assert.Equal(t, customerID, rev.CustomerID)
 
 	// Verify product_reviews record in database
 	var reviewCount int
@@ -138,5 +138,5 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 		Comment:    &comment,
 	})
 	require.Error(t, err, "duplicate review must be rejected")
-	assert.Contains(t, err.Error(), reviewdomain.ErrDuplicateReview.Error())
+	assert.Contains(t, err.Error(), review.ErrDuplicateReview.Error())
 }

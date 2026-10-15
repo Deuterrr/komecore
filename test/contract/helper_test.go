@@ -18,26 +18,20 @@ import (
 	appcookie "komecore/internal/httpx/cookie"
 	appmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/courier/courierrepo"
+	"komecore/internal/modules/auth"
+	"komecore/internal/modules/courier"
 	"komecore/internal/modules/courier/courierusecase"
-	"komecore/internal/modules/discount/discountdomain"
-	"komecore/internal/modules/discount/discountrepo"
+	"komecore/internal/modules/discount"
 	"komecore/internal/modules/discount/discountusecase"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/order/orderrepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/order"
 	"komecore/internal/modules/order/orderusecase"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	"komecore/internal/modules/payment/paymentusecase"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 	"komecore/internal/modules/product/productusecase"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
-	"komecore/internal/modules/staff/staffdomain"
-	"komecore/internal/modules/staff/staffrepo"
+	"komecore/internal/modules/shop"
+	"komecore/internal/modules/staff"
 	"komecore/internal/modules/staff/staffusecase"
 	"komecore/internal/pagination"
 	"komecore/pkg/clock"
@@ -133,7 +127,7 @@ func (m *contractAuth) OptionalAuth(_ transaction.Executor, _ transaction.Transa
 	}
 }
 
-func (m *contractAuth) RequireAccountType(_ ...authdomain.AccountType) appmiddleware.Middleware {
+func (m *contractAuth) RequireAccountType(_ ...auth.AccountType) appmiddleware.Middleware {
 	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			return next(w, r)
@@ -141,7 +135,7 @@ func (m *contractAuth) RequireAccountType(_ ...authdomain.AccountType) appmiddle
 	}
 }
 
-func (m *contractAuth) RequireStaffRole(_ ...authdomain.RoleCode) appmiddleware.Middleware {
+func (m *contractAuth) RequireStaffRole(_ ...auth.RoleCode) appmiddleware.Middleware {
 	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			return next(w, r)
@@ -176,18 +170,18 @@ func (m *contractAuth) OptionalLoadActor(_ transaction.Executor) appmiddleware.M
 // Mock Repositories for contract testing using interface embedding
 
 type contractProductRepo struct {
-	productrepo.ProductRepository
-	products []productdomain.Product
+	product.Repository
+	products []product.Product
 }
 
-func (m *contractProductRepo) FindProducts(_ context.Context, _ transaction.Executor, _ productrepo.FindProductParams) ([]productdomain.Product, int, error) {
+func (m *contractProductRepo) FindProducts(_ context.Context, _ transaction.Executor, _ product.FindProductParams) ([]product.Product, int, error) {
 	return m.products, len(m.products), nil
 }
 
-func (m *contractProductRepo) FindProductsWithInventory(_ context.Context, _ transaction.Executor, _ productrepo.FindProductParams) ([]productdomain.ProductWithInventory, int, error) {
-	items := make([]productdomain.ProductWithInventory, 0, len(m.products))
+func (m *contractProductRepo) FindProductsWithInventory(_ context.Context, _ transaction.Executor, _ product.FindProductParams) ([]product.ProductWithInventory, int, error) {
+	items := make([]product.ProductWithInventory, 0, len(m.products))
 	for _, p := range m.products {
-		items = append(items, productdomain.ProductWithInventory{
+		items = append(items, product.ProductWithInventory{
 			Product:       p,
 			TotalStock:    100,
 			ReservedStock: 0,
@@ -197,40 +191,40 @@ func (m *contractProductRepo) FindProductsWithInventory(_ context.Context, _ tra
 }
 
 type contractProductImgRepo struct {
-	productrepo.ProductImageRepository
+	product.ImageRepository
 }
 
-func (m *contractProductImgRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]productdomain.ProductImage, error) {
-	return make(map[uuid.UUID][]productdomain.ProductImage), nil
+func (m *contractProductImgRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]product.ProductImage, error) {
+	return make(map[uuid.UUID][]product.ProductImage), nil
 }
 
 type contractInventoryRepo struct {
-	inventoryrepo.InventoryRepository
+	inventory.Repository
 }
 
-func (m *contractInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]inventorydomain.Inventory, error) {
-	return make(map[uuid.UUID][]inventorydomain.Inventory), nil
+func (m *contractInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]inventory.Inventory, error) {
+	return make(map[uuid.UUID][]inventory.Inventory), nil
 }
 
 type contractShopRepo struct {
-	shoprepo.ShopRepository
+	shop.Repository
 }
 
-func (m *contractShopRepo) FindByIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shopdomain.Shop, error) {
-	return []shopdomain.Shop{
+func (m *contractShopRepo) FindByIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shop.Shop, error) {
+	return []shop.Shop{
 		{
 			ID:             uuid.MustParse("c0000000-0000-0000-0000-000000000001"),
 			Name:           "Kome Central Store",
 			Slug:           "kome-central-store",
 			IsActive:       true,
-			ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+			ApprovalStatus: shop.ShopApprovalStatusApproved,
 			CreatedAt:      time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		},
 	}, nil
 }
 
 type contractCourierRepo struct {
-	courierrepo.CourierRepository
+	courier.Repository
 }
 
 func (m *contractCourierRepo) ListAll(_ context.Context, _ transaction.Executor) ([]string, error) {
@@ -238,11 +232,11 @@ func (m *contractCourierRepo) ListAll(_ context.Context, _ transaction.Executor)
 }
 
 type contractPaymentMethodRepo struct {
-	paymentrepo.PaymentMethodRepository
+	payment.MethodRepository
 }
 
-func (m *contractPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
-	return []paymentdomain.PaymentMethod{
+func (m *contractPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]payment.PaymentMethod, error) {
+	return []payment.PaymentMethod{
 		{
 			ID:          uuid.MustParse("d0000000-0000-0000-0000-000000000001"),
 			Name:        "BCA Virtual Account",
@@ -254,7 +248,7 @@ func (m *contractPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Exe
 			FeeType:     "fixed",
 			FeeFixed:    4000,
 			CreatedAt:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-			Instruction: &paymentdomain.PaymentInstruction{
+			Instruction: &payment.PaymentInstruction{
 				ID:        uuid.MustParse("d0000000-0000-0000-0000-000000000002"),
 				Content:   "Transfer to BCA account 1234567890",
 				CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -264,11 +258,11 @@ func (m *contractPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Exe
 }
 
 type contractAnalyticsRepo struct {
-	staffrepo.AnalyticsRepository
+	staff.AnalyticsRepository
 }
 
-func (m *contractAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transaction.Executor, _ string, _ time.Time) ([]staffdomain.RevenueBucket, error) {
-	return []staffdomain.RevenueBucket{
+func (m *contractAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transaction.Executor, _ string, _ time.Time) ([]staff.RevenueBucket, error) {
+	return []staff.RevenueBucket{
 		{
 			Bucket:  time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC),
 			Revenue: 12500000,
@@ -277,8 +271,8 @@ func (m *contractAnalyticsRepo) GetRevenueOverTime(_ context.Context, _ transact
 	}, nil
 }
 
-func (m *contractAnalyticsRepo) GetOrderPipeline(_ context.Context, _ transaction.Executor) ([]staffdomain.OrderStatusCount, error) {
-	return []staffdomain.OrderStatusCount{
+func (m *contractAnalyticsRepo) GetOrderPipeline(_ context.Context, _ transaction.Executor) ([]staff.OrderStatusCount, error) {
+	return []staff.OrderStatusCount{
 		{
 			Status:      "confirmed",
 			Count:       25,
@@ -287,21 +281,21 @@ func (m *contractAnalyticsRepo) GetOrderPipeline(_ context.Context, _ transactio
 	}, nil
 }
 
-func (m *contractAnalyticsRepo) GetTopProducts(_ context.Context, _ transaction.Executor, _ int) ([]staffdomain.TopProduct, error) {
-	return []staffdomain.TopProduct{}, nil
+func (m *contractAnalyticsRepo) GetTopProducts(_ context.Context, _ transaction.Executor, _ int) ([]staff.TopProduct, error) {
+	return []staff.TopProduct{}, nil
 }
 
 type contractDiscountRepo struct {
-	discountrepo.CouponRepository
+	discount.Repository
 }
 
-func (m *contractDiscountRepo) GetByCode(_ context.Context, _ transaction.Executor, code string) (*discountdomain.Coupon, error) {
+func (m *contractDiscountRepo) GetByCode(_ context.Context, _ transaction.Executor, code string) (*discount.Coupon, error) {
 	if code == "PROMO2026" {
 		maxDiscount := int64(50000)
-		return &discountdomain.Coupon{
+		return &discount.Coupon{
 			ID:             uuid.MustParse("c0000000-0000-0000-0000-000000000001"),
 			Code:           "PROMO2026",
-			Type:           discountdomain.CouponTypePercentage,
+			Type:           discount.CouponTypePercentage,
 			DiscountValue:  10,
 			MinSpend:       100000,
 			MaxDiscount:    &maxDiscount,
@@ -318,22 +312,22 @@ func (m *contractDiscountRepo) GetByCode(_ context.Context, _ transaction.Execut
 
 type contractPricingService struct{}
 
-func (m *contractPricingService) Calculate(_ context.Context, _ transaction.Executor, _ orderrepo.PricingInput) (*orderrepo.PricingResult, error) {
+func (m *contractPricingService) Calculate(_ context.Context, _ transaction.Executor, _ order.PricingInput) (*order.PricingResult, error) {
 	methodID := uuid.MustParse("d0000000-0000-0000-0000-000000000001")
-	return &orderrepo.PricingResult{
-		Address: orderrepo.PricingAddressResult{
+	return &order.PricingResult{
+		Address: order.PricingAddressResult{
 			ID:            uuid.MustParse("e0000000-0000-0000-0000-000000000001"),
 			RecipientName: "John Doe",
 			FullAddress:   "Jl. Sudirman No. 1, Jakarta",
 		},
-		Shops: []orderrepo.PricingShopResult{
+		Shops: []order.PricingShopResult{
 			{
 				ShopID:   uuid.MustParse("c0000000-0000-0000-0000-000000000001"),
 				ShopName: "Kome Central Store",
 				ShopSlug: "kome-central-store",
 				Subtotal: 150000,
 				Total:    160000,
-				Items: []orderrepo.PricingItemResult{
+				Items: []order.PricingItemResult{
 					{
 						ProductID:   uuid.MustParse("b0000000-0000-0000-0000-000000000001"),
 						ProductName: "Organic Japonica Rice 5kg",
@@ -343,12 +337,12 @@ func (m *contractPricingService) Calculate(_ context.Context, _ transaction.Exec
 						WeightGrams: 5000,
 					},
 				},
-				SelectedCourier: orderrepo.SelectedCourierResult{
+				SelectedCourier: order.SelectedCourierResult{
 					Code:    "jne",
 					Service: "REG",
 					Fee:     10000,
 				},
-				CourierOptions: []orderrepo.CourierOption{
+				CourierOptions: []order.CourierOption{
 					{
 						Code:    "jne",
 						Service: "REG",
@@ -362,7 +356,7 @@ func (m *contractPricingService) Calculate(_ context.Context, _ transaction.Exec
 		Subtotal:         150000,
 		TotalShippingFee: 10000,
 		GrandTotal:       160000,
-		PaymentMethods: []orderrepo.PaymentMethodPricingResult{
+		PaymentMethods: []order.PaymentMethodPricingResult{
 			{
 				PaymentMethodID: methodID,
 				Name:            "BCA Virtual Account",
@@ -373,7 +367,7 @@ func (m *contractPricingService) Calculate(_ context.Context, _ transaction.Exec
 				Total:           164000,
 			},
 		},
-		SelectedPaymentMethod: &orderrepo.PaymentMethodPricingResult{
+		SelectedPaymentMethod: &order.PaymentMethodPricingResult{
 			PaymentMethodID: methodID,
 			Name:            "BCA Virtual Account",
 			Type:            "bank_transfer",
@@ -393,13 +387,13 @@ func newTestContractServer(t *testing.T) *httptest.Server {
 	mockClock := clock.NewMockClock(now)
 
 	weight := 5000.0
-	testProducts := []productdomain.Product{
+	testProducts := []product.Product{
 		{
 			ID:        uuid.MustParse("b0000000-0000-0000-0000-000000000001"),
 			SKU:       "PRD-001",
 			Name:      "Organic Japonica Rice 5kg",
 			Slug:      "organic-japonica-rice-5kg",
-			Status:    productdomain.ProductStatusActive,
+			Status:    product.ProductStatusActive,
 			Price:     75000,
 			Weight:    &weight,
 			CreatedAt: now,
