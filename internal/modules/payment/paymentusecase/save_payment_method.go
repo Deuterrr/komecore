@@ -6,18 +6,18 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 )
 
 type SavePaymentMethodUsecase struct {
-	paymentMethodRepo paymentrepo.PaymentMethodRepository
+	paymentMethodRepo payment.MethodRepository
 	executor          transaction.Executor
 }
 
 func NewSavePaymentMethodUsecase(
-	paymentMethodRepo paymentrepo.PaymentMethodRepository,
+	paymentMethodRepo payment.MethodRepository,
 	executor transaction.Executor,
 ) *SavePaymentMethodUsecase {
 	return &SavePaymentMethodUsecase{

@@ -1,60 +1,63 @@
-package shipmentrepo
+package shipment
 
 import (
 	"context"
 
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/shipment/shipmentdomain"
-
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
 )
 
-type ShipmentRepository interface {
+type Repository interface {
 	GetByID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*shipmentdomain.Shipment, error)
+	) (*Shipment, error)
 
 	GetByOrderID(
 		ctx context.Context,
 		exec transaction.Executor,
 		orderID uuid.UUID,
-	) (*shipmentdomain.Shipment, error)
+	) (*Shipment, error)
 
 	ListByOrderID(
 		ctx context.Context,
 		exec transaction.Executor,
 		orderID uuid.UUID,
-	) ([]shipmentdomain.Shipment, error)
+	) ([]Shipment, error)
 
 	ListByOrderIDs(
 		ctx context.Context,
 		exec transaction.Executor,
 		orderIDs []uuid.UUID,
-	) ([]shipmentdomain.Shipment, error)
+	) ([]Shipment, error)
 
 	Create(
 		ctx context.Context,
 		exec transaction.Executor,
-		shipment shipmentdomain.Shipment,
+		shipment Shipment,
 	) error
+
 	Update(
 		ctx context.Context,
 		exec transaction.Executor,
-		shipment shipmentdomain.Shipment,
+		shipment Shipment,
 	) error
 }
 
-type ShipmentMethodRepository interface {
+type MethodRepository interface {
 	ListActive(
 		ctx context.Context,
 		exec transaction.Executor,
-	) ([]shipmentdomain.ShipmentOption, error)
+	) ([]ShipmentOption, error)
 
 	GetByID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*shipmentdomain.ShipmentOption, error)
+	) (*ShipmentOption, error)
 }
+
+type ShipmentRepository = Repository
+type ShipmentMethodRepository = MethodRepository

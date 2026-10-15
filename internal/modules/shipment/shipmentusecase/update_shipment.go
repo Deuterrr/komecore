@@ -7,8 +7,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/shipment/shipmentdomain"
-	"komecore/internal/modules/shipment/shipmentrepo"
+	"komecore/internal/modules/shipment"
 
 	"github.com/google/uuid"
 )
@@ -16,13 +15,13 @@ import (
 type UpdateShipmentUsecase struct {
 	executor     transaction.Executor
 	transactor   transaction.Transactor
-	shipmentRepo shipmentrepo.ShipmentRepository
+	shipmentRepo shipment.Repository
 }
 
 func NewUpdateShipmentUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	shipmentRepo shipmentrepo.ShipmentRepository,
+	shipmentRepo shipment.Repository,
 ) *UpdateShipmentUsecase {
 	return &UpdateShipmentUsecase{
 		executor:     executor,
@@ -39,7 +38,7 @@ type UpdateShipmentInput struct {
 }
 
 type UpdateShipmentResult struct {
-	Shipment *shipmentdomain.Shipment
+	Shipment *shipment.Shipment
 }
 
 func (u *UpdateShipmentUsecase) Execute(
@@ -96,28 +95,28 @@ func (u *UpdateShipmentUsecase) Dispatch(
 	ctx context.Context,
 	shipmentID uuid.UUID,
 	trackingNumber string,
-) (*shipmentdomain.Shipment, error) {
-	shipment, err := u.shipmentRepo.GetByID(ctx, u.executor, shipmentID)
+) (*shipment.Shipment, error) {
+	ship, err := u.shipmentRepo.GetByID(ctx, u.executor, shipmentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get shipment: %w", err)
 	}
-	if shipment == nil {
+	if ship == nil {
 		return nil, apperror.NewNotFound("shipment not found")
 	}
 
-	shipment.TrackingNumber = &trackingNumber
+	ship.TrackingNumber = &trackingNumber
 	now := time.Now()
-	shipment.ShippedAt = &now
-	if err := shipment.UpdateStatus(shipmentdomain.ShipmentStatusShipped); err != nil {
+	ship.ShippedAt = &now
+	if err := ship.UpdateStatus(shipment.ShipmentStatusShipped); err != nil {
 		return nil, apperror.NewInvalidInput(err.Error())
 	}
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		return u.shipmentRepo.Update(ctx, exec, *shipment)
+		return u.shipmentRepo.Update(ctx, exec, *ship)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return shipment, nil
+	return ship, nil
 }

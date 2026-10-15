@@ -7,39 +7,39 @@ import (
 
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 )
 
 type refundMockPaymentRepo struct {
-	payment *paymentdomain.Payment
-	status  paymentdomain.PaymentStatus
+	payment *payment.Payment
+	status  payment.PaymentStatus
 }
 
-func (m *refundMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *refundMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
-func (m *refundMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *refundMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return m.payment, nil
 }
-func (m *refundMockPaymentRepo) GetByOrderIDForUpdate(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *refundMockPaymentRepo) GetByOrderIDForUpdate(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return m.payment, nil
 }
-func (m *refundMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]paymentdomain.Payment, error) {
+func (m *refundMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *refundMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, status paymentdomain.PaymentStatus) error {
+func (m *refundMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, status payment.PaymentStatus) error {
 	m.status = status
 	return nil
 }
-func (m *refundMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.Payment) error {
+func (m *refundMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ payment.Payment) error {
 	return nil
 }
-func (m *refundMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]paymentdomain.Payment, error) {
+func (m *refundMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *refundMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]paymentdomain.Payment, error) {
+func (m *refundMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]payment.Payment, error) {
 	return nil, nil
 }
 
@@ -70,10 +70,10 @@ func (m *refundMockGateway) RefundTransaction(_ context.Context, req paymentgate
 func TestProcessOrderRefundUsecase_NonPaidPayment(t *testing.T) {
 	orderID := uuid.New()
 	repo := &refundMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			ID:      uuid.New(),
 			OrderID: orderID,
-			Status:  paymentdomain.PaymentStatusPending,
+			Status:  payment.PaymentStatusPending,
 		},
 	}
 	gw := &refundMockGateway{}
@@ -96,13 +96,13 @@ func TestProcessOrderRefundUsecase_PaidPaymentAutomatedRefund(t *testing.T) {
 	orderID := uuid.New()
 	providerOrderID := "ord-123"
 	repo := &refundMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			ID:              uuid.New(),
 			OrderID:         orderID,
 			Provider:        "gateway",
 			ProviderOrderID: &providerOrderID,
 			Amount:          50000,
-			Status:          paymentdomain.PaymentStatusPaid,
+			Status:          payment.PaymentStatusPaid,
 		},
 	}
 	gw := &refundMockGateway{}
@@ -116,7 +116,7 @@ func TestProcessOrderRefundUsecase_PaidPaymentAutomatedRefund(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if repo.status != paymentdomain.PaymentStatusRefunded {
+	if repo.status != payment.PaymentStatusRefunded {
 		t.Fatalf("expected status to be refunded, got %s", repo.status)
 	}
 }

@@ -1,4 +1,4 @@
-package shipmentrepo
+package shipment
 
 type CalculateCostInput struct {
 	OriginID      int

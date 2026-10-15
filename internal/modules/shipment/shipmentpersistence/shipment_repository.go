@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/shipment"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -33,9 +33,9 @@ const shipmentSelectCols = `
 	created_at
 `
 
-func (r *ShipmentRepository) scanShipment(row transaction.Row) (*shipmentdomain.Shipment, error) {
+func (r *ShipmentRepository) scanShipment(row transaction.Row) (*shipment.Shipment, error) {
 	var (
-		s                shipmentdomain.Shipment
+		s                shipment.Shipment
 		originID, destID string
 	)
 	err := row.Scan(
@@ -62,7 +62,7 @@ func (r *ShipmentRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*shipmentdomain.Shipment, error) {
+) (*shipment.Shipment, error) {
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM shipments
@@ -83,7 +83,7 @@ func (r *ShipmentRepository) GetByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) (*shipmentdomain.Shipment, error) {
+) (*shipment.Shipment, error) {
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM shipments
@@ -106,7 +106,7 @@ func (r *ShipmentRepository) ListByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) ([]shipmentdomain.Shipment, error) {
+) ([]shipment.Shipment, error) {
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM shipments
@@ -120,9 +120,9 @@ func (r *ShipmentRepository) ListByOrderID(
 	}
 	defer rows.Close()
 
-	shipments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (shipmentdomain.Shipment, error) {
+	shipments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (shipment.Shipment, error) {
 		var (
-			s                shipmentdomain.Shipment
+			s                shipment.Shipment
 			originID, destID string
 		)
 		err := row.Scan(
@@ -152,9 +152,9 @@ func (r *ShipmentRepository) ListByOrderIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderIDs []uuid.UUID,
-) ([]shipmentdomain.Shipment, error) {
+) ([]shipment.Shipment, error) {
 	if len(orderIDs) == 0 {
-		return []shipmentdomain.Shipment{}, nil
+		return []shipment.Shipment{}, nil
 	}
 
 	query := fmt.Sprintf(`
@@ -175,9 +175,9 @@ func (r *ShipmentRepository) ListByOrderIDs(
 	}
 	defer rows.Close()
 
-	shipments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (shipmentdomain.Shipment, error) {
+	shipments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (shipment.Shipment, error) {
 		var (
-			s                shipmentdomain.Shipment
+			s                shipment.Shipment
 			originID, destID string
 		)
 		err := row.Scan(
@@ -206,7 +206,7 @@ func (r *ShipmentRepository) ListByOrderIDs(
 func (r *ShipmentRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	shipment shipmentdomain.Shipment,
+	shipment shipment.Shipment,
 ) error {
 	query := `
 		INSERT INTO shipments (
@@ -248,7 +248,7 @@ func (r *ShipmentRepository) Create(
 func (r *ShipmentRepository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
-	shipment shipmentdomain.Shipment,
+	shipment shipment.Shipment,
 ) error {
 	query := `
 		UPDATE shipments

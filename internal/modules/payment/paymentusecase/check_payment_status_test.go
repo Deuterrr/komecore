@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"komecore/internal/infra/paymentgateway"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 )
@@ -26,17 +26,17 @@ func TestCheckPaymentStatus_Success_Paid(t *testing.T) {
 	}
 
 	providerOrderID := orderID.String()
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:              paymentID,
 		OrderID:         orderID,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID,
 		Amount:          100000,
 		CreatedAt:       time.Now(),
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{paymentID: payment}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{paymentID: pmt}}
 	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		result: &paymentgateway.NotificationResult{
@@ -64,12 +64,12 @@ func TestCheckPaymentStatus_Success_Paid(t *testing.T) {
 		t.Errorf("expected Synced to be true")
 	}
 
-	if res.Status != paymentdomain.PaymentStatusPaid {
+	if res.Status != payment.PaymentStatusPaid {
 		t.Errorf("expected Status to be Paid, got %v", res.Status)
 	}
 
-	if payment.Status != paymentdomain.PaymentStatusPaid {
-		t.Errorf("expected payment to be updated to Paid, got %v", payment.Status)
+	if pmt.Status != payment.PaymentStatusPaid {
+		t.Errorf("expected payment to be updated to Paid, got %v", pmt.Status)
 	}
 
 	if order.Status != "confirmed" {
@@ -83,7 +83,7 @@ func TestCheckPaymentStatus_OrderNotFound(t *testing.T) {
 	orderID := uuid.New()
 	customerID := uuid.New()
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}}
 	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{}}
 	gateway := &mockPaymentGateway{}
 
@@ -113,7 +113,7 @@ func TestCheckPaymentStatus_WrongCustomer(t *testing.T) {
 		Status:     "pending",
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}}
 	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{}
 
@@ -144,17 +144,17 @@ func TestCheckPaymentStatus_NotPending(t *testing.T) {
 	}
 
 	providerOrderID := orderID.String()
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:              paymentID,
 		OrderID:         orderID,
-		Status:          paymentdomain.PaymentStatusPaid,
+		Status:          payment.PaymentStatusPaid,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID,
 		Amount:          100000,
 		CreatedAt:       time.Now(),
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{paymentID: payment}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{paymentID: pmt}}
 	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{}
 
@@ -174,7 +174,7 @@ func TestCheckPaymentStatus_NotPending(t *testing.T) {
 		t.Errorf("expected Synced to be false")
 	}
 
-	if res.Status != paymentdomain.PaymentStatusPaid {
+	if res.Status != payment.PaymentStatusPaid {
 		t.Errorf("expected Status to remain Paid, got %v", res.Status)
 	}
 }
@@ -193,17 +193,17 @@ func TestCheckPaymentStatus_GatewayError(t *testing.T) {
 	}
 
 	providerOrderID := orderID.String()
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:              paymentID,
 		OrderID:         orderID,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID,
 		Amount:          100000,
 		CreatedAt:       time.Now(),
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{paymentID: payment}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{paymentID: pmt}}
 	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		err: errors.New("gateway error"),

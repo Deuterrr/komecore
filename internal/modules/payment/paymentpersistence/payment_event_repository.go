@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -22,7 +22,7 @@ func (r *PaymentEventRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*paymentdomain.PaymentEvent, error) {
+) (*payment.PaymentEvent, error) {
 	query := `
 		SELECT
 			id
@@ -36,7 +36,7 @@ func (r *PaymentEventRepository) GetByID(
 		LIMIT 1
 	`
 
-	var event paymentdomain.PaymentEvent
+	var event payment.PaymentEvent
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&event.ID,
 		&event.PaymentID,
@@ -58,7 +58,7 @@ func (r *PaymentEventRepository) ListByPaymentID(
 	ctx context.Context,
 	exec transaction.Executor,
 	paymentID uuid.UUID,
-) ([]paymentdomain.PaymentEvent, error) {
+) ([]payment.PaymentEvent, error) {
 	query := `
 		SELECT
 			id
@@ -77,9 +77,9 @@ func (r *PaymentEventRepository) ListByPaymentID(
 	}
 	defer rows.Close()
 
-	var events []paymentdomain.PaymentEvent
+	var events []payment.PaymentEvent
 	for rows.Next() {
-		var event paymentdomain.PaymentEvent
+		var event payment.PaymentEvent
 		err := rows.Scan(
 			&event.ID,
 			&event.PaymentID,
@@ -104,7 +104,7 @@ func (r *PaymentEventRepository) ListByPaymentID(
 func (r *PaymentEventRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	event paymentdomain.PaymentEvent,
+	event payment.PaymentEvent,
 ) error {
 	query := `
 		INSERT INTO payment_events (

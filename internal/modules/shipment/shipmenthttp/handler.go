@@ -5,7 +5,7 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/shipment"
 	"komecore/internal/modules/shipment/shipmentusecase"
 
 	"github.com/go-chi/chi/v5"
@@ -105,7 +105,7 @@ func (h *ShipmentHandler) UpdateShipmentStatus(w http.ResponseWriter, r *http.Re
 
 	input := shipmentusecase.UpdateShipmentStatusInput{
 		ShipmentID:  shipmentID,
-		Status:      shipmentdomain.ShipmentStatus(req.Status),
+		Status:      shipment.ShipmentStatus(req.Status),
 		Description: req.Description,
 		Location:    req.Location,
 	}
@@ -176,7 +176,7 @@ func (h *ShipmentHandler) DispatchShipment(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func buildShipmentResponse(s *shipmentdomain.Shipment) shipmentResponse {
+func buildShipmentResponse(s *shipment.Shipment) shipmentResponse {
 	return shipmentResponse{
 		ID:                s.ID.String(),
 		OrderID:           s.OrderID.String(),

@@ -8,8 +8,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	"komecore/internal/strtpl"
 
 	"github.com/google/uuid"
@@ -18,19 +17,19 @@ import (
 type GetPaymentDetailUsecase struct {
 	executor               transaction.Executor
 	orderMgr               OrderPaymentManager
-	paymentRepo            paymentrepo.PaymentRepository
-	paymentMethodRepo      paymentrepo.PaymentMethodRepository
-	paymentInstructionRepo paymentrepo.PaymentInstructionRepository
-	paymentChannelDataRepo paymentrepo.PaymentChannelDataRepository
+	paymentRepo            payment.Repository
+	paymentMethodRepo      payment.MethodRepository
+	paymentInstructionRepo payment.InstructionRepository
+	paymentChannelDataRepo payment.ChannelDataRepository
 }
 
 func NewGetPaymentDetailUsecase(
 	executor transaction.Executor,
 	orderMgr OrderPaymentManager,
-	paymentRepo paymentrepo.PaymentRepository,
-	paymentMethodRepo paymentrepo.PaymentMethodRepository,
-	paymentInstructionRepo paymentrepo.PaymentInstructionRepository,
-	paymentChannelDataRepo paymentrepo.PaymentChannelDataRepository,
+	paymentRepo payment.Repository,
+	paymentMethodRepo payment.MethodRepository,
+	paymentInstructionRepo payment.InstructionRepository,
+	paymentChannelDataRepo payment.ChannelDataRepository,
 ) *GetPaymentDetailUsecase {
 	return &GetPaymentDetailUsecase{
 		executor:               executor,
@@ -50,8 +49,8 @@ type GetPaymentDetailInput struct {
 }
 
 type GetPaymentDetailResult struct {
-	Payment     paymentdomain.Payment
-	ChannelData *paymentdomain.PaymentChannelData
+	Payment     payment.Payment
+	ChannelData *payment.PaymentChannelData
 	Instruction *string
 }
 
@@ -72,22 +71,22 @@ func (u *GetPaymentDetailUsecase) Execute(
 		return nil, apperror.NewNotFound("order not found")
 	}
 
-	payment, err := u.paymentRepo.GetByOrderID(ctx, u.executor, order.ID)
+	pmt, err := u.paymentRepo.GetByOrderID(ctx, u.executor, order.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve payment: %w", err)
 	}
-	if payment == nil {
+	if pmt == nil {
 		return nil, apperror.NewNotFound("payment not found")
 	}
 
 	var (
-		channelData *paymentdomain.PaymentChannelData
+		channelData *payment.PaymentChannelData
 		vaNumber    string
 		qrString    string
 		redirectURL string
 	)
 
-	cd, err := u.paymentChannelDataRepo.GetByPaymentID(ctx, u.executor, payment.ID)
+	cd, err := u.paymentChannelDataRepo.GetByPaymentID(ctx, u.executor, pmt.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve payment channel data: %w", err)
 	}
@@ -96,23 +95,23 @@ func (u *GetPaymentDetailUsecase) Execute(
 	if cd != nil {
 		if cd.AccountNumber != nil {
 			vaNumber = *cd.AccountNumber
-		} else if cd.ChannelType == paymentdomain.TypeBankTransfer && cd.ActionURL != nil {
+		} else if cd.ChannelType == payment.TypeBankTransfer && cd.ActionURL != nil {
 			vaNumber = *cd.ActionURL
 		}
 		if cd.QRString != nil {
 			qrString = *cd.QRString
-		} else if cd.ChannelType == paymentdomain.TypeQRCode && cd.ActionURL != nil {
+		} else if cd.ChannelType == payment.TypeQRCode && cd.ActionURL != nil {
 			vaNumber = *cd.ActionURL
 		}
 		if cd.RedirectURL != nil {
 			redirectURL = *cd.RedirectURL
-		} else if cd.ChannelType == paymentdomain.TypeEWallet && cd.ActionURL != nil {
+		} else if cd.ChannelType == payment.TypeEWallet && cd.ActionURL != nil {
 			redirectURL = *cd.ActionURL
 		}
 	}
 
 	var renderedInstruction *string
-	instruction, err := u.paymentInstructionRepo.GetByPaymentMethodID(ctx, u.executor, payment.MethodID)
+	instruction, err := u.paymentInstructionRepo.GetByPaymentMethodID(ctx, u.executor, pmt.MethodID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve payment instruction: %w", err)
 	}
@@ -127,10 +126,10 @@ func (u *GetPaymentDetailUsecase) Execute(
 		}
 
 		expiredAtStr := ""
-		if payment.ExpiresAt != nil {
-			expiredAtStr = payment.ExpiresAt.Format(time.RFC3339)
+		if pmt.ExpiresAt != nil {
+			expiredAtStr = pmt.ExpiresAt.Format(time.RFC3339)
 		} else {
-			expiredAtStr = payment.CreatedAt.Add(24 * time.Hour).Format(time.RFC3339)
+			expiredAtStr = pmt.CreatedAt.Add(24 * time.Hour).Format(time.RFC3339)
 		}
 
 		vars := map[string]string{
@@ -151,7 +150,7 @@ func (u *GetPaymentDetailUsecase) Execute(
 	}
 
 	return &GetPaymentDetailResult{
-		Payment:     *payment,
+		Payment:     *pmt,
 		ChannelData: channelData,
 		Instruction: renderedInstruction,
 	}, nil

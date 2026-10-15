@@ -6,8 +6,7 @@ import (
 
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	"komecore/internal/pagination"
 	appclock "komecore/pkg/clock"
 
@@ -20,13 +19,13 @@ import (
 // It registers newly supported methods, updates metadata for existing methods,
 // and deactivates methods that are no longer allowed by the provider.
 type SyncPaymentMethodsUsecase struct {
-	methodRepo paymentrepo.PaymentMethodRepository
+	methodRepo payment.MethodRepository
 	executor   transaction.Executor
 	gateway    paymentgateway.Provider
 }
 
 func NewSyncPaymentMethodsUsecase(
-	methodRepo paymentrepo.PaymentMethodRepository,
+	methodRepo payment.MethodRepository,
 	executor transaction.Executor,
 	gateway paymentgateway.Provider,
 ) *SyncPaymentMethodsUsecase {
@@ -51,7 +50,7 @@ func (u *SyncPaymentMethodsUsecase) Execute(ctx context.Context) error {
 		provider string
 		mType    string
 	}
-	existingMap := make(map[key]*paymentdomain.PaymentMethod)
+	existingMap := make(map[key]*payment.PaymentMethod)
 	for i := range existingMethods {
 		m := &existingMethods[i]
 		existingMap[key{
@@ -72,15 +71,15 @@ func (u *SyncPaymentMethodsUsecase) Execute(ctx context.Context) error {
 
 		existing, ok := existingMap[k]
 		if !ok {
-			newMethod := paymentdomain.PaymentMethod{
+			newMethod := payment.PaymentMethod{
 				ID:            uuid.New(),
 				Name:          am.Name,
 				Code:          am.Code,
 				Provider:      providerName,
-				Type:          paymentdomain.PaymentMethodType(am.Type),
+				Type:          payment.PaymentMethodType(am.Type),
 				IsActive:      true,
 				Description:   am.Description,
-				FeeType:       paymentdomain.PaymentFeeType(am.FeeType),
+				FeeType:       payment.PaymentFeeType(am.FeeType),
 				FeeFixed:      am.FeeFixed,
 				FeePercentage: am.FeePercentage,
 				FeeMax:        am.FeeMax,
@@ -93,7 +92,7 @@ func (u *SyncPaymentMethodsUsecase) Execute(ctx context.Context) error {
 			updatedMethod := *existing
 			updatedMethod.Name = am.Name
 			updatedMethod.Description = am.Description
-			updatedMethod.FeeType = paymentdomain.PaymentFeeType(am.FeeType)
+			updatedMethod.FeeType = payment.PaymentFeeType(am.FeeType)
 			updatedMethod.FeeFixed = am.FeeFixed
 			updatedMethod.FeePercentage = am.FeePercentage
 			updatedMethod.FeeMax = am.FeeMax

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -22,7 +22,7 @@ func (r *PaymentInstructionRepository) GetByPaymentMethodID(
 	ctx context.Context,
 	exec transaction.Executor,
 	methodID uuid.UUID,
-) (*paymentdomain.PaymentInstruction, error) {
+) (*payment.PaymentInstruction, error) {
 	query := `
 		SELECT
 			id,
@@ -34,7 +34,7 @@ func (r *PaymentInstructionRepository) GetByPaymentMethodID(
 		LIMIT 1
 	`
 
-	var inst paymentdomain.PaymentInstruction
+	var inst payment.PaymentInstruction
 	err := exec.QueryRow(ctx, query, methodID).Scan(
 		&inst.ID,
 		&inst.PaymentMethodID,
@@ -54,7 +54,7 @@ func (r *PaymentInstructionRepository) GetByPaymentMethodID(
 func (r *PaymentInstructionRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	instruction paymentdomain.PaymentInstruction,
+	instruction payment.PaymentInstruction,
 ) error {
 	query := `
 		INSERT INTO payment_instructions (

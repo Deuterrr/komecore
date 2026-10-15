@@ -6,34 +6,34 @@ import (
 
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 type mockSyncPaymentMethodRepo struct {
-	methods map[uuid.UUID]paymentdomain.PaymentMethod
+	methods map[uuid.UUID]payment.PaymentMethod
 }
 
-func (m *mockSyncPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, method paymentdomain.PaymentMethod) error {
+func (m *mockSyncPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, method payment.PaymentMethod) error {
 	m.methods[method.ID] = method
 	return nil
 }
 
-func (m *mockSyncPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*paymentdomain.PaymentMethod, error) {
+func (m *mockSyncPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*payment.PaymentMethod, error) {
 	return nil, nil
 }
 
-func (m *mockSyncPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*paymentdomain.PaymentMethod, error) {
+func (m *mockSyncPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*payment.PaymentMethod, error) {
 	if method, ok := m.methods[id]; ok {
 		return &method, nil
 	}
 	return nil, nil
 }
 
-func (m *mockSyncPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
-	result := make([]paymentdomain.PaymentMethod, 0, len(m.methods))
+func (m *mockSyncPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]payment.PaymentMethod, error) {
+	result := make([]payment.PaymentMethod, 0, len(m.methods))
 	for _, val := range m.methods {
 		result = append(result, val)
 	}
@@ -41,17 +41,17 @@ func (m *mockSyncPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Exe
 }
 
 type mockSyncInstructionRepo struct {
-	instructions map[uuid.UUID]paymentdomain.PaymentInstruction
+	instructions map[uuid.UUID]payment.PaymentInstruction
 }
 
-func (m *mockSyncInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, methodID uuid.UUID) (*paymentdomain.PaymentInstruction, error) {
+func (m *mockSyncInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, methodID uuid.UUID) (*payment.PaymentInstruction, error) {
 	if inst, ok := m.instructions[methodID]; ok {
 		return &inst, nil
 	}
 	return nil, nil
 }
 
-func (m *mockSyncInstructionRepo) Save(_ context.Context, _ transaction.Executor, instruction paymentdomain.PaymentInstruction) error {
+func (m *mockSyncInstructionRepo) Save(_ context.Context, _ transaction.Executor, instruction payment.PaymentInstruction) error {
 	m.instructions[instruction.PaymentMethodID] = instruction
 	return nil
 }
@@ -101,7 +101,7 @@ func (g *mockSyncGateway) RefundTransaction(_ context.Context, _ paymentgateway.
 func TestSyncPaymentMethods_Success(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockSyncPaymentMethodRepo{
-		methods: make(map[uuid.UUID]paymentdomain.PaymentMethod),
+		methods: make(map[uuid.UUID]payment.PaymentMethod),
 	}
 
 	gateway := &mockSyncGateway{

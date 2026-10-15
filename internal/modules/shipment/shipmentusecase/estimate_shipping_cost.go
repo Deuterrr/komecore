@@ -7,8 +7,8 @@ import (
 	"komecore/internal/apperror"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/courier/courierrepo"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/courier"
+	"komecore/internal/modules/shipment"
 
 	"github.com/google/uuid"
 )
@@ -16,13 +16,13 @@ import (
 type EstimateShippingOptionsUsecase struct {
 	shippingProvider shipping.ShippingProvider
 	executor         transaction.Executor
-	courierRepo      courierrepo.CourierRepository
+	courierRepo      courier.Repository
 }
 
 func NewEstimateShippingOptionsUsecase(
 	shippingProvider shipping.ShippingProvider,
 	executor transaction.Executor,
-	courierRepo courierrepo.CourierRepository,
+	courierRepo courier.Repository,
 ) *EstimateShippingOptionsUsecase {
 	return &EstimateShippingOptionsUsecase{
 		shippingProvider: shippingProvider,
@@ -44,7 +44,7 @@ func (u *EstimateShippingOptionsUsecase) Execute(
 	input EstimateShippingOptionsInput,
 ) ([]shipping.RateOption, error) {
 	if input.Weight <= 0 {
-		return nil, apperror.NewInvalidInput(shipmentdomain.ErrInvalidWeight.Error())
+		return nil, apperror.NewInvalidInput(shipment.ErrInvalidWeight.Error())
 	}
 
 	var courierCodes []string

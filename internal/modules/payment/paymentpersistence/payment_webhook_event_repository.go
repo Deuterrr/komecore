@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -26,8 +26,8 @@ func NewPaymentWebhookEventRepository() *PaymentWebhookEventRepository {
 func (r *PaymentWebhookEventRepository) Upsert(
 	ctx context.Context,
 	exec transaction.Executor,
-	event paymentdomain.PaymentWebhookEvent,
-) (*paymentdomain.PaymentWebhookEvent, error) {
+	event payment.PaymentWebhookEvent,
+) (*payment.PaymentWebhookEvent, error) {
 	// INSERT ... ON CONFLICT DO NOTHING, then SELECT to return the
 	// authoritative row (either the newly inserted one or the pre-existing one).
 	insertQuery := `
@@ -125,8 +125,8 @@ func (r *PaymentWebhookEventRepository) MarkFailed(
 
 func (r *PaymentWebhookEventRepository) scanWebhookEvent(
 	row transaction.Row,
-) (*paymentdomain.PaymentWebhookEvent, error) {
-	var e paymentdomain.PaymentWebhookEvent
+) (*payment.PaymentWebhookEvent, error) {
+	var e payment.PaymentWebhookEvent
 	err := row.Scan(
 		&e.ID,
 		&e.OrderID,

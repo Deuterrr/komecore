@@ -6,22 +6,21 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
 )
 
 type SavePaymentInstructionUsecase struct {
-	paymentMethodRepo      paymentrepo.PaymentMethodRepository
-	paymentInstructionRepo paymentrepo.PaymentInstructionRepository
+	paymentMethodRepo      payment.MethodRepository
+	paymentInstructionRepo payment.InstructionRepository
 	executor               transaction.Executor
 }
 
 func NewSavePaymentInstructionUsecase(
-	paymentMethodRepo paymentrepo.PaymentMethodRepository,
-	paymentInstructionRepo paymentrepo.PaymentInstructionRepository,
+	paymentMethodRepo payment.MethodRepository,
+	paymentInstructionRepo payment.InstructionRepository,
 	executor transaction.Executor,
 ) *SavePaymentInstructionUsecase {
 	return &SavePaymentInstructionUsecase{
@@ -54,12 +53,12 @@ func (u *SavePaymentInstructionUsecase) Execute(
 		return fmt.Errorf("failed to retrieve existing payment instruction: %w", err)
 	}
 
-	var instruction paymentdomain.PaymentInstruction
+	var instruction payment.PaymentInstruction
 	if existing != nil {
 		instruction = *existing
 		instruction.Content = input.Content
 	} else {
-		instruction = paymentdomain.PaymentInstruction{
+		instruction = payment.PaymentInstruction{
 			ID:              uuid.New(),
 			PaymentMethodID: input.PaymentMethodID,
 			Content:         input.Content,

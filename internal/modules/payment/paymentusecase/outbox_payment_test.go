@@ -8,7 +8,7 @@ import (
 	"komecore/internal/infra/outbox"
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 )
@@ -36,10 +36,10 @@ func TestProcessPaymentWebhook_OutboxSettlement(t *testing.T) {
 	productID := uuid.New()
 	shopID := uuid.New()
 
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:        paymentID,
 		OrderID:   orderID,
-		Status:    paymentdomain.PaymentStatusPending,
+		Status:    payment.PaymentStatusPending,
 		Amount:    100000,
 		Provider:  "midtrans",
 		CreatedAt: time.Now(),
@@ -53,7 +53,7 @@ func TestProcessPaymentWebhook_OutboxSettlement(t *testing.T) {
 	}
 	items := []OrderItemInfo{{ProductID: productID, ShopID: shopID, Quantity: 2}}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{paymentID: payment}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{paymentID: pmt}}
 	peRepo := &mockPaymentEventRepo{}
 	oMgr := &mockOrderPaymentManager{
 		orders: map[uuid.UUID]*mockOrder{orderID: order},

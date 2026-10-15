@@ -6,18 +6,17 @@ import (
 	"strings"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	"komecore/internal/pagination"
 )
 
 type ListPaymentMethodUsecase struct {
-	paymentMethodRepo paymentrepo.PaymentMethodRepository
+	paymentMethodRepo payment.MethodRepository
 	executor          transaction.Executor
 }
 
 func NewListPaymentMethodUsecase(
-	paymentMethodRepo paymentrepo.PaymentMethodRepository,
+	paymentMethodRepo payment.MethodRepository,
 	executor transaction.Executor,
 ) *ListPaymentMethodUsecase {
 	return &ListPaymentMethodUsecase{
@@ -33,12 +32,12 @@ type ListPaymentMethodInput struct {
 func (u *ListPaymentMethodUsecase) ListAll(
 	ctx context.Context,
 	input ListPaymentMethodInput,
-) ([]paymentdomain.PaymentMethod, error) {
+) ([]payment.PaymentMethod, error) {
 	var pmSortKeys = map[string]pagination.SortKey{
-		"latest": paymentrepo.PaymentMethodSortLatest,
-		"name":   paymentrepo.PaymentMethodSortName,
-		"code":   paymentrepo.PaymentMethodSortCode,
-		"type":   paymentrepo.PaymentMethodSortType,
+		"latest": payment.PaymentMethodSortLatest,
+		"name":   payment.PaymentMethodSortName,
+		"code":   payment.PaymentMethodSortCode,
+		"type":   payment.PaymentMethodSortType,
 	}
 
 	var sorts pagination.Sorts
@@ -74,7 +73,7 @@ func (u *ListPaymentMethodUsecase) ListAll(
 	if len(sorts) == 0 {
 		sorts = pagination.Sorts{
 			{
-				By:        paymentrepo.PaymentMethodSortLatest,
+				By:        payment.PaymentMethodSortLatest,
 				Direction: pagination.SortDesc,
 			},
 		}

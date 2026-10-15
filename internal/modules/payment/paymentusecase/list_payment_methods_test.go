@@ -6,28 +6,27 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 type mockListPaymentMethodRepo struct {
-	methods     []paymentdomain.PaymentMethod
+	methods     []payment.PaymentMethod
 	calledSorts pagination.Sorts
 }
 
-func (m *mockListPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentMethod) error {
+func (m *mockListPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentMethod) error {
 	return nil
 }
-func (m *mockListPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*paymentdomain.PaymentMethod, error) {
+func (m *mockListPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*payment.PaymentMethod, error) {
 	return nil, nil
 }
-func (m *mockListPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.PaymentMethod, error) {
+func (m *mockListPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.PaymentMethod, error) {
 	return nil, nil
 }
-func (m *mockListPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, sorts pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
+func (m *mockListPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, sorts pagination.Sorts) ([]payment.PaymentMethod, error) {
 	m.calledSorts = sorts
 	return m.methods, nil
 }
@@ -37,13 +36,13 @@ func TestListPaymentMethods_DefaultSortAndBinding(t *testing.T) {
 
 	methodID := uuid.New()
 	instructionID := uuid.New()
-	methods := []paymentdomain.PaymentMethod{
+	methods := []payment.PaymentMethod{
 		{
 			ID:       methodID,
 			Name:     "BCA Transfer",
 			Code:     "bca_va",
 			IsActive: true,
-			Instruction: &paymentdomain.PaymentInstruction{
+			Instruction: &payment.PaymentInstruction{
 				ID:              instructionID,
 				PaymentMethodID: methodID,
 				Content:         "Transfer instructions",
@@ -76,7 +75,7 @@ func TestListPaymentMethods_DefaultSortAndBinding(t *testing.T) {
 	if len(repo.calledSorts) != 1 {
 		t.Fatalf("expected 1 sort clause, got %d", len(repo.calledSorts))
 	}
-	if repo.calledSorts[0].By != paymentrepo.PaymentMethodSortLatest || repo.calledSorts[0].Direction != pagination.SortDesc {
+	if repo.calledSorts[0].By != payment.PaymentMethodSortLatest || repo.calledSorts[0].Direction != pagination.SortDesc {
 		t.Errorf("expected default sort to be latest desc, got %v", repo.calledSorts)
 	}
 }
@@ -98,10 +97,10 @@ func TestListPaymentMethods_CustomSort(t *testing.T) {
 		t.Fatalf("expected 2 sort clauses, got %d", len(repo.calledSorts))
 	}
 
-	if repo.calledSorts[0].By != paymentrepo.PaymentMethodSortName || repo.calledSorts[0].Direction != pagination.SortAsc {
+	if repo.calledSorts[0].By != payment.PaymentMethodSortName || repo.calledSorts[0].Direction != pagination.SortAsc {
 		t.Errorf("expected first sort to be name asc, got %v", repo.calledSorts[0])
 	}
-	if repo.calledSorts[1].By != paymentrepo.PaymentMethodSortCode || repo.calledSorts[1].Direction != pagination.SortDesc {
+	if repo.calledSorts[1].By != payment.PaymentMethodSortCode || repo.calledSorts[1].Direction != pagination.SortDesc {
 		t.Errorf("expected second sort to be code desc, got %v", repo.calledSorts[1])
 	}
 }

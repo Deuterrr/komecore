@@ -9,10 +9,8 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/payment"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 )
@@ -29,7 +27,7 @@ import (
 // idempotency gate â€” so no double-processing can
 // occur even if a late webhook also arrives.
 type SyncPendingPaymentsUsecase struct {
-	paymentRepo    paymentrepo.PaymentRepository
+	paymentRepo    payment.Repository
 	paymentGateway paymentgateway.Provider
 	processWebhook *ProcessPaymentWebhookUsecase
 	executor       transaction.Executor
@@ -37,11 +35,11 @@ type SyncPendingPaymentsUsecase struct {
 	lookbackWindow time.Duration
 	transactor     transaction.Transactor
 	orderMgr       OrderPaymentManager
-	inventoryRepo  inventoryrepo.InventoryRepository
+	inventoryRepo  inventory.Repository
 }
 
 func NewSyncPendingPaymentsUsecase(
-	paymentRepo paymentrepo.PaymentRepository,
+	paymentRepo payment.Repository,
 	paymentGateway paymentgateway.Provider,
 	processWebhook *ProcessPaymentWebhookUsecase,
 	executor transaction.Executor,
@@ -49,7 +47,7 @@ func NewSyncPendingPaymentsUsecase(
 	lookbackWindow time.Duration,
 	transactor transaction.Transactor,
 	orderMgr OrderPaymentManager,
-	inventoryRepo inventoryrepo.InventoryRepository,
+	inventoryRepo inventory.Repository,
 ) *SyncPendingPaymentsUsecase {
 	return &SyncPendingPaymentsUsecase{
 		paymentRepo:    paymentRepo,
@@ -182,17 +180,17 @@ func (u *SyncPendingPaymentsUsecase) Execute(ctx context.Context) {
 
 func (u *SyncPendingPaymentsUsecase) expirePaymentLocally(
 	ctx context.Context,
-	payment paymentdomain.Payment,
+	pmt payment.Payment,
 ) error {
 	return u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
 		if err := u.paymentRepo.UpdateStatus(ctx, exec,
-			payment.ID,
-			paymentdomain.PaymentStatusExpired,
+			pmt.ID,
+			payment.PaymentStatusExpired,
 		); err != nil {
 			return fmt.Errorf("failed to update payment status: %w", err)
 		}
 
-		orderItems, err := u.orderMgr.ExpireOrderPayment(ctx, exec, payment.OrderID)
+		orderItems, err := u.orderMgr.ExpireOrderPayment(ctx, exec, pmt.OrderID)
 		if err != nil {
 			return fmt.Errorf("failed to expire order payment: %w", err)
 		}
@@ -203,13 +201,13 @@ func (u *SyncPendingPaymentsUsecase) expirePaymentLocally(
 				item.ShopID,
 				item.Quantity,
 			); err != nil {
-				if errors.Is(err, inventorydomain.ErrInsufficientReserved) ||
+				if errors.Is(err, inventory.ErrInsufficientReserved) ||
 					errors.Is(err, apperror.ErrNotFound) {
 
 					msg := "inventory anomaly during payment reconciliation expiry: reserved stock insufficient or missing"
 					u.logger.Warn(ctx, msg,
-						applogger.Field{Key: "payment_id", Value: payment.ID.String()},
-						applogger.Field{Key: "order_id", Value: payment.OrderID.String()},
+						applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+						applogger.Field{Key: "order_id", Value: pmt.OrderID.String()},
 						applogger.Field{Key: "product_id", Value: item.ProductID.String()},
 						applogger.Field{Key: "shop_id", Value: item.ShopID.String()},
 						applogger.Field{Key: "requested_qty", Value: item.Quantity},

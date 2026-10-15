@@ -8,8 +8,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -25,7 +24,7 @@ func NewPaymentMethodRepository() *PaymentMethodRepository {
 func (r *PaymentMethodRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	method paymentdomain.PaymentMethod,
+	method payment.PaymentMethod,
 ) error {
 	query := `
 		INSERT INTO payment_methods (
@@ -86,7 +85,7 @@ func (r *PaymentMethodRepository) FindByName(
 	ctx context.Context,
 	exec transaction.Executor,
 	name string,
-) (*paymentdomain.PaymentMethod, error) {
+) (*payment.PaymentMethod, error) {
 	query := `
 		SELECT
 			pm.id,
@@ -112,7 +111,7 @@ func (r *PaymentMethodRepository) FindByName(
 		LIMIT 1
 	`
 
-	var method paymentdomain.PaymentMethod
+	var method payment.PaymentMethod
 	var piID *uuid.UUID
 	var piContent *string
 	var piCreatedAt *time.Time
@@ -153,7 +152,7 @@ func (r *PaymentMethodRepository) FindByName(
 			createdAt = *piCreatedAt
 		}
 
-		method.Instruction = &paymentdomain.PaymentInstruction{
+		method.Instruction = &payment.PaymentInstruction{
 			ID:              *piID,
 			PaymentMethodID: method.ID,
 			Content:         content,
@@ -168,7 +167,7 @@ func (r *PaymentMethodRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	paymentID uuid.UUID,
-) (*paymentdomain.PaymentMethod, error) {
+) (*payment.PaymentMethod, error) {
 	query := `
 		SELECT
 			pm.id,
@@ -194,7 +193,7 @@ func (r *PaymentMethodRepository) GetByID(
 		LIMIT 1
 	`
 
-	var method paymentdomain.PaymentMethod
+	var method payment.PaymentMethod
 	var piID *uuid.UUID
 	var piContent *string
 	var piCreatedAt *time.Time
@@ -236,7 +235,7 @@ func (r *PaymentMethodRepository) GetByID(
 			createdAt = *piCreatedAt
 		}
 
-		method.Instruction = &paymentdomain.PaymentInstruction{
+		method.Instruction = &payment.PaymentInstruction{
 			ID:              *piID,
 			PaymentMethodID: method.ID,
 			Content:         content,
@@ -251,12 +250,12 @@ func (r *PaymentMethodRepository) ListAll(
 	ctx context.Context,
 	exec transaction.Executor,
 	sorts pagination.Sorts,
-) ([]paymentdomain.PaymentMethod, error) {
+) ([]payment.PaymentMethod, error) {
 	var pmSortKeys = map[pagination.SortKey]string{
-		paymentrepo.PaymentMethodSortLatest: "pm.created_at",
-		paymentrepo.PaymentMethodSortName:   "pm.name",
-		paymentrepo.PaymentMethodSortCode:   "pm.code",
-		paymentrepo.PaymentMethodSortType:   "pm.type",
+		payment.PaymentMethodSortLatest: "pm.created_at",
+		payment.PaymentMethodSortName:   "pm.name",
+		payment.PaymentMethodSortCode:   "pm.code",
+		payment.PaymentMethodSortType:   "pm.type",
 	}
 
 	var sortClauses []string
@@ -312,9 +311,9 @@ func (r *PaymentMethodRepository) ListAll(
 	}
 	defer rows.Close()
 
-	var result []paymentdomain.PaymentMethod
+	var result []payment.PaymentMethod
 	for rows.Next() {
-		var row paymentdomain.PaymentMethod
+		var row payment.PaymentMethod
 		var piID *uuid.UUID
 		var piContent *string
 		var piCreatedAt *time.Time
@@ -350,7 +349,7 @@ func (r *PaymentMethodRepository) ListAll(
 			if piCreatedAt != nil {
 				createdAt = *piCreatedAt
 			}
-			row.Instruction = &paymentdomain.PaymentInstruction{
+			row.Instruction = &payment.PaymentInstruction{
 				ID:              *piID,
 				PaymentMethodID: row.ID,
 				Content:         content,

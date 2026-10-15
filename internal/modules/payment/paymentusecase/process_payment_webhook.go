@@ -11,10 +11,8 @@ import (
 	"komecore/internal/infra/outbox"
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/payment"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -26,11 +24,11 @@ type OutboxRecorder interface {
 }
 
 type ProcessPaymentWebhookUsecase struct {
-	repository       paymentrepo.PaymentRepository
-	paymentEventRepo paymentrepo.PaymentEventRepository
-	webhookEventRepo paymentrepo.PaymentWebhookEventRepository
+	repository       payment.Repository
+	paymentEventRepo payment.EventRepository
+	webhookEventRepo payment.WebhookEventRepository
 	orderMgr         OrderPaymentManager
-	inventoryRepo    inventoryrepo.InventoryRepository
+	inventoryRepo    inventory.Repository
 	paymentGateway   paymentgateway.Provider
 	auditLogger      applogger.AuditLogger
 	transactor       transaction.Transactor
@@ -39,11 +37,11 @@ type ProcessPaymentWebhookUsecase struct {
 }
 
 func NewProcessPaymentWebhookUsecase(
-	repository paymentrepo.PaymentRepository,
-	paymentEventRepo paymentrepo.PaymentEventRepository,
-	webhookEventRepo paymentrepo.PaymentWebhookEventRepository,
+	repository payment.Repository,
+	paymentEventRepo payment.EventRepository,
+	webhookEventRepo payment.WebhookEventRepository,
 	orderMgr OrderPaymentManager,
-	inventoryRepo inventoryrepo.InventoryRepository,
+	inventoryRepo inventory.Repository,
 	paymentGateway paymentgateway.Provider,
 	auditLogger applogger.AuditLogger,
 	transactor transaction.Transactor,
@@ -174,12 +172,12 @@ func (u *ProcessPaymentWebhookUsecase) Execute(
 	//
 	// If the same (order_id, transaction_status) has already
 	// been successfully processed, system will short-circuit immediately.
-	webhookEvent := paymentdomain.PaymentWebhookEvent{
+	webhookEvent := payment.PaymentWebhookEvent{
 		ID:                uuid.New(),
 		OrderID:           orderIDStr,
 		TransactionStatus: txStatus,
 		Payload:           payloadBytes,
-		Status:            paymentdomain.WebhookEventStatusReceived,
+		Status:            payment.WebhookEventStatusReceived,
 		ReceivedAt:        appclock.Now(),
 	}
 
@@ -191,7 +189,7 @@ func (u *ProcessPaymentWebhookUsecase) Execute(
 	}
 
 	if canonicalEvent != nil &&
-		canonicalEvent.Status == paymentdomain.WebhookEventStatusProcessed {
+		canonicalEvent.Status == payment.WebhookEventStatusProcessed {
 		return nil
 	}
 
@@ -259,16 +257,16 @@ func (u *ProcessPaymentWebhookUsecase) process(
 	}
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		payment, err := u.repository.GetByOrderIDForUpdate(ctx, exec,
+		pmt, err := u.repository.GetByOrderIDForUpdate(ctx, exec,
 			orderID,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve payment: %w", err)
 		}
-		if payment == nil {
+		if pmt == nil {
 			return apperror.NewNotFound("payment not found for order")
 		}
-		if payment.Status != paymentdomain.PaymentStatusPending {
+		if pmt.Status != payment.PaymentStatusPending {
 			return nil
 		}
 
@@ -279,25 +277,25 @@ func (u *ProcessPaymentWebhookUsecase) process(
 		// payment status and order status: they must always
 		// transition together within the same transactional boundary
 		var (
-			newPaymentStatus paymentdomain.PaymentStatus
+			newPaymentStatus payment.PaymentStatus
 			action           string
 		)
 
 		switch notifResult.Status {
 		case paymentgateway.NotificationStatusSettlement:
-			newPaymentStatus = paymentdomain.PaymentStatusPaid
+			newPaymentStatus = payment.PaymentStatusPaid
 			action = "commit"
 
 		case paymentgateway.NotificationStatusExpire:
-			newPaymentStatus = paymentdomain.PaymentStatusExpired
+			newPaymentStatus = payment.PaymentStatusExpired
 			action = "release_expire"
 
 		case paymentgateway.NotificationStatusCancel:
-			newPaymentStatus = paymentdomain.PaymentStatusCancelled
+			newPaymentStatus = payment.PaymentStatusCancelled
 			action = "release_cancel"
 
 		case paymentgateway.NotificationStatusDeny:
-			newPaymentStatus = paymentdomain.PaymentStatusFailed
+			newPaymentStatus = payment.PaymentStatusFailed
 			action = "release_cancel"
 
 		default:
@@ -305,7 +303,7 @@ func (u *ProcessPaymentWebhookUsecase) process(
 		}
 
 		if err := u.repository.UpdateStatus(ctx, exec,
-			payment.ID,
+			pmt.ID,
 			newPaymentStatus,
 		); err != nil {
 			return fmt.Errorf("failed to update payment status: %w", err)
@@ -318,11 +316,11 @@ func (u *ProcessPaymentWebhookUsecase) process(
 		now := appclock.Now()
 		switch action {
 		case "commit":
-			orderItems, orderErr = u.orderMgr.ConfirmOrderPayment(ctx, exec, payment.OrderID, now, 72*time.Hour)
+			orderItems, orderErr = u.orderMgr.ConfirmOrderPayment(ctx, exec, pmt.OrderID, now, 72*time.Hour)
 		case "release_expire":
-			orderItems, orderErr = u.orderMgr.ExpireOrderPayment(ctx, exec, payment.OrderID)
+			orderItems, orderErr = u.orderMgr.ExpireOrderPayment(ctx, exec, pmt.OrderID)
 		case "release_cancel":
-			orderItems, orderErr = u.orderMgr.CancelOrderPayment(ctx, exec, payment.OrderID)
+			orderItems, orderErr = u.orderMgr.CancelOrderPayment(ctx, exec, pmt.OrderID)
 		}
 		if orderErr != nil {
 			return orderErr
@@ -345,7 +343,7 @@ func (u *ProcessPaymentWebhookUsecase) process(
 					item.ShopID,
 					item.Quantity,
 				); err != nil {
-					if errors.Is(err, inventorydomain.ErrInsufficientReserved) ||
+					if errors.Is(err, inventory.ErrInsufficientReserved) ||
 						errors.Is(err, apperror.ErrNotFound) {
 
 						if u.auditLogger != nil {
@@ -356,8 +354,8 @@ func (u *ProcessPaymentWebhookUsecase) process(
 								ResourceID: item.ProductID.String(),
 								Outcome:    applogger.OutcomeFailure,
 								Metadata: map[string]any{
-									"payment_id":    payment.ID.String(),
-									"order_id":      payment.OrderID.String(),
+									"payment_id":    pmt.ID.String(),
+									"order_id":      pmt.OrderID.String(),
 									"product_id":    item.ProductID.String(),
 									"shop_id":       item.ShopID.String(),
 									"requested_qty": item.Quantity,
@@ -388,9 +386,9 @@ func (u *ProcessPaymentWebhookUsecase) process(
 			return fmt.Errorf("failed to marshal payment event payload: %w", err)
 		}
 
-		paymentEvent := paymentdomain.PaymentEvent{
+		paymentEvent := payment.PaymentEvent{
 			ID:        uuid.New(),
-			PaymentID: payment.ID,
+			PaymentID: pmt.ID,
 			EventName: string(newPaymentStatus),
 			Payload:   payloadBytes,
 			CreatedAt: appclock.Now(),
@@ -406,14 +404,14 @@ func (u *ProcessPaymentWebhookUsecase) process(
 				custEmail string
 				custName  string
 			)
-			if orderInfo, err := u.orderMgr.GetOrderForPayment(ctx, exec, payment.OrderID); err == nil && orderInfo != nil {
+			if orderInfo, err := u.orderMgr.GetOrderForPayment(ctx, exec, pmt.OrderID); err == nil && orderInfo != nil {
 				orderNum = orderInfo.Number
 				custEmail = orderInfo.CustomerEmail
 				custName = orderInfo.CustomerName
 			}
 			var paidAt time.Time
-			if payment.PaidAt != nil {
-				paidAt = *payment.PaidAt
+			if pmt.PaidAt != nil {
+				paidAt = *pmt.PaidAt
 			} else {
 				paidAt = now
 			}
@@ -424,14 +422,14 @@ func (u *ProcessPaymentWebhookUsecase) process(
 				}
 			}
 			if payMethod == "" {
-				payMethod = payment.Provider
+				payMethod = pmt.Provider
 			}
 			outboxPayload := outbox.PaymentSettledPayload{
-				OrderID:       payment.OrderID,
+				OrderID:       pmt.OrderID,
 				OrderNumber:   orderNum,
 				CustomerEmail: custEmail,
 				CustomerName:  custName,
-				Amount:        payment.Amount,
+				Amount:        pmt.Amount,
 				PaymentMethod: payMethod,
 				PaidAt:        paidAt,
 			}

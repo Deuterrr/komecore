@@ -1,4 +1,4 @@
-package shipmentdomain
+package shipment
 
 import "errors"
 

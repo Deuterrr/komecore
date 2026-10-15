@@ -7,15 +7,14 @@ import (
 
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 	applogger "komecore/pkg/logger"
 
 	"github.com/google/uuid"
 )
 
 type ProcessOrderRefundUsecase struct {
-	paymentRepo    paymentrepo.PaymentRepository
+	paymentRepo    payment.Repository
 	paymentGateway paymentgateway.Provider
 	executor       transaction.Executor
 	transactor     transaction.Transactor
@@ -23,7 +22,7 @@ type ProcessOrderRefundUsecase struct {
 }
 
 func NewProcessOrderRefundUsecase(
-	paymentRepo paymentrepo.PaymentRepository,
+	paymentRepo payment.Repository,
 	paymentGateway paymentgateway.Provider,
 	executor transaction.Executor,
 	transactor transaction.Transactor,
@@ -39,37 +38,37 @@ func NewProcessOrderRefundUsecase(
 }
 
 func (u *ProcessOrderRefundUsecase) Execute(ctx context.Context, orderID uuid.UUID, reason string) error {
-	payment, err := u.paymentRepo.GetByOrderID(ctx, u.executor, orderID)
+	pmt, err := u.paymentRepo.GetByOrderID(ctx, u.executor, orderID)
 	if err != nil {
 		return fmt.Errorf("failed to get payment for order %s: %w", orderID, err)
 	}
-	if payment == nil {
+	if pmt == nil {
 		return fmt.Errorf("payment not found for order %s", orderID)
 	}
 
-	if payment.Status != paymentdomain.PaymentStatusPaid {
+	if pmt.Status != payment.PaymentStatusPaid {
 		u.logger.Info(ctx, "skipping refund as payment is not in paid status",
 			applogger.Field{Key: "order_id", Value: orderID.String()},
-			applogger.Field{Key: "payment_status", Value: string(payment.Status)},
+			applogger.Field{Key: "payment_status", Value: string(pmt.Status)},
 		)
 		return nil
 	}
 
 	// Determine if automated gateway refund can be attempted
-	canAutoRefund := payment.Provider == "gateway" &&
-		payment.ProviderOrderID != nil &&
-		*payment.ProviderOrderID != ""
+	canAutoRefund := pmt.Provider == "gateway" &&
+		pmt.ProviderOrderID != nil &&
+		*pmt.ProviderOrderID != ""
 
 	if canAutoRefund {
 		refundReq := paymentgateway.RefundRequest{
-			GatewayOrderID: *payment.ProviderOrderID,
-			RefundAmount:   payment.Amount,
+			GatewayOrderID: *pmt.ProviderOrderID,
+			RefundAmount:   pmt.Amount,
 			Reason:         reason,
 		}
 
 		u.logger.Info(ctx, "attempting automated gateway refund",
 			applogger.Field{Key: "order_id", Value: orderID.String()},
-			applogger.Field{Key: "gateway_order_id", Value: *payment.ProviderOrderID},
+			applogger.Field{Key: "gateway_order_id", Value: *pmt.ProviderOrderID},
 		)
 
 		resp, gatewayErr := u.paymentGateway.RefundTransaction(ctx, refundReq)
@@ -78,7 +77,7 @@ func (u *ProcessOrderRefundUsecase) Execute(ctx context.Context, orderID uuid.UU
 				applogger.Field{Key: "order_id", Value: orderID.String()},
 				applogger.Field{Key: "gateway_transaction_id", Value: resp.GatewayTransactionID},
 			)
-			return u.paymentRepo.UpdateStatus(ctx, u.executor, payment.ID, paymentdomain.PaymentStatusRefunded)
+			return u.paymentRepo.UpdateStatus(ctx, u.executor, pmt.ID, payment.PaymentStatusRefunded)
 		}
 
 		u.logger.Warn(ctx, "automated gateway refund failed or not supported by channel; flagging for manual refund queue",
@@ -97,7 +96,7 @@ func (u *ProcessOrderRefundUsecase) Execute(ctx context.Context, orderID uuid.UU
 	}
 
 	// Fallback to manual refund queue status
-	return u.paymentRepo.UpdateStatus(ctx, u.executor, payment.ID, paymentdomain.PaymentStatusRefundPending)
+	return u.paymentRepo.UpdateStatus(ctx, u.executor, pmt.ID, payment.PaymentStatusRefundPending)
 }
 
 func isAutoRefundableChannel(channel string) bool {

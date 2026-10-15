@@ -9,7 +9,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -42,90 +42,90 @@ func (m *mockOrderDetailOrderPaymentManager) CancelOrderPayment(_ context.Contex
 }
 
 type mockOrderDetailPaymentRepo struct {
-	payment *paymentdomain.Payment
+	payment *payment.Payment
 }
 
-func (m *mockOrderDetailPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *mockOrderDetailPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *mockOrderDetailPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	if m.payment != nil && m.payment.OrderID == orderID {
 		return m.payment, nil
 	}
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentRepo) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *mockOrderDetailPaymentRepo) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	return m.GetByOrderID(ctx, exec, orderID)
 }
-func (m *mockOrderDetailPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]paymentdomain.Payment, error) {
+func (m *mockOrderDetailPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ paymentdomain.PaymentStatus) error {
+func (m *mockOrderDetailPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ payment.PaymentStatus) error {
 	return nil
 }
-func (m *mockOrderDetailPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.Payment) error {
+func (m *mockOrderDetailPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ payment.Payment) error {
 	return nil
 }
-func (m *mockOrderDetailPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]paymentdomain.Payment, error) {
-	if m.payment != nil && m.payment.Status == paymentdomain.PaymentStatusPending && m.payment.Provider == "gateway" {
-		return []paymentdomain.Payment{*m.payment}, nil
+func (m *mockOrderDetailPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]payment.Payment, error) {
+	if m.payment != nil && m.payment.Status == payment.PaymentStatusPending && m.payment.Provider == "gateway" {
+		return []payment.Payment{*m.payment}, nil
 	}
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]paymentdomain.Payment, error) {
+func (m *mockOrderDetailPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]payment.Payment, error) {
 	return nil, nil
 }
 
 type mockOrderDetailPaymentMethodRepo struct {
-	method *paymentdomain.PaymentMethod
+	method *payment.PaymentMethod
 }
 
-func (m *mockOrderDetailPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentMethod) error {
+func (m *mockOrderDetailPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentMethod) error {
 	return nil
 }
-func (m *mockOrderDetailPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*paymentdomain.PaymentMethod, error) {
+func (m *mockOrderDetailPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*payment.PaymentMethod, error) {
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*paymentdomain.PaymentMethod, error) {
+func (m *mockOrderDetailPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*payment.PaymentMethod, error) {
 	if m.method != nil && m.method.ID == id {
 		return m.method, nil
 	}
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
+func (m *mockOrderDetailPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]payment.PaymentMethod, error) {
 	return nil, nil
 }
 
 type mockOrderDetailPaymentAccountRepo struct{}
 
 type mockOrderDetailPaymentInstructionRepo struct {
-	instruction *paymentdomain.PaymentInstruction
+	instruction *payment.PaymentInstruction
 }
 
-func (m *mockOrderDetailPaymentInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, methodID uuid.UUID) (*paymentdomain.PaymentInstruction, error) {
+func (m *mockOrderDetailPaymentInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, methodID uuid.UUID) (*payment.PaymentInstruction, error) {
 	if m.instruction != nil && m.instruction.PaymentMethodID == methodID {
 		return m.instruction, nil
 	}
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentInstructionRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentInstruction) error {
+func (m *mockOrderDetailPaymentInstructionRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentInstruction) error {
 	return nil
 }
 
 type mockOrderDetailPaymentChannelDataRepo struct {
-	channelData *paymentdomain.PaymentChannelData
+	channelData *payment.PaymentChannelData
 }
 
-func (m *mockOrderDetailPaymentChannelDataRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentChannelData) error {
+func (m *mockOrderDetailPaymentChannelDataRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentChannelData) error {
 	return nil
 }
-func (m *mockOrderDetailPaymentChannelDataRepo) GetByPaymentID(_ context.Context, _ transaction.Executor, paymentID uuid.UUID) (*paymentdomain.PaymentChannelData, error) {
+func (m *mockOrderDetailPaymentChannelDataRepo) GetByPaymentID(_ context.Context, _ transaction.Executor, paymentID uuid.UUID) (*payment.PaymentChannelData, error) {
 	if m.channelData != nil && m.channelData.PaymentID == paymentID {
 		return m.channelData, nil
 	}
 	return nil, nil
 }
-func (m *mockOrderDetailPaymentChannelDataRepo) ListByPaymentIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]*paymentdomain.PaymentChannelData, error) {
+func (m *mockOrderDetailPaymentChannelDataRepo) ListByPaymentIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]*payment.PaymentChannelData, error) {
 	return nil, nil
 }
 
@@ -145,33 +145,33 @@ func TestGetPaymentDetail_Gateway_Success(t *testing.T) {
 		Total:      115000,
 	}
 
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:        paymentID,
 		OrderID:   orderID,
 		MethodID:  methodID,
 		Provider:  "midtrans",
 		Amount:    115000,
-		Status:    paymentdomain.PaymentStatusPending,
+		Status:    payment.PaymentStatusPending,
 		ExpiresAt: pointer(time.Date(2026, 7, 12, 10, 0, 0, 0, time.UTC)),
 	}
 
-	method := &paymentdomain.PaymentMethod{
+	method := &payment.PaymentMethod{
 		ID:   methodID,
 		Name: "QRIS",
-		Type: paymentdomain.TypeQRCode,
+		Type: payment.TypeQRCode,
 	}
 
 	qrString := "data:image/png;base64,qrstring"
-	channelData := &paymentdomain.PaymentChannelData{
+	channelData := &payment.PaymentChannelData{
 		ID:          uuid.New(),
 		PaymentID:   paymentID,
-		ChannelType: paymentdomain.TypeQRCode,
+		ChannelType: payment.TypeQRCode,
 		DisplayName: "QRIS",
 		QRString:    &qrString,
 		ActionURL:   &qrString,
 	}
 
-	instruction := &paymentdomain.PaymentInstruction{
+	instruction := &payment.PaymentInstruction{
 		ID:              uuid.New(),
 		PaymentMethodID: methodID,
 		Content:         "Pay invoice {{invoice_number}} amount {{amount}} before {{expired_at}} using {{qr_string}}",
@@ -180,7 +180,7 @@ func TestGetPaymentDetail_Gateway_Success(t *testing.T) {
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
 		&mockOrderDetailOrderPaymentManager{order: order, invoice: "INV-12345"},
-		&mockOrderDetailPaymentRepo{payment: payment},
+		&mockOrderDetailPaymentRepo{payment: pmt},
 		&mockOrderDetailPaymentMethodRepo{method: method},
 		&mockOrderDetailPaymentInstructionRepo{instruction: instruction},
 		&mockOrderDetailPaymentChannelDataRepo{channelData: channelData},
@@ -206,8 +206,8 @@ func TestGetPaymentDetail_Gateway_Success(t *testing.T) {
 		t.Fatal("expected non-nil channel data")
 	}
 
-	if res.ChannelData.ChannelType != paymentdomain.TypeQRCode {
-		t.Errorf("expected channel type %v, got %v", paymentdomain.TypeQRCode, res.ChannelData.ChannelType)
+	if res.ChannelData.ChannelType != payment.TypeQRCode {
+		t.Errorf("expected channel type %v, got %v", payment.TypeQRCode, res.ChannelData.ChannelType)
 	}
 
 	if res.Instruction == nil {
@@ -234,33 +234,33 @@ func TestGetPaymentDetail_BankTransfer_Success(t *testing.T) {
 		Total:      250000,
 	}
 
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:        paymentID,
 		OrderID:   orderID,
 		MethodID:  methodID,
 		Provider:  "midtrans",
 		Amount:    250000,
-		Status:    paymentdomain.PaymentStatusPending,
+		Status:    payment.PaymentStatusPending,
 		ExpiresAt: pointer(time.Date(2026, 7, 12, 12, 0, 0, 0, time.UTC)),
 	}
 
-	method := &paymentdomain.PaymentMethod{
+	method := &payment.PaymentMethod{
 		ID:   methodID,
 		Name: "BCA Virtual Account",
-		Type: paymentdomain.TypeBankTransfer,
+		Type: payment.TypeBankTransfer,
 	}
 
 	vaNumber := "123456789012"
-	channelData := &paymentdomain.PaymentChannelData{
+	channelData := &payment.PaymentChannelData{
 		ID:            uuid.New(),
 		PaymentID:     paymentID,
-		ChannelType:   paymentdomain.TypeBankTransfer,
+		ChannelType:   payment.TypeBankTransfer,
 		DisplayName:   "BCA Virtual Account",
 		AccountNumber: &vaNumber,
 		ActionURL:     &vaNumber,
 	}
 
-	instruction := &paymentdomain.PaymentInstruction{
+	instruction := &payment.PaymentInstruction{
 		ID:              uuid.New(),
 		PaymentMethodID: methodID,
 		Content:         "Pay invoice {{invoice_number}} amount {{amount}} to {{va_number}}",
@@ -269,7 +269,7 @@ func TestGetPaymentDetail_BankTransfer_Success(t *testing.T) {
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
 		&mockOrderDetailOrderPaymentManager{order: order, invoice: "INV-54321"},
-		&mockOrderDetailPaymentRepo{payment: payment},
+		&mockOrderDetailPaymentRepo{payment: pmt},
 		&mockOrderDetailPaymentMethodRepo{method: method},
 		&mockOrderDetailPaymentInstructionRepo{instruction: instruction},
 		&mockOrderDetailPaymentChannelDataRepo{channelData: channelData},
@@ -379,32 +379,32 @@ func TestGetPaymentDetail_BankTransfer_InstructionsRenderedWithVANumberAndBiller
 		Total:      469000,
 	}
 
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:        paymentID,
 		OrderID:   orderID,
 		MethodID:  methodID,
 		Provider:  "midtrans",
 		Amount:    469000,
-		Status:    paymentdomain.PaymentStatusPending,
+		Status:    payment.PaymentStatusPending,
 		ExpiresAt: pointer(time.Date(2026, 9, 8, 22, 41, 5, 0, time.UTC)),
 	}
 
-	method := &paymentdomain.PaymentMethod{
+	method := &payment.PaymentMethod{
 		ID:   methodID,
 		Name: "Mandiri Bill",
-		Type: paymentdomain.TypeBankTransfer,
+		Type: payment.TypeBankTransfer,
 	}
 
 	vaNumber := "990000000260"
-	channelData := &paymentdomain.PaymentChannelData{
+	channelData := &payment.PaymentChannelData{
 		ID:          uuid.New(),
 		PaymentID:   paymentID,
-		ChannelType: paymentdomain.TypeBankTransfer,
+		ChannelType: payment.TypeBankTransfer,
 		DisplayName: "MANDIRI Bill Key (Biller Code: 70012)",
 		ActionURL:   &vaNumber,
 	}
 
-	instruction := &paymentdomain.PaymentInstruction{
+	instruction := &payment.PaymentInstruction{
 		ID:              uuid.New(),
 		PaymentMethodID: methodID,
 		Content:         "Kode Biller: 70012, Bill Key: {{bill_key}}, VA: {{va_number}}, Exp: {{expired_at}}",
@@ -413,7 +413,7 @@ func TestGetPaymentDetail_BankTransfer_InstructionsRenderedWithVANumberAndBiller
 	uc := NewGetPaymentDetailUsecase(
 		&mockExecutor{},
 		&mockOrderDetailOrderPaymentManager{order: order, invoice: "INV-20260907-001"},
-		&mockOrderDetailPaymentRepo{payment: payment},
+		&mockOrderDetailPaymentRepo{payment: pmt},
 		&mockOrderDetailPaymentMethodRepo{method: method},
 		&mockOrderDetailPaymentInstructionRepo{instruction: instruction},
 		&mockOrderDetailPaymentChannelDataRepo{channelData: channelData},

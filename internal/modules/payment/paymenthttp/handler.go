@@ -5,7 +5,7 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	"komecore/internal/modules/payment/paymentusecase"
 
 	"github.com/go-chi/chi/v5"
@@ -214,14 +214,14 @@ func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Reques
 		if result.ChannelData.AccountNumber != nil {
 			resp.AccountName = &result.ChannelData.DisplayName
 			resp.AccountNumber = result.ChannelData.AccountNumber
-		} else if result.ChannelData.ChannelType == paymentdomain.TypeBankTransfer {
+		} else if result.ChannelData.ChannelType == payment.TypeBankTransfer {
 			resp.AccountName = &result.ChannelData.DisplayName
 			resp.AccountNumber = result.ChannelData.ActionURL
 		}
 
 		if result.ChannelData.QRString != nil {
 			resp.QRString = result.ChannelData.QRString
-		} else if result.ChannelData.ChannelType == paymentdomain.TypeQRCode {
+		} else if result.ChannelData.ChannelType == payment.TypeQRCode {
 			resp.QRString = result.ChannelData.ActionURL
 		}
 	}

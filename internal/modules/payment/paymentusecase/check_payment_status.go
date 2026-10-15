@@ -7,8 +7,7 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 )
@@ -22,7 +21,7 @@ import (
 // without waiting for the next background reconciliation tick.
 type CheckPaymentStatusUsecase struct {
 	orderMgr       OrderPaymentManager
-	repository     paymentrepo.PaymentRepository
+	repository     payment.Repository
 	paymentGateway paymentgateway.Provider
 	processWebhook *ProcessPaymentWebhookUsecase
 	executor       transaction.Executor
@@ -30,7 +29,7 @@ type CheckPaymentStatusUsecase struct {
 
 func NewCheckPaymentStatusUsecase(
 	orderMgr OrderPaymentManager,
-	repository paymentrepo.PaymentRepository,
+	repository payment.Repository,
 	paymentGateway paymentgateway.Provider,
 	processWebhook *ProcessPaymentWebhookUsecase,
 	executor transaction.Executor,
@@ -52,7 +51,7 @@ type CheckPaymentStatusInput struct {
 type CheckPaymentStatusResult struct {
 	// Status is the payment status after the check
 	// (may be unchanged if Midtrans still reports pending).
-	Status paymentdomain.PaymentStatus
+	Status payment.PaymentStatus
 
 	// Synced is true when the status was resolved
 	// from Midtrans during this call
@@ -85,30 +84,30 @@ func (u *CheckPaymentStatusUsecase) Execute(
 		return nil, apperror.NewNotFound("order not found")
 	}
 
-	payment, err := u.repository.GetByOrderID(ctx, u.executor, input.OrderID)
+	pmt, err := u.repository.GetByOrderID(ctx, u.executor, input.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("check payment status: retrieve payment: %w", err)
 	}
-	if payment == nil {
+	if pmt == nil {
 		return nil, apperror.NewNotFound("payment not found for order")
 	}
 	// Only gateway payments with a ProviderOrderID can be synced.
-	if payment.ProviderOrderID == nil {
-		return &CheckPaymentStatusResult{Status: payment.Status, Synced: false}, nil
+	if pmt.ProviderOrderID == nil {
+		return &CheckPaymentStatusResult{Status: pmt.Status, Synced: false}, nil
 	}
 	// Only pending payments need a sync â€” return early for any terminal state.
-	if payment.Status != paymentdomain.PaymentStatusPending {
-		return &CheckPaymentStatusResult{Status: payment.Status, Synced: false}, nil
+	if pmt.Status != payment.PaymentStatusPending {
+		return &CheckPaymentStatusResult{Status: pmt.Status, Synced: false}, nil
 	}
 
-	result, err := u.paymentGateway.GetTransactionStatus(ctx, *payment.ProviderOrderID)
+	result, err := u.paymentGateway.GetTransactionStatus(ctx, *pmt.ProviderOrderID)
 	if err != nil {
 		return nil, fmt.Errorf("check payment status: gateway status check failed: %w", err)
 	}
 
 	if result.Status == paymentgateway.NotificationStatusPending {
 		return &CheckPaymentStatusResult{
-			Status: payment.Status,
+			Status: pmt.Status,
 			Synced: false,
 		}, nil
 	}
@@ -132,15 +131,15 @@ func (u *CheckPaymentStatusUsecase) Execute(
 
 // mapGatewayStatus converts a gateway NotificationStatus to the domain
 // PaymentStatus that the processWebhook usecase would have set.
-func mapGatewayStatus(s paymentgateway.NotificationStatus) paymentdomain.PaymentStatus {
+func mapGatewayStatus(s paymentgateway.NotificationStatus) payment.PaymentStatus {
 	switch s {
 	case paymentgateway.NotificationStatusSettlement:
-		return paymentdomain.PaymentStatusPaid
+		return payment.PaymentStatusPaid
 	case paymentgateway.NotificationStatusExpire:
-		return paymentdomain.PaymentStatusExpired
+		return payment.PaymentStatusExpired
 	case paymentgateway.NotificationStatusCancel, paymentgateway.NotificationStatusDeny:
-		return paymentdomain.PaymentStatusCancelled
+		return payment.PaymentStatusCancelled
 	default:
-		return paymentdomain.PaymentStatusPending
+		return payment.PaymentStatusPending
 	}
 }

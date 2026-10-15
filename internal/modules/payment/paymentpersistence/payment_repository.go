@@ -7,7 +7,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -24,7 +24,7 @@ func (r *PaymentRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*paymentdomain.Payment, error) {
+) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -59,7 +59,7 @@ func (r *PaymentRepository) GetByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) (*paymentdomain.Payment, error) {
+) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -98,7 +98,7 @@ func (r *PaymentRepository) GetByOrderIDForUpdate(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) (*paymentdomain.Payment, error) {
+) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -138,7 +138,7 @@ func (r *PaymentRepository) UpdateStatus(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-	status paymentdomain.PaymentStatus,
+	status payment.PaymentStatus,
 ) error {
 	query := `
 		UPDATE payments
@@ -160,7 +160,7 @@ func (r *PaymentRepository) UpdateStatus(
 func (r *PaymentRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	payment paymentdomain.Payment,
+	payment payment.Payment,
 ) error {
 	now := appclock.Now()
 	payment.UpdatedAt = &now
@@ -217,8 +217,8 @@ func (r *PaymentRepository) Save(
 
 func (r *PaymentRepository) scanPayment(
 	row transaction.Row,
-) (*paymentdomain.Payment, error) {
-	var payment paymentdomain.Payment
+) (*payment.Payment, error) {
+	var payment payment.Payment
 	err := row.Scan(
 		&payment.ID,
 		&payment.OrderID,
@@ -244,9 +244,9 @@ func (r *PaymentRepository) ListByOrderIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderIDs []uuid.UUID,
-) ([]paymentdomain.Payment, error) {
+) ([]payment.Payment, error) {
 	if len(orderIDs) == 0 {
-		return []paymentdomain.Payment{}, nil
+		return []payment.Payment{}, nil
 	}
 
 	query := `
@@ -279,8 +279,8 @@ func (r *PaymentRepository) ListByOrderIDs(
 	}
 	defer rows.Close()
 
-	payments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (paymentdomain.Payment, error) {
-		var p paymentdomain.Payment
+	payments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (payment.Payment, error) {
+		var p payment.Payment
 		err := row.Scan(
 			&p.ID,
 			&p.OrderID,
@@ -308,7 +308,7 @@ func (r *PaymentRepository) ListPendingGateway(
 	ctx context.Context,
 	exec transaction.Executor,
 	since time.Time,
-) ([]paymentdomain.Payment, error) {
+) ([]payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -337,8 +337,8 @@ func (r *PaymentRepository) ListPendingGateway(
 	}
 	defer rows.Close()
 
-	payments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (paymentdomain.Payment, error) {
-		var p paymentdomain.Payment
+	payments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (payment.Payment, error) {
+		var p payment.Payment
 		err := row.Scan(
 			&p.ID,
 			&p.OrderID,
@@ -367,7 +367,7 @@ func (r *PaymentRepository) ListPastDuePending(
 	exec transaction.Executor,
 	now time.Time,
 	limit int,
-) ([]paymentdomain.Payment, error) {
+) ([]payment.Payment, error) {
 	if limit <= 0 {
 		limit = 100
 	}
@@ -400,8 +400,8 @@ func (r *PaymentRepository) ListPastDuePending(
 	}
 	defer rows.Close()
 
-	payments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (paymentdomain.Payment, error) {
-		var p paymentdomain.Payment
+	payments, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (payment.Payment, error) {
+		var p payment.Payment
 		err := row.Scan(
 			&p.ID,
 			&p.OrderID,

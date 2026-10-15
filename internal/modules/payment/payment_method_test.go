@@ -1,4 +1,4 @@
-package paymentdomain
+package payment
 
 import (
 	"testing"

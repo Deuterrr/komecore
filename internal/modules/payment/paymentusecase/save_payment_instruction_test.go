@@ -8,7 +8,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -17,17 +17,17 @@ import (
 // --- mocks ---
 
 type mockSavePaymentMethodRepo struct {
-	method *paymentdomain.PaymentMethod
+	method *payment.PaymentMethod
 	getErr error
 }
 
-func (m *mockSavePaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentMethod) error {
+func (m *mockSavePaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentMethod) error {
 	return nil
 }
-func (m *mockSavePaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*paymentdomain.PaymentMethod, error) {
+func (m *mockSavePaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*payment.PaymentMethod, error) {
 	return nil, nil
 }
-func (m *mockSavePaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*paymentdomain.PaymentMethod, error) {
+func (m *mockSavePaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*payment.PaymentMethod, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -36,18 +36,18 @@ func (m *mockSavePaymentMethodRepo) GetByID(_ context.Context, _ transaction.Exe
 	}
 	return nil, nil
 }
-func (m *mockSavePaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
+func (m *mockSavePaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]payment.PaymentMethod, error) {
 	return nil, nil
 }
 
 type mockSavePaymentInstructionRepo struct {
-	instruction *paymentdomain.PaymentInstruction
+	instruction *payment.PaymentInstruction
 	getErr      error
 	saveErr     error
-	saved       []paymentdomain.PaymentInstruction
+	saved       []payment.PaymentInstruction
 }
 
-func (m *mockSavePaymentInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, methodID uuid.UUID) (*paymentdomain.PaymentInstruction, error) {
+func (m *mockSavePaymentInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, methodID uuid.UUID) (*payment.PaymentInstruction, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -57,7 +57,7 @@ func (m *mockSavePaymentInstructionRepo) GetByPaymentMethodID(_ context.Context,
 	return nil, nil
 }
 
-func (m *mockSavePaymentInstructionRepo) Save(_ context.Context, _ transaction.Executor, instruction paymentdomain.PaymentInstruction) error {
+func (m *mockSavePaymentInstructionRepo) Save(_ context.Context, _ transaction.Executor, instruction payment.PaymentInstruction) error {
 	if m.saveErr != nil {
 		return m.saveErr
 	}
@@ -71,7 +71,7 @@ func TestSavePaymentInstruction_Create(t *testing.T) {
 	ctx := context.Background()
 
 	methodID := uuid.New()
-	method := &paymentdomain.PaymentMethod{
+	method := &payment.PaymentMethod{
 		ID:       methodID,
 		Name:     "BCA Transfer",
 		Code:     "bca_va",
@@ -113,7 +113,7 @@ func TestSavePaymentInstruction_Update(t *testing.T) {
 	ctx := context.Background()
 
 	methodID := uuid.New()
-	method := &paymentdomain.PaymentMethod{
+	method := &payment.PaymentMethod{
 		ID:       methodID,
 		Name:     "BCA Transfer",
 		Code:     "bca_va",
@@ -121,7 +121,7 @@ func TestSavePaymentInstruction_Update(t *testing.T) {
 	}
 
 	instructionID := uuid.New()
-	existingInstruction := &paymentdomain.PaymentInstruction{
+	existingInstruction := &payment.PaymentInstruction{
 		ID:              instructionID,
 		PaymentMethodID: methodID,
 		Content:         "Old Content",
@@ -211,7 +211,7 @@ func TestSavePaymentInstruction_InstructionRepoError(t *testing.T) {
 	ctx := context.Background()
 
 	methodID := uuid.New()
-	method := &paymentdomain.PaymentMethod{
+	method := &payment.PaymentMethod{
 		ID: methodID,
 	}
 
@@ -235,7 +235,7 @@ func TestSavePaymentInstruction_SaveError(t *testing.T) {
 	ctx := context.Background()
 
 	methodID := uuid.New()
-	method := &paymentdomain.PaymentMethod{
+	method := &payment.PaymentMethod{
 		ID: methodID,
 	}
 

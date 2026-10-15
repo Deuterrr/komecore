@@ -7,7 +7,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/shipment"
 
 	"github.com/google/uuid"
 )
@@ -23,13 +23,13 @@ func (m *mockTransactor) WithinTransaction(ctx context.Context, fn func(transact
 }
 
 type mockShipmentRepo struct {
-	shipment        *shipmentdomain.Shipment
-	updatedShipment *shipmentdomain.Shipment
+	shipment        *shipment.Shipment
+	updatedShipment *shipment.Shipment
 	getErr          error
 	updateErr       error
 }
 
-func (m *mockShipmentRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*shipmentdomain.Shipment, error) {
+func (m *mockShipmentRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*shipment.Shipment, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -39,23 +39,23 @@ func (m *mockShipmentRepo) GetByID(_ context.Context, _ transaction.Executor, id
 	return nil, nil
 }
 
-func (m *mockShipmentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipmentdomain.Shipment, error) {
+func (m *mockShipmentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipment.Shipment, error) {
 	return nil, nil
 }
 
-func (m *mockShipmentRepo) ListByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]shipmentdomain.Shipment, error) {
+func (m *mockShipmentRepo) ListByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]shipment.Shipment, error) {
 	return nil, nil
 }
 
-func (m *mockShipmentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shipmentdomain.Shipment, error) {
+func (m *mockShipmentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shipment.Shipment, error) {
 	return nil, nil
 }
 
-func (m *mockShipmentRepo) Create(_ context.Context, _ transaction.Executor, _ shipmentdomain.Shipment) error {
+func (m *mockShipmentRepo) Create(_ context.Context, _ transaction.Executor, _ shipment.Shipment) error {
 	return nil
 }
 
-func (m *mockShipmentRepo) Update(_ context.Context, _ transaction.Executor, shipment shipmentdomain.Shipment) error {
+func (m *mockShipmentRepo) Update(_ context.Context, _ transaction.Executor, shipment shipment.Shipment) error {
 	m.updatedShipment = &shipment
 	return m.updateErr
 }
@@ -77,7 +77,7 @@ func TestUpdateShipmentStatus_ShipmentNotFound(t *testing.T) {
 
 	_, err := u.Execute(context.Background(), UpdateShipmentStatusInput{
 		ShipmentID: uuid.New(),
-		Status:     shipmentdomain.ShipmentStatusPacked,
+		Status:     shipment.ShipmentStatusPacked,
 	})
 
 	if err == nil {
@@ -90,17 +90,17 @@ func TestUpdateShipmentStatus_ShipmentNotFound(t *testing.T) {
 }
 
 func TestUpdateShipmentStatus_InvalidTransition(t *testing.T) {
-	shipment := &shipmentdomain.Shipment{
+	shp := &shipment.Shipment{
 		ID:     uuid.New(),
-		Status: shipmentdomain.ShipmentStatusDelivered,
+		Status: shipment.ShipmentStatusDelivered,
 	}
-	sRepo := &mockShipmentRepo{shipment: shipment}
+	sRepo := &mockShipmentRepo{shipment: shp}
 	oUpdater := &mockOrderDeliveryUpdater{}
 	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oUpdater)
 
 	_, err := u.Execute(context.Background(), UpdateShipmentStatusInput{
-		ShipmentID: shipment.ID,
-		Status:     shipmentdomain.ShipmentStatusCreated,
+		ShipmentID: shp.ID,
+		Status:     shipment.ShipmentStatusCreated,
 	})
 
 	if err == nil {
@@ -113,11 +113,11 @@ func TestUpdateShipmentStatus_InvalidTransition(t *testing.T) {
 }
 
 func TestUpdateShipmentStatus_Success(t *testing.T) {
-	shipment := &shipmentdomain.Shipment{
+	shp := &shipment.Shipment{
 		ID:     uuid.New(),
-		Status: shipmentdomain.ShipmentStatusCreated,
+		Status: shipment.ShipmentStatusCreated,
 	}
-	sRepo := &mockShipmentRepo{shipment: shipment}
+	sRepo := &mockShipmentRepo{shipment: shp}
 	oUpdater := &mockOrderDeliveryUpdater{}
 	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oUpdater)
 
@@ -125,8 +125,8 @@ func TestUpdateShipmentStatus_Success(t *testing.T) {
 	loc := "Central Hub"
 
 	res, err := u.Execute(context.Background(), UpdateShipmentStatusInput{
-		ShipmentID:  shipment.ID,
-		Status:      shipmentdomain.ShipmentStatusPacked,
+		ShipmentID:  shp.ID,
+		Status:      shipment.ShipmentStatusPacked,
 		Description: &desc,
 		Location:    &loc,
 	})
@@ -135,30 +135,30 @@ func TestUpdateShipmentStatus_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if res.Shipment.Status != shipmentdomain.ShipmentStatusPacked {
+	if res.Shipment.Status != shipment.ShipmentStatusPacked {
 		t.Errorf("expected status Packed, got %s", res.Shipment.Status)
 	}
 
-	if sRepo.updatedShipment == nil || sRepo.updatedShipment.Status != shipmentdomain.ShipmentStatusPacked {
+	if sRepo.updatedShipment == nil || sRepo.updatedShipment.Status != shipment.ShipmentStatusPacked {
 		t.Errorf("expected repository to update shipment to Packed")
 	}
 }
 
 func TestUpdateShipmentStatus_DeliveredTransitionsOrder(t *testing.T) {
 	orderID := uuid.New()
-	shipment := &shipmentdomain.Shipment{
+	shp := &shipment.Shipment{
 		ID:      uuid.New(),
 		OrderID: orderID,
-		Status:  shipmentdomain.ShipmentStatusOutForDelivery,
+		Status:  shipment.ShipmentStatusOutForDelivery,
 	}
 
-	sRepo := &mockShipmentRepo{shipment: shipment}
+	sRepo := &mockShipmentRepo{shipment: shp}
 	oUpdater := &mockOrderDeliveryUpdater{}
 	u := NewUpdateShipmentStatusUsecase(&mockExecutor{}, &mockTransactor{}, sRepo, oUpdater)
 
 	_, err := u.Execute(context.Background(), UpdateShipmentStatusInput{
-		ShipmentID: shipment.ID,
-		Status:     shipmentdomain.ShipmentStatusDelivered,
+		ShipmentID: shp.ID,
+		Status:     shipment.ShipmentStatusDelivered,
 	})
 
 	if err != nil {

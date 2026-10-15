@@ -9,33 +9,31 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/payment"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 )
 
 type ExpirePastDuePaymentsUsecase struct {
-	paymentRepo    paymentrepo.PaymentRepository
+	paymentRepo    payment.Repository
 	paymentGateway paymentgateway.Provider
 	executor       transaction.Executor
 	transactor     transaction.Transactor
 	orderMgr       OrderPaymentManager
-	inventoryRepo  inventoryrepo.InventoryRepository
+	inventoryRepo  inventory.Repository
 	logger         applogger.Logger
 	batchSize      int
 	concurrency    int
 }
 
 func NewExpirePastDuePaymentsUsecase(
-	paymentRepo paymentrepo.PaymentRepository,
+	paymentRepo payment.Repository,
 	paymentGateway paymentgateway.Provider,
 	executor transaction.Executor,
 	transactor transaction.Transactor,
 	orderMgr OrderPaymentManager,
-	inventoryRepo inventoryrepo.InventoryRepository,
+	inventoryRepo inventory.Repository,
 	logger applogger.Logger,
 	batchSize int,
 	concurrency int,
@@ -81,7 +79,7 @@ func (u *ExpirePastDuePaymentsUsecase) Execute(ctx context.Context) {
 		applogger.Field{Key: "count", Value: len(payments)},
 	)
 
-	paymentChan := make(chan paymentdomain.Payment, len(payments))
+	paymentChan := make(chan payment.Payment, len(payments))
 	for _, p := range payments {
 		paymentChan <- p
 	}
@@ -126,17 +124,17 @@ func (u *ExpirePastDuePaymentsUsecase) Execute(ctx context.Context) {
 
 func (u *ExpirePastDuePaymentsUsecase) expireSinglePayment(
 	ctx context.Context,
-	payment paymentdomain.Payment,
+	pmt payment.Payment,
 ) error {
 	// Best-effort gateway cancellation
-	if payment.Provider == "gateway" &&
-		payment.ProviderOrderID != nil &&
-		*payment.ProviderOrderID != "" {
+	if pmt.Provider == "gateway" &&
+		pmt.ProviderOrderID != nil &&
+		*pmt.ProviderOrderID != "" {
 
-		if err := u.paymentGateway.CancelTransaction(ctx, *payment.ProviderOrderID); err != nil {
+		if err := u.paymentGateway.CancelTransaction(ctx, *pmt.ProviderOrderID); err != nil {
 			u.logger.Warn(ctx, "failed to cancel transaction at gateway during expiry, proceeding locally",
-				applogger.Field{Key: "payment_id", Value: payment.ID.String()},
-				applogger.Field{Key: "gateway_order_id", Value: *payment.ProviderOrderID},
+				applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+				applogger.Field{Key: "gateway_order_id", Value: *pmt.ProviderOrderID},
 				applogger.Field{Key: "error", Value: err.Error()},
 			)
 		}
@@ -144,13 +142,13 @@ func (u *ExpirePastDuePaymentsUsecase) expireSinglePayment(
 
 	return u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
 		if err := u.paymentRepo.UpdateStatus(ctx, exec,
-			payment.ID,
-			paymentdomain.PaymentStatusExpired,
+			pmt.ID,
+			payment.PaymentStatusExpired,
 		); err != nil {
 			return fmt.Errorf("failed to update payment status to expired: %w", err)
 		}
 
-		orderItems, err := u.orderMgr.ExpireOrderPayment(ctx, exec, payment.OrderID)
+		orderItems, err := u.orderMgr.ExpireOrderPayment(ctx, exec, pmt.OrderID)
 		if err != nil {
 			return fmt.Errorf("failed to expire order payment: %w", err)
 		}
@@ -161,13 +159,13 @@ func (u *ExpirePastDuePaymentsUsecase) expireSinglePayment(
 				item.ShopID,
 				item.Quantity,
 			); err != nil {
-				if errors.Is(err, inventorydomain.ErrInsufficientReserved) ||
+				if errors.Is(err, inventory.ErrInsufficientReserved) ||
 					errors.Is(err, apperror.ErrNotFound) {
 
 					msg := "inventory anomaly during payment expiry: reserved stock insufficient or missing"
 					u.logger.Warn(ctx, msg,
-						applogger.Field{Key: "payment_id", Value: payment.ID.String()},
-						applogger.Field{Key: "order_id", Value: payment.OrderID.String()},
+						applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+						applogger.Field{Key: "order_id", Value: pmt.OrderID.String()},
 						applogger.Field{Key: "product_id", Value: item.ProductID.String()},
 						applogger.Field{Key: "shop_id", Value: item.ShopID.String()},
 						applogger.Field{Key: "requested_qty", Value: item.Quantity},

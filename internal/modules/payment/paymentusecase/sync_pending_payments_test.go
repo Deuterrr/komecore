@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"komecore/internal/infra/paymentgateway"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	applogger "komecore/pkg/logger"
 
 	"github.com/google/uuid"
@@ -51,17 +51,17 @@ func TestSyncPendingPayments_ReconcileOnePaid(t *testing.T) {
 	}
 
 	providerOrderID := orderID.String()
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:              paymentID,
 		OrderID:         orderID,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID,
 		Amount:          100000,
 		CreatedAt:       time.Now(),
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{paymentID: payment}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{paymentID: pmt}}
 	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		result: &paymentgateway.NotificationResult{
@@ -79,8 +79,8 @@ func TestSyncPendingPayments_ReconcileOnePaid(t *testing.T) {
 
 	usecase.Execute(ctx)
 
-	if payment.Status != paymentdomain.PaymentStatusPaid {
-		t.Errorf("expected payment status to be updated to Paid, got %v", payment.Status)
+	if pmt.Status != payment.PaymentStatusPaid {
+		t.Errorf("expected payment status to be updated to Paid, got %v", pmt.Status)
 	}
 
 	if order.Status != "confirmed" {
@@ -100,17 +100,17 @@ func TestSyncPendingPayments_SkipStillPending(t *testing.T) {
 	}
 
 	providerOrderID := orderID.String()
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:              paymentID,
 		OrderID:         orderID,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID,
 		Amount:          100000,
 		CreatedAt:       time.Now(),
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{paymentID: payment}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{paymentID: pmt}}
 	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
 	gateway := &mockPaymentGateway{
 		result: &paymentgateway.NotificationResult{
@@ -126,8 +126,8 @@ func TestSyncPendingPayments_SkipStillPending(t *testing.T) {
 
 	usecase.Execute(ctx)
 
-	if payment.Status != paymentdomain.PaymentStatusPending {
-		t.Errorf("expected payment status to remain Pending, got %v", payment.Status)
+	if pmt.Status != payment.PaymentStatusPending {
+		t.Errorf("expected payment status to remain Pending, got %v", pmt.Status)
 	}
 }
 
@@ -174,26 +174,26 @@ func TestSyncPendingPayments_GatewayErrorDoesNotBlockOtherPayments(t *testing.T)
 	providerOrderID1 := orderID1.String()
 	providerOrderID2 := orderID2.String()
 
-	payment1 := &paymentdomain.Payment{
+	payment1 := &payment.Payment{
 		ID:              paymentID1,
 		OrderID:         orderID1,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID1,
 		Amount:          100000,
 		CreatedAt:       time.Now(),
 	}
-	payment2 := &paymentdomain.Payment{
+	payment2 := &payment.Payment{
 		ID:              paymentID2,
 		OrderID:         orderID2,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID2,
 		Amount:          200000,
 		CreatedAt:       time.Now(),
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{
 		paymentID1: payment1,
 		paymentID2: payment2,
 	}}
@@ -224,12 +224,12 @@ func TestSyncPendingPayments_GatewayErrorDoesNotBlockOtherPayments(t *testing.T)
 	usecase.Execute(ctx)
 
 	// Payment 1 should remain pending (due to error)
-	if payment1.Status != paymentdomain.PaymentStatusPending {
+	if payment1.Status != payment.PaymentStatusPending {
 		t.Errorf("expected payment1 status to remain Pending on error, got %v", payment1.Status)
 	}
 
 	// Payment 2 should be processed and paid
-	if payment2.Status != paymentdomain.PaymentStatusPaid {
+	if payment2.Status != payment.PaymentStatusPaid {
 		t.Errorf("expected payment2 status to be Paid, got %v", payment2.Status)
 	}
 
@@ -260,10 +260,10 @@ func TestSyncPendingPayments_EnforceLocalExpiry(t *testing.T) {
 
 	providerOrderID := orderID.String()
 	pastTime := time.Now().Add(-1 * time.Hour)
-	payment := &paymentdomain.Payment{
+	pmt := &payment.Payment{
 		ID:              paymentID,
 		OrderID:         orderID,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		Provider:        "gateway",
 		ProviderOrderID: &providerOrderID,
 		Amount:          100000,
@@ -271,7 +271,7 @@ func TestSyncPendingPayments_EnforceLocalExpiry(t *testing.T) {
 		CreatedAt:       time.Now().Add(-2 * time.Hour),
 	}
 
-	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{paymentID: payment}}
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{paymentID: pmt}}
 	oMgr := &mockOrderPaymentManager{
 		orders: map[uuid.UUID]*mockOrder{orderID: order},
 		items: map[uuid.UUID][]OrderItemInfo{
@@ -299,8 +299,8 @@ func TestSyncPendingPayments_EnforceLocalExpiry(t *testing.T) {
 
 	usecase.Execute(ctx)
 
-	if payment.Status != paymentdomain.PaymentStatusExpired {
-		t.Errorf("expected payment status to be updated to Expired, got %v", payment.Status)
+	if pmt.Status != payment.PaymentStatusExpired {
+		t.Errorf("expected payment status to be updated to Expired, got %v", pmt.Status)
 	}
 
 	if order.Status != "expired" {

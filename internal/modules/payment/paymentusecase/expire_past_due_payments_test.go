@@ -7,51 +7,51 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 )
 
 type mockPaymentExpiryRepo struct {
-	pastDuePayments []paymentdomain.Payment
-	updatedStatuses map[uuid.UUID]paymentdomain.PaymentStatus
+	pastDuePayments []payment.Payment
+	updatedStatuses map[uuid.UUID]payment.PaymentStatus
 	listErr         error
 }
 
-func (m *mockPaymentExpiryRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *mockPaymentExpiryRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
 
-func (m *mockPaymentExpiryRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *mockPaymentExpiryRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
 
-func (m *mockPaymentExpiryRepo) GetByOrderIDForUpdate(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *mockPaymentExpiryRepo) GetByOrderIDForUpdate(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
 
-func (m *mockPaymentExpiryRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]paymentdomain.Payment, error) {
+func (m *mockPaymentExpiryRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]payment.Payment, error) {
 	return nil, nil
 }
 
-func (m *mockPaymentExpiryRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status paymentdomain.PaymentStatus) error {
+func (m *mockPaymentExpiryRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status payment.PaymentStatus) error {
 	if m.updatedStatuses == nil {
-		m.updatedStatuses = make(map[uuid.UUID]paymentdomain.PaymentStatus)
+		m.updatedStatuses = make(map[uuid.UUID]payment.PaymentStatus)
 	}
 	m.updatedStatuses[id] = status
 	return nil
 }
 
-func (m *mockPaymentExpiryRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.Payment) error {
+func (m *mockPaymentExpiryRepo) Save(_ context.Context, _ transaction.Executor, _ payment.Payment) error {
 	return nil
 }
 
-func (m *mockPaymentExpiryRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]paymentdomain.Payment, error) {
+func (m *mockPaymentExpiryRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]payment.Payment, error) {
 	return nil, nil
 }
 
-func (m *mockPaymentExpiryRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]paymentdomain.Payment, error) {
+func (m *mockPaymentExpiryRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]payment.Payment, error) {
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
@@ -90,17 +90,17 @@ func TestExpirePastDuePayments_Success(t *testing.T) {
 	gatewayOrderID := "ORDER-123"
 
 	pastTime := time.Now().Add(-10 * time.Minute)
-	pastDuePayment := paymentdomain.Payment{
+	pastDuePayment := payment.Payment{
 		ID:              paymentID,
 		OrderID:         orderID,
 		Provider:        "gateway",
 		ProviderOrderID: &gatewayOrderID,
-		Status:          paymentdomain.PaymentStatusPending,
+		Status:          payment.PaymentStatusPending,
 		ExpiresAt:       &pastTime,
 	}
 
 	paymentRepo := &mockPaymentExpiryRepo{
-		pastDuePayments: []paymentdomain.Payment{pastDuePayment},
+		pastDuePayments: []payment.Payment{pastDuePayment},
 	}
 	order := &mockOrder{
 		ID:     orderID,
@@ -136,7 +136,7 @@ func TestExpirePastDuePayments_Success(t *testing.T) {
 
 	uc.Execute(context.Background())
 
-	if paymentRepo.updatedStatuses[paymentID] != paymentdomain.PaymentStatusExpired {
+	if paymentRepo.updatedStatuses[paymentID] != payment.PaymentStatusExpired {
 		t.Errorf("expected payment status expired, got %s", paymentRepo.updatedStatuses[paymentID])
 	}
 	if order.Status != "expired" {
@@ -180,16 +180,16 @@ func TestExpirePastDuePayments_InventoryAnomalyLogsWarnAndFinalizesState(t *test
 	shopID := uuid.New()
 
 	pastTime := time.Now().Add(-10 * time.Minute)
-	pastDuePayment := paymentdomain.Payment{
+	pastDuePayment := payment.Payment{
 		ID:        paymentID,
 		OrderID:   orderID,
 		Provider:  "manual",
-		Status:    paymentdomain.PaymentStatusPending,
+		Status:    payment.PaymentStatusPending,
 		ExpiresAt: &pastTime,
 	}
 
 	paymentRepo := &mockPaymentExpiryRepo{
-		pastDuePayments: []paymentdomain.Payment{pastDuePayment},
+		pastDuePayments: []payment.Payment{pastDuePayment},
 	}
 	order := &mockOrder{
 		ID:     orderID,
@@ -207,7 +207,7 @@ func TestExpirePastDuePayments_InventoryAnomalyLogsWarnAndFinalizesState(t *test
 		items:  map[uuid.UUID][]OrderItemInfo{orderID: items},
 	}
 	inventoryRepo := &mockInventoryRepo{
-		releaseErr: inventorydomain.ErrInsufficientReserved,
+		releaseErr: inventory.ErrInsufficientReserved,
 	}
 	gw := &mockPaymentGateway{}
 	transactor := &mockTransactor{}
@@ -227,7 +227,7 @@ func TestExpirePastDuePayments_InventoryAnomalyLogsWarnAndFinalizesState(t *test
 
 	uc.Execute(context.Background())
 
-	if paymentRepo.updatedStatuses[paymentID] != paymentdomain.PaymentStatusExpired {
+	if paymentRepo.updatedStatuses[paymentID] != payment.PaymentStatusExpired {
 		t.Errorf("expected payment status expired despite inventory anomaly, got %s", paymentRepo.updatedStatuses[paymentID])
 	}
 	if order.Status != "expired" {

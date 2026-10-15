@@ -5,9 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/uuid"
 	"komecore/internal/apperror"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/shipment"
+
+	"github.com/google/uuid"
 )
 
 func TestUpdateShipment_ShipmentNotFound(t *testing.T) {
@@ -32,19 +33,19 @@ func TestUpdateShipment_Success(t *testing.T) {
 	courier := "jne"
 	service := "REG"
 
-	shipment := &shipmentdomain.Shipment{
+	shp := &shipment.Shipment{
 		ID:                uuid.New(),
-		FulfillmentMethod: shipmentdomain.FulfillmentMethodCourier,
+		FulfillmentMethod: shipment.FulfillmentMethodCourier,
 		Courier:           "placeholder",
 		Service:           "placeholder",
 		Weight:            1000,
 	}
 
-	sRepo := &mockShipmentRepo{shipment: shipment}
+	sRepo := &mockShipmentRepo{shipment: shp}
 	u := NewUpdateShipmentUsecase(&mockExecutor{}, &mockTransactor{}, sRepo)
 
 	res, err := u.Execute(context.Background(), UpdateShipmentInput{
-		ShipmentID:     shipment.ID,
+		ShipmentID:     shp.ID,
 		TrackingNumber: &tracking,
 		Courier:        &courier,
 		Service:        &service,
@@ -73,20 +74,20 @@ func TestUpdateShipment_Success(t *testing.T) {
 
 func TestUpdateShipment_ValidationError(t *testing.T) {
 	emptyCourier := ""
-	shipment := &shipmentdomain.Shipment{
+	shp := &shipment.Shipment{
 		ID:                uuid.New(),
-		FulfillmentMethod: shipmentdomain.FulfillmentMethodCourier,
+		FulfillmentMethod: shipment.FulfillmentMethodCourier,
 		Courier:           "jne",
 		Service:           "REG",
 		Weight:            1000,
 	}
 
-	sRepo := &mockShipmentRepo{shipment: shipment}
+	sRepo := &mockShipmentRepo{shipment: shp}
 	u := NewUpdateShipmentUsecase(&mockExecutor{}, &mockTransactor{}, sRepo)
 
 	// In courier mode, empty courier is invalid
 	_, err := u.Execute(context.Background(), UpdateShipmentInput{
-		ShipmentID: shipment.ID,
+		ShipmentID: shp.ID,
 		Courier:    &emptyCourier,
 	})
 

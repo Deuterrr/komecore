@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/payment"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -23,7 +23,7 @@ func NewPaymentChannelDataRepository() *PaymentChannelDataRepository {
 func (r *PaymentChannelDataRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	data paymentdomain.PaymentChannelData,
+	data payment.PaymentChannelData,
 ) error {
 	metadataJSON := "{}"
 	if len(data.Metadata) > 0 {
@@ -94,7 +94,7 @@ func (r *PaymentChannelDataRepository) GetByPaymentID(
 	ctx context.Context,
 	exec transaction.Executor,
 	paymentID uuid.UUID,
-) (*paymentdomain.PaymentChannelData, error) {
+) (*payment.PaymentChannelData, error) {
 	query := `
 		SELECT
 			id,
@@ -114,7 +114,7 @@ func (r *PaymentChannelDataRepository) GetByPaymentID(
 		LIMIT 1
 	`
 
-	var d paymentdomain.PaymentChannelData
+	var d payment.PaymentChannelData
 	var metadataBytes []byte
 	err := exec.QueryRow(ctx, query, paymentID).Scan(
 		&d.ID,
@@ -145,9 +145,9 @@ func (r *PaymentChannelDataRepository) ListByPaymentIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	paymentIDs []uuid.UUID,
-) (map[uuid.UUID]*paymentdomain.PaymentChannelData, error) {
+) (map[uuid.UUID]*payment.PaymentChannelData, error) {
 	if len(paymentIDs) == 0 {
-		return map[uuid.UUID]*paymentdomain.PaymentChannelData{}, nil
+		return map[uuid.UUID]*payment.PaymentChannelData{}, nil
 	}
 
 	query := `
@@ -179,9 +179,9 @@ func (r *PaymentChannelDataRepository) ListByPaymentIDs(
 	}
 	defer rows.Close()
 
-	result := make(map[uuid.UUID]*paymentdomain.PaymentChannelData)
+	result := make(map[uuid.UUID]*payment.PaymentChannelData)
 	for rows.Next() {
-		var d paymentdomain.PaymentChannelData
+		var d payment.PaymentChannelData
 		var metadataBytes []byte
 		if err := rows.Scan(
 			&d.ID,
@@ -217,7 +217,7 @@ func (r *PaymentChannelDataRepository) ListByPaymentIDs(
 	return result, nil
 }
 
-func populateChannelFallbacks(d *paymentdomain.PaymentChannelData, metadataBytes []byte) {
+func populateChannelFallbacks(d *payment.PaymentChannelData, metadataBytes []byte) {
 	if len(metadataBytes) > 0 {
 		var meta map[string]any
 		if err := json.Unmarshal(metadataBytes, &meta); err == nil {
@@ -231,11 +231,11 @@ func populateChannelFallbacks(d *paymentdomain.PaymentChannelData, metadataBytes
 	// Fallback from legacy action_url if decoupled fields are nil
 	if d.AccountNumber == nil && d.QRString == nil && d.RedirectURL == nil && d.ActionURL != nil {
 		switch d.ChannelType {
-		case paymentdomain.TypeBankTransfer:
+		case payment.TypeBankTransfer:
 			d.AccountNumber = d.ActionURL
-		case paymentdomain.TypeQRCode:
+		case payment.TypeQRCode:
 			d.QRString = d.ActionURL
-		case paymentdomain.TypeEWallet:
+		case payment.TypeEWallet:
 			d.RedirectURL = d.ActionURL
 		}
 	}
