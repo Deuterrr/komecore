@@ -7,14 +7,14 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/courier/courierrepo"
+	"komecore/internal/modules/courier"
 	"komecore/internal/modules/courier/courierusecase"
 
 	"github.com/stretchr/testify/assert"
 )
 
 type mockCourierRepo struct {
-	courierrepo.CourierRepository
+	courier.Repository
 	couriers []string
 	err      error
 	calls    int

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
+	"komecore/internal/modules/product"
 	image "komecore/pkg/imageutil"
 
 	"github.com/google/uuid"
@@ -21,8 +21,8 @@ func (r *ProductImageRepository) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]productdomain.ProductImage, error) {
-	result := make(map[uuid.UUID][]productdomain.ProductImage)
+) (map[uuid.UUID][]product.ProductImage, error) {
+	result := make(map[uuid.UUID][]product.ProductImage)
 	if len(productIDs) == 0 {
 		return result, nil
 	}
@@ -76,21 +76,21 @@ func (r *ProductImageRepository) ListByProductIDs(
 			return nil, fmt.Errorf("scan product image: %w", err)
 		}
 
-		img := productdomain.ProductImage{
+		img := product.ProductImage{
 			ID:        r.ID,
 			ProductID: r.ProductID,
 
-			Variants: map[image.ResolutionType]productdomain.ImageVariant{
-				productdomain.ResolutionThumbnail: {
-					Type: productdomain.ResolutionThumbnail,
+			Variants: map[image.ResolutionType]product.ImageVariant{
+				product.ResolutionThumbnail: {
+					Type: product.ResolutionThumbnail,
 					Key:  r.ThumbKey,
 				},
-				productdomain.ResolutionPreview: {
-					Type: productdomain.ResolutionPreview,
+				product.ResolutionPreview: {
+					Type: product.ResolutionPreview,
 					Key:  r.PreviewKey,
 				},
-				productdomain.ResolutionDetail: {
-					Type: productdomain.ResolutionDetail,
+				product.ResolutionDetail: {
+					Type: product.ResolutionDetail,
 					Key:  r.DetailKey,
 				},
 			},
@@ -98,7 +98,7 @@ func (r *ProductImageRepository) ListByProductIDs(
 			IsPrimary:    r.IsPrimary,
 			DisplayOrder: r.DisplayOrder,
 
-			Metadata:  productdomain.ProductImageMetadata{},
+			Metadata:  product.ProductImageMetadata{},
 			CreatedAt: r.CreatedAt,
 		}
 
@@ -116,7 +116,7 @@ func (r *ProductImageRepository) ListByProductID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
-) ([]productdomain.ProductImage, error) {
+) ([]product.ProductImage, error) {
 	query := `
 		SELECT
 			id,
@@ -168,24 +168,24 @@ func (r *ProductImageRepository) ListByProductID(
 		return nil, fmt.Errorf("iterate product image failed: %w", err)
 	}
 
-	images := make([]productdomain.ProductImage, 0, len(rowsData))
+	images := make([]product.ProductImage, 0, len(rowsData))
 
 	for _, r := range rowsData {
-		img := productdomain.ProductImage{
+		img := product.ProductImage{
 			ID:        r.ID,
 			ProductID: r.ProductID,
 
-			Variants: map[image.ResolutionType]productdomain.ImageVariant{
-				productdomain.ResolutionThumbnail: {
-					Type: productdomain.ResolutionThumbnail,
+			Variants: map[image.ResolutionType]product.ImageVariant{
+				product.ResolutionThumbnail: {
+					Type: product.ResolutionThumbnail,
 					Key:  r.ThumbKey,
 				},
-				productdomain.ResolutionPreview: {
-					Type: productdomain.ResolutionPreview,
+				product.ResolutionPreview: {
+					Type: product.ResolutionPreview,
 					Key:  r.PreviewKey,
 				},
-				productdomain.ResolutionDetail: {
-					Type: productdomain.ResolutionDetail,
+				product.ResolutionDetail: {
+					Type: product.ResolutionDetail,
 					Key:  r.DetailKey,
 				},
 			},
@@ -193,7 +193,7 @@ func (r *ProductImageRepository) ListByProductID(
 			IsPrimary:    r.IsPrimary,
 			DisplayOrder: r.DisplayOrder,
 
-			Metadata:  productdomain.ProductImageMetadata{},
+			Metadata:  product.ProductImageMetadata{},
 			CreatedAt: r.CreatedAt,
 		}
 
@@ -206,7 +206,7 @@ func (r *ProductImageRepository) ListByProductID(
 func (r *ProductImageRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	images []productdomain.ProductImage,
+	images []product.ProductImage,
 ) error {
 	query := `
 		INSERT INTO product_images (
@@ -228,12 +228,12 @@ func (r *ProductImageRepository) Create(
 		_, err := exec.Exec(ctx, query,
 			image.ID,
 			image.ProductID,
-			image.Variants[productdomain.ResolutionThumbnail].Key,
-			image.Variants[productdomain.ResolutionPreview].Key,
-			image.Variants[productdomain.ResolutionDetail].Key,
-			image.Variants[productdomain.ResolutionThumbnail].Key,
-			image.Variants[productdomain.ResolutionPreview].Key,
-			image.Variants[productdomain.ResolutionDetail].Key,
+			image.Variants[product.ResolutionThumbnail].Key,
+			image.Variants[product.ResolutionPreview].Key,
+			image.Variants[product.ResolutionDetail].Key,
+			image.Variants[product.ResolutionThumbnail].Key,
+			image.Variants[product.ResolutionPreview].Key,
+			image.Variants[product.ResolutionDetail].Key,
 			image.IsPrimary,
 			image.DisplayOrder,
 			image.CreatedAt,

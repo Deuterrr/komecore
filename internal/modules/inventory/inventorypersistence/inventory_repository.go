@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
+	"komecore/internal/modules/inventory"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,7 +23,7 @@ func (r *InventoryRepository) GetByProductIDAndShopID(
 	exec transaction.Executor,
 	productID uuid.UUID,
 	shopID uuid.UUID,
-) (*inventorydomain.Inventory, error) {
+) (*inventory.Inventory, error) {
 	query := `
 		SELECT
 			id,
@@ -38,7 +38,7 @@ func (r *InventoryRepository) GetByProductIDAndShopID(
 		LIMIT 1
 	`
 
-	var inventory inventorydomain.Inventory
+	var inventory inventory.Inventory
 	err := exec.QueryRow(ctx, query, productID, shopID).Scan(
 		&inventory.ID,
 		&inventory.ProductID,
@@ -62,7 +62,7 @@ func (r *InventoryRepository) ListByProductID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
-) ([]inventorydomain.Inventory, error) {
+) ([]inventory.Inventory, error) {
 	query := `
 		SELECT
 			id,
@@ -83,9 +83,9 @@ func (r *InventoryRepository) ListByProductID(
 	}
 	defer rows.Close()
 
-	var inventories []inventorydomain.Inventory
+	var inventories []inventory.Inventory
 	for rows.Next() {
-		var inventory inventorydomain.Inventory
+		var inventory inventory.Inventory
 		if err := rows.Scan(
 			&inventory.ID,
 			&inventory.ProductID,
@@ -110,8 +110,8 @@ func (r *InventoryRepository) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]inventorydomain.Inventory, error) {
-	result := make(map[uuid.UUID][]inventorydomain.Inventory)
+) (map[uuid.UUID][]inventory.Inventory, error) {
+	result := make(map[uuid.UUID][]inventory.Inventory)
 	if len(productIDs) == 0 {
 		return result, nil
 	}
@@ -141,9 +141,9 @@ func (r *InventoryRepository) ListByProductIDs(
 	}
 	defer rows.Close()
 
-	var inventories []inventorydomain.Inventory
+	var inventories []inventory.Inventory
 	for rows.Next() {
-		var inventory inventorydomain.Inventory
+		var inventory inventory.Inventory
 		if err := rows.Scan(
 			&inventory.ID,
 			&inventory.ProductID,
@@ -172,7 +172,7 @@ func (r *InventoryRepository) ListByShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
-) ([]inventorydomain.Inventory, error) {
+) ([]inventory.Inventory, error) {
 	query := `
 		SELECT
 			id,
@@ -193,9 +193,9 @@ func (r *InventoryRepository) ListByShopID(
 	}
 	defer rows.Close()
 
-	var inventories []inventorydomain.Inventory
+	var inventories []inventory.Inventory
 	for rows.Next() {
-		var inventory inventorydomain.Inventory
+		var inventory inventory.Inventory
 		if err := rows.Scan(
 			&inventory.ID,
 			&inventory.ProductID,
@@ -219,7 +219,7 @@ func (r *InventoryRepository) ListByShopID(
 func (r *InventoryRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	inventory *inventorydomain.Inventory,
+	inventory *inventory.Inventory,
 ) error {
 	query := `
 		INSERT INTO inventory (
@@ -281,7 +281,7 @@ func (r *InventoryRepository) Reserve(
 	}
 
 	if tag.RowsAffected() == 0 {
-		return inventorydomain.ErrInsufficientStock
+		return inventory.ErrInsufficientStock
 	}
 
 	return nil
@@ -315,7 +315,7 @@ func (r *InventoryRepository) Release(
 	}
 
 	if tag.RowsAffected() == 0 {
-		return inventorydomain.ErrInsufficientReserved
+		return inventory.ErrInsufficientReserved
 	}
 
 	return nil
@@ -351,7 +351,7 @@ func (r *InventoryRepository) Commit(
 	}
 
 	if tag.RowsAffected() == 0 {
-		return inventorydomain.ErrInsufficientReserved
+		return inventory.ErrInsufficientReserved
 	}
 
 	return nil
@@ -393,7 +393,7 @@ func (r *InventoryRepository) Restock(
 func (r *InventoryRepository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
-	inventory *inventorydomain.Inventory,
+	inventory *inventory.Inventory,
 ) error {
 	query := `
 		UPDATE inventory

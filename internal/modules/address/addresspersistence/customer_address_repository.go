@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -22,7 +22,7 @@ func (r *CustomerAddressRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	addressID uuid.UUID,
-) (*addressdomain.CustomerAddress, error) {
+) (*address.CustomerAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -45,7 +45,7 @@ func (r *CustomerAddressRepository) GetByID(
 	`
 
 	var (
-		add           addressdomain.CustomerAddress
+		add           address.CustomerAddress
 		unusedVillage string
 	)
 	err := exec.QueryRow(ctx, query, addressID).Scan(
@@ -79,7 +79,7 @@ func (r *CustomerAddressRepository) GetDefaultByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) (*addressdomain.CustomerAddress, error) {
+) (*address.CustomerAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -107,7 +107,7 @@ func (r *CustomerAddressRepository) GetDefaultByCustomerID(
 	`
 
 	var (
-		add           addressdomain.CustomerAddress
+		add           address.CustomerAddress
 		unusedVillage string
 	)
 	err := exec.QueryRow(ctx, query, customerID).Scan(
@@ -141,7 +141,7 @@ func (r *CustomerAddressRepository) ListByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) ([]addressdomain.CustomerAddress, error) {
+) ([]address.CustomerAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -169,10 +169,10 @@ func (r *CustomerAddressRepository) ListByCustomerID(
 	}
 	defer rows.Close()
 
-	var addresses []addressdomain.CustomerAddress
+	var addresses []address.CustomerAddress
 	for rows.Next() {
 		var (
-			a             addressdomain.CustomerAddress
+			a             address.CustomerAddress
 			unusedVillage string
 		)
 
@@ -259,7 +259,7 @@ func (r *CustomerAddressRepository) UnsetDefaultByCustomerID(
 func (r *CustomerAddressRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.CustomerAddress,
+	address address.CustomerAddress,
 ) error {
 	query := `
 		INSERT INTO customer_addresses (
@@ -375,9 +375,9 @@ func (r *CustomerAddressRepository) ListByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	addressIDs []uuid.UUID,
-) ([]addressdomain.CustomerAddress, error) {
+) ([]address.CustomerAddress, error) {
 	if len(addressIDs) == 0 {
-		return []addressdomain.CustomerAddress{}, nil
+		return []address.CustomerAddress{}, nil
 	}
 
 	query := `
@@ -412,10 +412,10 @@ func (r *CustomerAddressRepository) ListByIDs(
 	}
 	defer rows.Close()
 
-	var addresses []addressdomain.CustomerAddress
+	var addresses []address.CustomerAddress
 	for rows.Next() {
 		var (
-			a             addressdomain.CustomerAddress
+			a             address.CustomerAddress
 			unusedVillage string
 		)
 		err := rows.Scan(

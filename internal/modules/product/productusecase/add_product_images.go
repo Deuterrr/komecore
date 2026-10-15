@@ -8,8 +8,7 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 	appclock "komecore/pkg/clock"
 	image "komecore/pkg/imageutil"
 	slug "komecore/pkg/slug"
@@ -18,16 +17,16 @@ import (
 )
 
 var specs = []image.VariantSpec{
-	{Type: productdomain.ResolutionThumbnail, Width: 150},
-	{Type: productdomain.ResolutionPreview, Width: 600},
-	{Type: productdomain.ResolutionDetail, Width: 1200},
+	{Type: product.ResolutionThumbnail, Width: 150},
+	{Type: product.ResolutionPreview, Width: 600},
+	{Type: product.ResolutionDetail, Width: 1200},
 }
 
 type AddProductImagesUsecase struct {
 	executor       transaction.Executor
 	transactor     transaction.Transactor
-	productRepo    productrepo.ProductRepository
-	productImgRepo productrepo.ProductImageRepository
+	productRepo    product.Repository
+	productImgRepo product.ImageRepository
 	slugGen        slug.Generator
 	resolutionGen  image.VariantCreator
 	fileStore      storage.Provider
@@ -36,8 +35,8 @@ type AddProductImagesUsecase struct {
 func NewAddProductImagesUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	productRepo productrepo.ProductRepository,
-	productImgRepo productrepo.ProductImageRepository,
+	productRepo product.Repository,
+	productImgRepo product.ImageRepository,
 	slugGen slug.Generator,
 	resolutionGen image.VariantCreator,
 	fileStore storage.Provider,
@@ -76,12 +75,12 @@ func (u *AddProductImagesUsecase) Execute(
 	ctx context.Context,
 	input AddProductImageInput,
 ) error {
-	product, err := u.productRepo.GetByID(ctx, u.executor, input.ProductID)
+	prod, err := u.productRepo.GetByID(ctx, u.executor, input.ProductID)
 	if err != nil {
 		return fmt.Errorf("failed to get product: %w", err)
 	}
 
-	if product == nil {
+	if prod == nil {
 		return apperror.NewNotFound("product not found")
 	}
 
@@ -92,7 +91,7 @@ func (u *AddProductImagesUsecase) Execute(
 
 		// Domain-level product image entities
 		// before persistence.
-		productImages []productdomain.ProductImage
+		productImages []product.ProductImage
 
 		// Index mapping between uploaded results
 		// and product images.Used to re-associate
@@ -104,13 +103,13 @@ func (u *AddProductImagesUsecase) Execute(
 	)
 
 	for _, img := range input.Images {
-		productImage := productdomain.ProductImage{
+		productImage := product.ProductImage{
 			ID:           uuid.New(),
-			ProductID:    product.ID,
-			Variants:     make(map[image.ResolutionType]productdomain.ImageVariant),
+			ProductID:    prod.ID,
+			Variants:     make(map[image.ResolutionType]product.ImageVariant),
 			IsPrimary:    img.IsPrimary,
 			DisplayOrder: img.DisplayOrder,
-			Metadata: productdomain.ProductImageMetadata{
+			Metadata: product.ProductImageMetadata{
 				OriginalName: img.OriginalName,
 				MIMEType:     image.MIME(img.MIMEType),
 				SizeBytes:    img.SizeBytes,
@@ -178,7 +177,7 @@ func (u *AddProductImagesUsecase) Execute(
 		m := mappings[i]
 
 		productImages[m.index].Variants[m.variantType] =
-			productdomain.ImageVariant{
+			product.ImageVariant{
 				Type: m.variantType,
 				Key:  resp.Key,
 			}

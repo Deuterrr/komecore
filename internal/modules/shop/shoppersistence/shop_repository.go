@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/shop"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -24,8 +23,8 @@ func NewShopRepository() *ShopRepository {
 func (r *ShopRepository) FindByParams(
 	ctx context.Context,
 	exec transaction.Executor,
-	params shoprepo.FindShopsParams,
-) ([]shopdomain.Shop, int, error) {
+	params shop.FindShopsParams,
+) ([]shop.Shop, int, error) {
 	baseQuery := `
 		FROM shops s
 	`
@@ -116,10 +115,10 @@ func (r *ShopRepository) FindByParams(
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
 	var shopSortKeys = map[pagination.SortKey]string{
-		shoprepo.ShopSortName:   "name",
-		shoprepo.ShopSortActive: "is_active",
-		shoprepo.ShopSortLatest: "created_at",
-		shoprepo.ShopSortModify: "updated_at",
+		shop.ShopSortName:   "name",
+		shop.ShopSortActive: "is_active",
+		shop.ShopSortLatest: "created_at",
+		shop.ShopSortModify: "updated_at",
 	}
 
 	var sortClauses []string
@@ -173,9 +172,9 @@ func (r *ShopRepository) FindByParams(
 	}
 	defer rows.Close()
 
-	var shops []shopdomain.Shop
+	var shops []shop.Shop
 	for rows.Next() {
-		var s shopdomain.Shop
+		var s shop.Shop
 		err := rows.Scan(
 			&s.ID,
 			&s.Name,
@@ -204,7 +203,7 @@ func (r *ShopRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
-) (*shopdomain.Shop, error) {
+) (*shop.Shop, error) {
 	query := `
 		SELECT
 			id,
@@ -220,7 +219,7 @@ func (r *ShopRepository) GetByID(
 		LIMIT 1
 	`
 
-	var s shopdomain.Shop
+	var s shop.Shop
 	err := exec.QueryRow(ctx, query, shopID).Scan(
 		&s.ID,
 		&s.Name,
@@ -246,7 +245,7 @@ func (r *ShopRepository) GetBySlug(
 	ctx context.Context,
 	exec transaction.Executor,
 	slug string,
-) (*shopdomain.Shop, error) {
+) (*shop.Shop, error) {
 	query := `
 		SELECT
 			id,
@@ -262,7 +261,7 @@ func (r *ShopRepository) GetBySlug(
 		LIMIT 1
 	`
 
-	var s shopdomain.Shop
+	var s shop.Shop
 	err := exec.QueryRow(ctx, query, slug).Scan(
 		&s.ID,
 		&s.Name,
@@ -288,9 +287,9 @@ func (r *ShopRepository) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	ids []uuid.UUID,
-) ([]shopdomain.Shop, error) {
+) ([]shop.Shop, error) {
 	if len(ids) == 0 {
-		return []shopdomain.Shop{}, nil
+		return []shop.Shop{}, nil
 	}
 
 	query := `
@@ -318,9 +317,9 @@ func (r *ShopRepository) FindByIDs(
 	}
 	defer rows.Close()
 
-	var results []shopdomain.Shop
+	var results []shop.Shop
 	for rows.Next() {
-		var s shopdomain.Shop
+		var s shop.Shop
 		err := rows.Scan(
 			&s.ID,
 			&s.Name,
@@ -348,11 +347,11 @@ func (r *ShopRepository) FindByIDs(
 func (r *ShopRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	shop shopdomain.Shop,
+	shp shop.Shop,
 ) error {
-	approvalStatus := shop.ApprovalStatus
+	approvalStatus := shp.ApprovalStatus
 	if approvalStatus == "" {
-		approvalStatus = shopdomain.ShopApprovalStatusPending
+		approvalStatus = shop.ShopApprovalStatusPending
 	}
 
 	query := `
@@ -378,13 +377,13 @@ func (r *ShopRepository) Save(
 	`
 
 	_, err := exec.Exec(ctx, query,
-		shop.ID,
-		shop.Slug,
-		shop.Name,
-		shop.Description,
-		shop.IsActive,
+		shp.ID,
+		shp.Slug,
+		shp.Name,
+		shp.Description,
+		shp.IsActive,
 		approvalStatus,
-		shop.CreatedAt,
+		shp.CreatedAt,
 	)
 
 	if err != nil {

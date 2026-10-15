@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"komecore/internal/apperror"
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 	"komecore/internal/modules/address/addressusecase"
 
 	"github.com/google/uuid"
@@ -21,7 +21,7 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 
 	t.Run("success deletes non-default address", func(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
-		repo.addresses[addressID] = addressdomain.CustomerAddress{
+		repo.addresses[addressID] = address.CustomerAddress{
 			ID:         addressID,
 			CustomerID: customerID,
 			IsDefault:  false,
@@ -51,7 +51,7 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 
 	t.Run("returns conflict when trying to delete default address", func(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
-		repo.addresses[addressID] = addressdomain.CustomerAddress{
+		repo.addresses[addressID] = address.CustomerAddress{
 			ID:         addressID,
 			CustomerID: customerID,
 			IsDefault:  true,
@@ -81,7 +81,7 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 
 	t.Run("returns error when Delete repository call fails", func(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
-		repo.addresses[addressID] = addressdomain.CustomerAddress{
+		repo.addresses[addressID] = address.CustomerAddress{
 			ID:         addressID,
 			CustomerID: customerID,
 			IsDefault:  false,

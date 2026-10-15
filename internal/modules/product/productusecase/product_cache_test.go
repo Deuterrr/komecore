@@ -7,8 +7,7 @@ import (
 
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 	"komecore/internal/modules/product/productusecase"
 
 	"github.com/google/uuid"
@@ -17,20 +16,20 @@ import (
 )
 
 type mockCacheProductRepo struct {
-	productrepo.ProductRepository
-	product         *productdomain.Product
+	product.Repository
+	product         *product.Product
 	getBySlugCalls  int
 	getByIDCalls    int
 	deleteCalls     int
 	lastDeletedUUID uuid.UUID
 }
 
-func (m *mockCacheProductRepo) GetBySlug(ctx context.Context, exec transaction.Executor, slug string) (*productdomain.Product, error) {
+func (m *mockCacheProductRepo) GetBySlug(ctx context.Context, exec transaction.Executor, slug string) (*product.Product, error) {
 	m.getBySlugCalls++
 	return m.product, nil
 }
 
-func (m *mockCacheProductRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*productdomain.Product, error) {
+func (m *mockCacheProductRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*product.Product, error) {
 	m.getByIDCalls++
 	return m.product, nil
 }
@@ -46,7 +45,7 @@ func TestProductCacheAside_GetProduct(t *testing.T) {
 	c := cache.NewMemoryCache()
 
 	testProdID := uuid.New()
-	prod := &productdomain.Product{
+	prod := &product.Product{
 		ID:    testProdID,
 		Name:  "Mechanical Keyboard",
 		Slug:  "mechanical-keyboard",
@@ -92,7 +91,7 @@ func TestProductCacheInvalidation_DeleteProduct(t *testing.T) {
 	_ = c.Set(ctx, "cache:user:profile:1", "user-data", 10*time.Minute)
 
 	testID := uuid.New()
-	prod := &productdomain.Product{ID: testID, Name: "Test", Slug: "test-item"}
+	prod := &product.Product{ID: testID, Name: "Test", Slug: "test-item"}
 
 	repo := &mockCacheProductRepo{
 		product: prod,

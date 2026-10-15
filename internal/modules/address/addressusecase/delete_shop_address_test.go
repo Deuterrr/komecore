@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 
 	"github.com/google/uuid"
 )
 
 type mockDeleteShopAddressRepository struct {
-	address     *addressdomain.ShopAddress
+	address     *address.ShopAddress
 	getErr      error
 	deleteCalls int
 	deleteErr   error
@@ -22,7 +22,7 @@ func (m *mockDeleteShopAddressRepository) FindByShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
-) ([]addressdomain.ShopAddress, error) {
+) ([]address.ShopAddress, error) {
 	return nil, nil
 }
 
@@ -30,7 +30,7 @@ func (m *mockDeleteShopAddressRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*addressdomain.ShopAddress, error) {
+) (*address.ShopAddress, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -48,7 +48,7 @@ func (m *mockDeleteShopAddressRepository) UnsetActiveByShopID(
 func (m *mockDeleteShopAddressRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.ShopAddress,
+	address address.ShopAddress,
 ) error {
 	return nil
 }
@@ -56,7 +56,7 @@ func (m *mockDeleteShopAddressRepository) Create(
 func (m *mockDeleteShopAddressRepository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.ShopAddress,
+	address address.ShopAddress,
 ) error {
 	return nil
 }
@@ -75,7 +75,7 @@ func TestDeleteShopAddress_Success(t *testing.T) {
 	addressID := uuid.New()
 	shopID := uuid.New()
 
-	existing := &addressdomain.ShopAddress{
+	existing := &address.ShopAddress{
 		ID:       addressID,
 		ShopID:   shopID,
 		IsActive: false,
@@ -103,7 +103,7 @@ func TestDeleteShopAddress_ConflictWhenActive(t *testing.T) {
 	addressID := uuid.New()
 	shopID := uuid.New()
 
-	existing := &addressdomain.ShopAddress{
+	existing := &address.ShopAddress{
 		ID:       addressID,
 		ShopID:   shopID,
 		IsActive: true,
@@ -146,7 +146,7 @@ func TestDeleteShopAddress_ShopIDMismatch(t *testing.T) {
 	addressID := uuid.New()
 	shopID := uuid.New()
 
-	existing := &addressdomain.ShopAddress{
+	existing := &address.ShopAddress{
 		ID:       addressID,
 		ShopID:   shopID,
 		IsActive: false,

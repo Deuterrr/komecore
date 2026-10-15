@@ -8,8 +8,7 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 	appclock "komecore/pkg/clock"
 	"komecore/pkg/slug"
 
@@ -18,17 +17,17 @@ import (
 
 type SaveProductUsecase struct {
 	transactor  transaction.Transactor
-	productRepo productrepo.ProductRepository
+	productRepo product.Repository
 	slugGen     slug.Generator
-	perfRepo    productrepo.ProductPerformanceRepository
+	perfRepo    product.PerformanceRepository
 	cache       cache.Cache
 }
 
 func NewSaveProductUsecase(
 	transactor transaction.Transactor,
-	productRepo productrepo.ProductRepository,
+	productRepo product.Repository,
 	slugGen slug.Generator,
-	perfRepo productrepo.ProductPerformanceRepository,
+	perfRepo product.PerformanceRepository,
 ) *SaveProductUsecase {
 	return &SaveProductUsecase{
 		transactor:  transactor,
@@ -68,12 +67,12 @@ func (u *SaveProductUsecase) Execute(
 		productID = *input.ID
 	}
 
-	prodStatus := productdomain.ProductStatus(input.Status)
+	prodStatus := product.ProductStatus(input.Status)
 	if prodStatus == "" {
-		prodStatus = productdomain.ProductStatusActive
+		prodStatus = product.ProductStatusActive
 	}
 
-	product := &productdomain.Product{
+	prod := &product.Product{
 		ID:          productID,
 		SKU:         input.SKU,
 		Name:        input.Name,
@@ -84,16 +83,16 @@ func (u *SaveProductUsecase) Execute(
 		Weight:      input.Weight,
 		CreatedAt:   now,
 	}
-	if err := product.Validate(); err != nil {
-		if errors.Is(err, productdomain.ErrInvalidProductName) ||
-			errors.Is(err, productdomain.ErrInvalidProductPrice) {
+	if err := prod.Validate(); err != nil {
+		if errors.Is(err, product.ErrInvalidProductName) ||
+			errors.Is(err, product.ErrInvalidProductPrice) {
 			return apperror.NewInvalidInput(err.Error())
 		}
 
 		return err
 	}
 
-	perf := productdomain.ProductPerformance{
+	perf := product.ProductPerformance{
 		ProductID:            productID,
 		CostPrice:            input.CostPrice,
 		SupplierLeadTimeDays: input.SupplierLeadTimeDays,
@@ -101,14 +100,14 @@ func (u *SaveProductUsecase) Execute(
 
 	if err := u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
 		if err := u.productRepo.Save(ctx, exec,
-			product,
+			prod,
 		); err != nil {
 			return fmt.Errorf("failed to save product: %w", err)
 		}
 
 		if err := u.perfRepo.UpsertPerformance(ctx, exec,
 			perf,
-			product.Price,
+			prod.Price,
 		); err != nil {
 			return fmt.Errorf("failed to save product performance: %w", err)
 		}

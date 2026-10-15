@@ -7,18 +7,17 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
+	"komecore/internal/modules/inventory"
 
 	"github.com/google/uuid"
 )
 
 type mockUpdateInventoryRepository struct {
-	inventoryrepo.InventoryRepository
-	inventory *inventorydomain.Inventory
+	inventory.Repository
+	inventory *inventory.Inventory
 	getErr    error
 	updateErr error
-	updated   *inventorydomain.Inventory
+	updated   *inventory.Inventory
 }
 
 func (m *mockUpdateInventoryRepository) GetByProductIDAndShopID(
@@ -26,7 +25,7 @@ func (m *mockUpdateInventoryRepository) GetByProductIDAndShopID(
 	exec transaction.Executor,
 	productID uuid.UUID,
 	shopID uuid.UUID,
-) (*inventorydomain.Inventory, error) {
+) (*inventory.Inventory, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -36,7 +35,7 @@ func (m *mockUpdateInventoryRepository) GetByProductIDAndShopID(
 func (m *mockUpdateInventoryRepository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
-	inventory *inventorydomain.Inventory,
+	inventory *inventory.Inventory,
 ) error {
 	m.updated = inventory
 	return m.updateErr
@@ -52,7 +51,7 @@ func TestUpdateInventory_Success(t *testing.T) {
 	shopID := uuid.New()
 	invID := uuid.New()
 
-	existing := &inventorydomain.Inventory{
+	existing := &inventory.Inventory{
 		ID:            invID,
 		ProductID:     productID,
 		ShopID:        shopID,
@@ -122,7 +121,7 @@ func TestUpdateInventory_InvalidStock(t *testing.T) {
 	shopID := uuid.New()
 	invID := uuid.New()
 
-	existing := &inventorydomain.Inventory{
+	existing := &inventory.Inventory{
 		ID:            invID,
 		ProductID:     productID,
 		ShopID:        shopID,
@@ -161,7 +160,7 @@ func TestUpdateInventory_RepoError(t *testing.T) {
 	shopID := uuid.New()
 	invID := uuid.New()
 
-	existing := &inventorydomain.Inventory{
+	existing := &inventory.Inventory{
 		ID:            invID,
 		ProductID:     productID,
 		ShopID:        shopID,

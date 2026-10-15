@@ -7,16 +7,15 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
+	"komecore/internal/modules/inventory"
 
 	"github.com/google/uuid"
 )
 
 type mockCreateInventoryRepository struct {
-	inventoryrepo.InventoryRepository
-	existing  *inventorydomain.Inventory
-	created   *inventorydomain.Inventory
+	inventory.Repository
+	existing  *inventory.Inventory
+	created   *inventory.Inventory
 	getErr    error
 	createErr error
 }
@@ -25,7 +24,7 @@ func (m *mockCreateInventoryRepository) GetByProductIDAndShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID, shopID uuid.UUID,
-) (*inventorydomain.Inventory, error) {
+) (*inventory.Inventory, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -35,7 +34,7 @@ func (m *mockCreateInventoryRepository) GetByProductIDAndShopID(
 func (m *mockCreateInventoryRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	inv *inventorydomain.Inventory,
+	inv *inventory.Inventory,
 ) error {
 	m.created = inv
 	return m.createErr
@@ -146,7 +145,7 @@ func TestCreateInventory_AlreadyExists(t *testing.T) {
 	shopID := uuid.New()
 
 	repo := &mockCreateInventoryRepository{
-		existing: &inventorydomain.Inventory{
+		existing: &inventory.Inventory{
 			ID:        uuid.New(),
 			ProductID: productID,
 			ShopID:    shopID,

@@ -6,17 +6,16 @@ import (
 
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/shop"
 	slug "komecore/pkg/slug"
 
 	"github.com/google/uuid"
 )
 
 type mockSaveShopRepository struct {
-	shoprepo.ShopRepository
-	savedShop *shopdomain.Shop
-	shopByID  *shopdomain.Shop
+	shop.Repository
+	savedShop *shop.Shop
+	shopByID  *shop.Shop
 	getErr    error
 	saveErr   error
 }
@@ -25,7 +24,7 @@ func (m *mockSaveShopRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*shopdomain.Shop, error) {
+) (*shop.Shop, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -35,7 +34,7 @@ func (m *mockSaveShopRepository) GetByID(
 func (m *mockSaveShopRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	shop shopdomain.Shop,
+	shop shop.Shop,
 ) error {
 	if m.saveErr != nil {
 		return m.saveErr
@@ -59,7 +58,7 @@ func TestSaveShop_AdminCreate(t *testing.T) {
 	uc := NewShopService(repo, nil, nil, slugGen, exec)
 
 	isActive := true
-	approvalStatus := string(shopdomain.ShopApprovalStatusApproved)
+	approvalStatus := string(shop.ShopApprovalStatusApproved)
 	desc := "Admin Shop"
 
 	err := uc.SaveShop(ctx, actor, SaveShopInput{
@@ -81,7 +80,7 @@ func TestSaveShop_AdminCreate(t *testing.T) {
 		t.Errorf("expected IsActive to be true, got %v", repo.savedShop.IsActive)
 	}
 
-	if repo.savedShop.ApprovalStatus != shopdomain.ShopApprovalStatusApproved {
+	if repo.savedShop.ApprovalStatus != shop.ShopApprovalStatusApproved {
 		t.Errorf("expected ApprovalStatus to be approved, got %v", repo.savedShop.ApprovalStatus)
 	}
 }
@@ -101,7 +100,7 @@ func TestSaveShop_RegularStaffCreate(t *testing.T) {
 	uc := NewShopService(repo, nil, nil, slugGen, exec)
 
 	isActive := true
-	approvalStatus := string(shopdomain.ShopApprovalStatusApproved)
+	approvalStatus := string(shop.ShopApprovalStatusApproved)
 	desc := "Staff Shop"
 
 	// Regular staff attempts to pass active=true and approved
@@ -125,7 +124,7 @@ func TestSaveShop_RegularStaffCreate(t *testing.T) {
 		t.Errorf("expected IsActive to be false for regular staff, got %v", repo.savedShop.IsActive)
 	}
 
-	if repo.savedShop.ApprovalStatus != shopdomain.ShopApprovalStatusPending {
+	if repo.savedShop.ApprovalStatus != shop.ShopApprovalStatusPending {
 		t.Errorf("expected ApprovalStatus to be pending for regular staff, got %v", repo.savedShop.ApprovalStatus)
 	}
 }
@@ -133,12 +132,12 @@ func TestSaveShop_RegularStaffCreate(t *testing.T) {
 func TestSaveShop_RegularStaffUpdatePreservesStatus(t *testing.T) {
 	ctx := context.Background()
 	shopID := uuid.New()
-	existingShop := &shopdomain.Shop{
+	existingShop := &shop.Shop{
 		ID:             shopID,
 		Name:           "Old Name",
 		Slug:           "old-name",
 		IsActive:       true,
-		ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+		ApprovalStatus: shop.ShopApprovalStatusApproved,
 	}
 
 	repo := &mockSaveShopRepository{
@@ -174,7 +173,7 @@ func TestSaveShop_RegularStaffUpdatePreservesStatus(t *testing.T) {
 		t.Errorf("expected existing IsActive (true) to be preserved, got %v", repo.savedShop.IsActive)
 	}
 
-	if repo.savedShop.ApprovalStatus != shopdomain.ShopApprovalStatusApproved {
+	if repo.savedShop.ApprovalStatus != shop.ShopApprovalStatusApproved {
 		t.Errorf("expected existing ApprovalStatus (approved) to be preserved, got %v", repo.savedShop.ApprovalStatus)
 	}
 }

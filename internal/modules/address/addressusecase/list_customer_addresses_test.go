@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 	"komecore/internal/modules/address/addressusecase"
 
 	"github.com/google/uuid"
@@ -20,19 +20,19 @@ func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
 
 	t.Run("success returns addresses for specified customer only", func(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
-		addr1 := addressdomain.CustomerAddress{
+		addr1 := address.CustomerAddress{
 			ID:           uuid.New(),
 			CustomerID:   customerID,
 			ReceiverName: "Customer 1 - Home",
 			IsDefault:    true,
 		}
-		addr2 := addressdomain.CustomerAddress{
+		addr2 := address.CustomerAddress{
 			ID:           uuid.New(),
 			CustomerID:   customerID,
 			ReceiverName: "Customer 1 - Office",
 			IsDefault:    false,
 		}
-		addrOther := addressdomain.CustomerAddress{
+		addrOther := address.CustomerAddress{
 			ID:           uuid.New(),
 			CustomerID:   otherCustomerID,
 			ReceiverName: "Other Customer Address",

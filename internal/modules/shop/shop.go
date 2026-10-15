@@ -1,4 +1,4 @@
-package shopdomain
+package shop
 
 import (
 	"time"

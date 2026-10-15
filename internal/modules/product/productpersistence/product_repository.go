@@ -7,8 +7,7 @@ import (
 	"strings"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -24,8 +23,8 @@ func NewProductRepository() *ProductRepository {
 func (r *ProductRepository) FindProducts(
 	ctx context.Context,
 	exec transaction.Executor,
-	params productrepo.FindProductParams,
-) ([]productdomain.Product, int, error) {
+	params product.FindProductParams,
+) ([]product.Product, int, error) {
 	baseQuery := `
 		FROM products p
 	`
@@ -140,18 +139,18 @@ func (r *ProductRepository) FindProducts(
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
 	var productSortKeys = map[pagination.SortKey]string{
-		productrepo.ProductSortLatest:   "created_at",
-		productrepo.ProductSortName:     "name",
-		productrepo.ProductSortPrice:    "base_price",
-		productrepo.ProductSortWeight:   "weight",
-		productrepo.ProductSortStatus:   "status",
-		productrepo.ProductSortModified: "updated_at",
-		productrepo.ProductSortArchived: "archived_at",
+		product.ProductSortLatest:   "created_at",
+		product.ProductSortName:     "name",
+		product.ProductSortPrice:    "base_price",
+		product.ProductSortWeight:   "weight",
+		product.ProductSortStatus:   "status",
+		product.ProductSortModified: "updated_at",
+		product.ProductSortArchived: "archived_at",
 	}
 
 	var sortClauses []string
 	for _, sort := range params.Sorts {
-		if sort.By == productrepo.ProductSortRelevance && searchArgPos > 0 {
+		if sort.By == product.ProductSortRelevance && searchArgPos > 0 {
 			dir := "DESC"
 			if sort.Direction == pagination.SortAsc {
 				dir = "ASC"
@@ -222,9 +221,9 @@ func (r *ProductRepository) FindProducts(
 	}
 	defer rows.Close()
 
-	var results []productdomain.Product
+	var results []product.Product
 	for rows.Next() {
-		var item productdomain.Product
+		var item product.Product
 		err := rows.Scan(
 			&item.ID,
 			&item.SKU,
@@ -260,8 +259,8 @@ func (r *ProductRepository) FindProducts(
 func (r *ProductRepository) FindProductsWithInventory(
 	ctx context.Context,
 	exec transaction.Executor,
-	params productrepo.FindProductParams,
-) ([]productdomain.ProductWithInventory, int, error) {
+	params product.FindProductParams,
+) ([]product.ProductWithInventory, int, error) {
 	baseQuery := `
 		FROM products p
 		LEFT JOIN inventory i ON p.id = i.product_id
@@ -379,19 +378,19 @@ func (r *ProductRepository) FindProductsWithInventory(
 	// Build sorting expressions
 	// Convert requested sort keys into SQL ORDER BY clauses
 	var productSortKeys = map[pagination.SortKey]string{
-		productrepo.ProductSortLatest:   "p.created_at",
-		productrepo.ProductSortName:     "p.name",
-		productrepo.ProductSortPrice:    "p.base_price",
-		productrepo.ProductSortWeight:   "p.weight",
-		productrepo.ProductSortStatus:   "p.status",
-		productrepo.ProductSortModified: "p.updated_at",
-		productrepo.ProductSortArchived: "p.archived_at",
-		productrepo.ProductSortStock:    "COALESCE(SUM(i.stock), 0)",
+		product.ProductSortLatest:   "p.created_at",
+		product.ProductSortName:     "p.name",
+		product.ProductSortPrice:    "p.base_price",
+		product.ProductSortWeight:   "p.weight",
+		product.ProductSortStatus:   "p.status",
+		product.ProductSortModified: "p.updated_at",
+		product.ProductSortArchived: "p.archived_at",
+		product.ProductSortStock:    "COALESCE(SUM(i.stock), 0)",
 	}
 
 	var sortClauses []string
 	for _, sort := range params.Sorts {
-		if sort.By == productrepo.ProductSortRelevance && searchArgPos > 0 {
+		if sort.By == product.ProductSortRelevance && searchArgPos > 0 {
 			dir := "DESC"
 			if sort.Direction == pagination.SortAsc {
 				dir = "ASC"
@@ -462,9 +461,9 @@ func (r *ProductRepository) FindProductsWithInventory(
 	}
 	defer rows.Close()
 
-	var results []productdomain.ProductWithInventory
+	var results []product.ProductWithInventory
 	for rows.Next() {
-		var item productdomain.ProductWithInventory
+		var item product.ProductWithInventory
 		err := rows.Scan(
 			&item.Product.ID,
 			&item.Product.SKU,
@@ -503,7 +502,7 @@ func (r *ProductRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*productdomain.Product, error) {
+) (*product.Product, error) {
 	query := `
 		SELECT
 			p.id,
@@ -524,7 +523,7 @@ func (r *ProductRepository) GetByID(
 		LIMIT 1
 	`
 
-	var result productdomain.Product
+	var result product.Product
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&result.ID,
 		&result.SKU,
@@ -555,7 +554,7 @@ func (r *ProductRepository) GetBySlug(
 	ctx context.Context,
 	exec transaction.Executor,
 	slug string,
-) (*productdomain.Product, error) {
+) (*product.Product, error) {
 	query := `
 		SELECT
 			p.id,
@@ -576,7 +575,7 @@ func (r *ProductRepository) GetBySlug(
 		LIMIT 1
 	`
 
-	var result productdomain.Product
+	var result product.Product
 	err := exec.QueryRow(ctx, query, slug).Scan(
 		&result.ID,
 		&result.SKU,
@@ -607,9 +606,9 @@ func (r *ProductRepository) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	ids []uuid.UUID,
-) ([]productdomain.Product, error) {
+) ([]product.Product, error) {
 	if len(ids) == 0 {
-		return []productdomain.Product{}, nil
+		return []product.Product{}, nil
 	}
 
 	query := `
@@ -642,9 +641,9 @@ func (r *ProductRepository) FindByIDs(
 	}
 	defer rows.Close()
 
-	var results []productdomain.Product
+	var results []product.Product
 	for rows.Next() {
-		var item productdomain.Product
+		var item product.Product
 
 		err := rows.Scan(
 			&item.ID,
@@ -679,7 +678,7 @@ func (r *ProductRepository) FindByIDs(
 func (r *ProductRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	product *productdomain.Product,
+	product *product.Product,
 ) error {
 	query := `
 		INSERT INTO products (

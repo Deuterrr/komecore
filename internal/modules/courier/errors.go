@@ -1,4 +1,4 @@
-package courierdomain
+package courier
 
 import "errors"
 

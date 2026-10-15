@@ -7,15 +7,14 @@ import (
 
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/shop"
 
 	"github.com/google/uuid"
 )
 
 type mockDeleteShopRepository struct {
-	shoprepo.ShopRepository
-	shop        *shopdomain.Shop
+	shop.Repository
+	shop        *shop.Shop
 	getErr      error
 	deleteCalls int
 	deleteErr   error
@@ -25,7 +24,7 @@ func (m *mockDeleteShopRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*shopdomain.Shop, error) {
+) (*shop.Shop, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -48,7 +47,7 @@ type mockExecutor struct {
 func TestDeleteShop_Success(t *testing.T) {
 	ctx := context.Background()
 	shopID := uuid.New()
-	shop := &shopdomain.Shop{
+	shop := &shop.Shop{
 		ID:   shopID,
 		Name: "Test Shop",
 		Slug: "test-shop",
@@ -176,7 +175,7 @@ func TestDeleteShop_RepoErrorOnGet(t *testing.T) {
 func TestDeleteShop_RepoErrorOnDelete(t *testing.T) {
 	ctx := context.Background()
 	shopID := uuid.New()
-	shop := &shopdomain.Shop{
+	shop := &shop.Shop{
 		ID:   shopID,
 		Name: "Test Shop",
 		Slug: "test-shop",

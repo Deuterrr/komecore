@@ -1,4 +1,4 @@
-package inventorydomain
+package inventory
 
 import (
 	"time"

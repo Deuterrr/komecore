@@ -6,8 +6,7 @@ import (
 	"testing"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 
 	"github.com/google/uuid"
 )
@@ -17,8 +16,8 @@ import (
 // ===========================================================================
 
 type mockDeleteProductRepository struct {
-	productrepo.ProductRepository
-	product     *productdomain.Product
+	product.Repository
+	product     *product.Product
 	getErr      error
 	deleteErr   error
 	deleteCalls int
@@ -28,7 +27,7 @@ func (m *mockDeleteProductRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*productdomain.Product, error) {
+) (*product.Product, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -51,7 +50,7 @@ func (m *mockDeleteProductRepository) Delete(
 func TestDeleteProduct_Success(t *testing.T) {
 	ctx := context.Background()
 	productID := uuid.New()
-	product := &productdomain.Product{
+	product := &product.Product{
 		ID:   productID,
 		SKU:  "PROD-001",
 		Name: "Test Product",
@@ -132,7 +131,7 @@ func TestDeleteProduct_RepoErrorOnGet(t *testing.T) {
 func TestDeleteProduct_RepoErrorOnDelete(t *testing.T) {
 	ctx := context.Background()
 	productID := uuid.New()
-	product := &productdomain.Product{
+	product := &product.Product{
 		ID:   productID,
 		SKU:  "PROD-001",
 		Name: "Test Product",

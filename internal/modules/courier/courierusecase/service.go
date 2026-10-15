@@ -6,17 +6,17 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/courier/courierrepo"
+	"komecore/internal/modules/courier"
 )
 
 type CourierService struct {
 	exec        transaction.Executor
-	courierRepo courierrepo.CourierRepository
+	courierRepo courier.Repository
 }
 
 func NewCourierService(
 	exec transaction.Executor,
-	courierRepo courierrepo.CourierRepository,
+	courierRepo courier.Repository,
 ) *CourierService {
 	return &CourierService{
 		exec:        exec,

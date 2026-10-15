@@ -1,4 +1,4 @@
-package addressdomain
+package address
 
 import (
 	"time"
@@ -6,15 +6,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type ShopAddress struct {
+type CustomerAddress struct {
 	ID uuid.UUID
 
-	ShopID uuid.UUID
+	CustomerID uuid.UUID
 
-	Label string
-	Phone *string
+	ReceiverName string
+	Phone        *string
 
-	IsActive bool
+	IsDefault bool
 
 	Detail AddressDetail
 

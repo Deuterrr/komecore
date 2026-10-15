@@ -7,8 +7,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
+	"komecore/internal/modules/inventory"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -32,7 +31,7 @@ type DeleteInventoryInput struct {
 }
 
 type InventoryService struct {
-	inventoryRepo    inventoryrepo.InventoryRepository
+	inventoryRepo    inventory.Repository
 	productChecker   ProductChecker
 	shopChecker      ShopChecker
 	executor         transaction.Executor
@@ -40,7 +39,7 @@ type InventoryService struct {
 }
 
 func NewInventoryService(
-	inventoryRepo inventoryrepo.InventoryRepository,
+	inventoryRepo inventory.Repository,
 	productChecker ProductChecker,
 	shopChecker ShopChecker,
 	executor transaction.Executor,
@@ -81,7 +80,7 @@ func (s *InventoryService) CreateInventory(ctx context.Context, input CreateInve
 		return apperror.NewConflict("inventory already exists for product and shop")
 	}
 
-	inventory := &inventorydomain.Inventory{
+	inv := &inventory.Inventory{
 		ID:            uuid.New(),
 		ProductID:     input.ProductID,
 		ShopID:        input.ShopID,
@@ -89,14 +88,14 @@ func (s *InventoryService) CreateInventory(ctx context.Context, input CreateInve
 		ReservedStock: 0,
 		CreatedAt:     appclock.Now(),
 	}
-	if err := inventory.Validate(); err != nil {
-		if errors.Is(err, inventorydomain.ErrInvalidStock) || errors.Is(err, inventorydomain.ErrInvalidReserved) {
+	if err := inv.Validate(); err != nil {
+		if errors.Is(err, inventory.ErrInvalidStock) || errors.Is(err, inventory.ErrInvalidReserved) {
 			return apperror.NewInvalidInput(err.Error())
 		}
 		return err
 	}
 
-	if err := s.inventoryRepo.Create(ctx, s.executor, inventory); err != nil {
+	if err := s.inventoryRepo.Create(ctx, s.executor, inv); err != nil {
 		return fmt.Errorf("failed to save inventory: %w", err)
 	}
 
@@ -104,9 +103,9 @@ func (s *InventoryService) CreateInventory(ctx context.Context, input CreateInve
 		_ = s.stockHistoryRepo.RecordStockEvent(
 			context.Background(),
 			s.executor,
-			inventory.ProductID,
-			inventory.ShopID,
-			inventory.TotalStock-inventory.ReservedStock,
+			inv.ProductID,
+			inv.ShopID,
+			inv.TotalStock-inv.ReservedStock,
 		)
 	}()
 
@@ -126,9 +125,9 @@ func (s *InventoryService) UpdateInventory(ctx context.Context, input UpdateInve
 	existing.TotalStock = input.Stock
 
 	if err := existing.Validate(); err != nil {
-		if errors.Is(err, inventorydomain.ErrInvalidStock) ||
-			errors.Is(err, inventorydomain.ErrInvalidReserved) ||
-			errors.Is(err, inventorydomain.ErrReservedExceedsStock) {
+		if errors.Is(err, inventory.ErrInvalidStock) ||
+			errors.Is(err, inventory.ErrInvalidReserved) ||
+			errors.Is(err, inventory.ErrReservedExceedsStock) {
 			return apperror.NewInvalidInput(err.Error())
 		}
 		return err

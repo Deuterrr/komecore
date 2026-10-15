@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 
 	"github.com/google/uuid"
 )
 
 type mockUpdateShopAddressRepository struct {
-	address          *addressdomain.ShopAddress
+	address          *address.ShopAddress
 	getErr           error
 	updateCalls      int
 	updateErr        error
@@ -24,7 +24,7 @@ func (m *mockUpdateShopAddressRepository) FindByShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
-) ([]addressdomain.ShopAddress, error) {
+) ([]address.ShopAddress, error) {
 	return nil, nil
 }
 
@@ -32,7 +32,7 @@ func (m *mockUpdateShopAddressRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*addressdomain.ShopAddress, error) {
+) (*address.ShopAddress, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -42,7 +42,7 @@ func (m *mockUpdateShopAddressRepository) GetByID(
 func (m *mockUpdateShopAddressRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.ShopAddress,
+	address address.ShopAddress,
 ) error {
 	return nil
 }
@@ -50,7 +50,7 @@ func (m *mockUpdateShopAddressRepository) Create(
 func (m *mockUpdateShopAddressRepository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.ShopAddress,
+	address address.ShopAddress,
 ) error {
 	m.updateCalls++
 	return m.updateErr
@@ -91,7 +91,7 @@ func TestUpdateShopAddress_Success(t *testing.T) {
 	addressID := uuid.New()
 	shopID := uuid.New()
 
-	existing := &addressdomain.ShopAddress{
+	existing := &address.ShopAddress{
 		ID:       addressID,
 		ShopID:   shopID,
 		Label:    "Old Label",
@@ -162,7 +162,7 @@ func TestUpdateShopAddress_ShopIDMismatch(t *testing.T) {
 	shopID := uuid.New()
 	differentShopID := uuid.New()
 
-	existing := &addressdomain.ShopAddress{
+	existing := &address.ShopAddress{
 		ID:     addressID,
 		ShopID: shopID,
 	}

@@ -7,23 +7,22 @@ import (
 
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 type GetProductStatsUsecase struct {
-	perfRepo       productrepo.ProductPerformanceRepository
-	productImgRepo productrepo.ProductImageRepository
+	perfRepo       product.PerformanceRepository
+	productImgRepo product.ImageRepository
 	fileStore      storage.Provider
 	executor       transaction.Executor
 }
 
 func NewGetProductStatsUsecase(
-	perfRepo productrepo.ProductPerformanceRepository,
-	productImgRepo productrepo.ProductImageRepository,
+	perfRepo product.PerformanceRepository,
+	productImgRepo product.ImageRepository,
 	fileStore storage.Provider,
 	executor transaction.Executor,
 ) *GetProductStatsUsecase {
@@ -46,17 +45,17 @@ type GetProductStatsInput struct {
 func (u *GetProductStatsUsecase) Execute(
 	ctx context.Context,
 	input GetProductStatsInput,
-) ([]productdomain.ProductStats, int, error) {
+) ([]product.ProductStats, int, error) {
 	var statsSortKeys = map[string]pagination.SortKey{
-		"latest":       productrepo.ProductSortLatest,
-		"date":         productrepo.ProductSortLatest,
-		"name":         productrepo.ProductSortName,
-		"price":        productrepo.ProductSortPrice,
-		"view_count":   productrepo.ProductSortViewCount,
-		"sales_30d":    productrepo.ProductSortSales30d,
-		"sales_7d":     productrepo.ProductSortSales7d,
-		"revenue":      productrepo.ProductSortRevenue,
-		"gross_margin": productrepo.ProductSortGrossMargin,
+		"latest":       product.ProductSortLatest,
+		"date":         product.ProductSortLatest,
+		"name":         product.ProductSortName,
+		"price":        product.ProductSortPrice,
+		"view_count":   product.ProductSortViewCount,
+		"sales_30d":    product.ProductSortSales30d,
+		"sales_7d":     product.ProductSortSales7d,
+		"revenue":      product.ProductSortRevenue,
+		"gross_margin": product.ProductSortGrossMargin,
 	}
 
 	var sorts pagination.Sorts
@@ -92,13 +91,13 @@ func (u *GetProductStatsUsecase) Execute(
 	if len(sorts) == 0 {
 		sorts = pagination.Sorts{
 			{
-				By:        productrepo.ProductSortLatest,
+				By:        product.ProductSortLatest,
 				Direction: pagination.SortDesc,
 			},
 		}
 	}
 
-	params := productrepo.GetProductStatsParams{
+	params := product.GetProductStatsParams{
 		ID:   input.ID,
 		Name: input.Name,
 		Pagination: pagination.Pagination{
@@ -113,7 +112,7 @@ func (u *GetProductStatsUsecase) Execute(
 		return nil, 0, fmt.Errorf("failed to load product stats: %w", err)
 	}
 	if len(stats) == 0 {
-		return []productdomain.ProductStats{}, total, nil
+		return []product.ProductStats{}, total, nil
 	}
 
 	productIDs := make([]uuid.UUID, 0, len(stats))
@@ -129,7 +128,7 @@ func (u *GetProductStatsUsecase) Execute(
 	for i := range stats {
 		images := imagesMap[stats[i].Product.ID]
 		if len(images) > 0 {
-			key := images[0].Variants[productdomain.ResolutionThumbnail].Key
+			key := images[0].Variants[product.ResolutionThumbnail].Key
 			stats[i].Thumbnail = u.fileStore.PublicURL(key, "public-assets")
 		}
 	}

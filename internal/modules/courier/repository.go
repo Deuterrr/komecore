@@ -1,4 +1,4 @@
-package courierrepo
+package courier
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	transaction "komecore/internal/infra/transactor"
 )
 
-type CourierRepository interface {
+type Repository interface {
 	ListAll(
 		ctx context.Context,
 		exec transaction.Executor,
@@ -24,3 +24,5 @@ type CourierRepository interface {
 		codes []string,
 	) ([]string, error)
 }
+
+type CourierRepository = Repository

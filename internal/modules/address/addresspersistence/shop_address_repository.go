@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -22,7 +22,7 @@ func (r *ShopAddressRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	addressID uuid.UUID,
-) (*addressdomain.ShopAddress, error) {
+) (*address.ShopAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -46,7 +46,7 @@ func (r *ShopAddressRepository) GetByID(
 	`
 
 	var (
-		a             addressdomain.ShopAddress
+		a             address.ShopAddress
 		unusedVillage string
 	)
 	err := exec.QueryRow(ctx, query, addressID).Scan(
@@ -81,7 +81,7 @@ func (r *ShopAddressRepository) GetDefaultByShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
-) (*addressdomain.ShopAddress, error) {
+) (*address.ShopAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -109,7 +109,7 @@ func (r *ShopAddressRepository) GetDefaultByShopID(
 	`
 
 	var (
-		a             addressdomain.ShopAddress
+		a             address.ShopAddress
 		unusedVillage string
 	)
 	err := exec.QueryRow(ctx, query, shopID).Scan(
@@ -144,8 +144,8 @@ func (r *ShopAddressRepository) GetDefaultsByShopIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopIDs []uuid.UUID,
-) (map[uuid.UUID]addressdomain.ShopAddress, error) {
-	addressMap := make(map[uuid.UUID]addressdomain.ShopAddress)
+) (map[uuid.UUID]address.ShopAddress, error) {
+	addressMap := make(map[uuid.UUID]address.ShopAddress)
 	if len(shopIDs) == 0 {
 		return addressMap, nil
 	}
@@ -186,10 +186,10 @@ func (r *ShopAddressRepository) GetDefaultsByShopIDs(
 	}
 	defer rows.Close()
 
-	var shopAddresses []addressdomain.ShopAddress
+	var shopAddresses []address.ShopAddress
 	for rows.Next() {
 		var (
-			sC            addressdomain.ShopAddress
+			sC            address.ShopAddress
 			unusedVillage string
 		)
 		if err := rows.Scan(
@@ -228,7 +228,7 @@ func (r *ShopAddressRepository) FindByShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
-) ([]addressdomain.ShopAddress, error) {
+) ([]address.ShopAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -256,10 +256,10 @@ func (r *ShopAddressRepository) FindByShopID(
 	}
 	defer rows.Close()
 
-	var addresses []addressdomain.ShopAddress
+	var addresses []address.ShopAddress
 	for rows.Next() {
 		var (
-			a             addressdomain.ShopAddress
+			a             address.ShopAddress
 			unusedVillage string
 		)
 
@@ -295,7 +295,7 @@ func (r *ShopAddressRepository) FindByShopID(
 func (r *ShopAddressRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.ShopAddress,
+	address address.ShopAddress,
 ) error {
 	query := `
 		INSERT INTO shop_addresses (
@@ -344,7 +344,7 @@ func (r *ShopAddressRepository) Create(
 func (r *ShopAddressRepository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.ShopAddress,
+	address address.ShopAddress,
 ) error {
 	query := `
 		UPDATE shop_addresses

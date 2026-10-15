@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 	"komecore/internal/modules/address/addressusecase"
 
 	"github.com/google/uuid"
@@ -18,7 +18,7 @@ func TestListShopAddressesUsecase_FindByShopID(t *testing.T) {
 	shopID := uuid.New()
 
 	t.Run("success returns shop addresses", func(t *testing.T) {
-		expected := []addressdomain.ShopAddress{
+		expected := []address.ShopAddress{
 			{
 				ID:       uuid.New(),
 				ShopID:   shopID,

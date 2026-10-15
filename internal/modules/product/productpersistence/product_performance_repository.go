@@ -6,8 +6,7 @@ import (
 	"strings"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -22,7 +21,7 @@ func NewProductPerformanceRepository() *ProductPerformanceRepository {
 func (r *ProductPerformanceRepository) UpsertPerformance(
 	ctx context.Context,
 	exec transaction.Executor,
-	perf productdomain.ProductPerformance,
+	perf product.ProductPerformance,
 	basePrice int64,
 ) error {
 	query := `
@@ -93,8 +92,8 @@ func (r *ProductPerformanceRepository) IncrementViewCount(
 func (r *ProductPerformanceRepository) GetProductStats(
 	ctx context.Context,
 	exec transaction.Executor,
-	params productrepo.GetProductStatsParams,
-) ([]productdomain.ProductStats, int, error) {
+	params product.GetProductStatsParams,
+) ([]product.ProductStats, int, error) {
 	whereClause := ""
 	notDeletedCondition := "p.deleted_at IS NULL"
 
@@ -235,14 +234,14 @@ func (r *ProductPerformanceRepository) GetProductStats(
 
 	// Build sorting clauses
 	var sortKeys = map[pagination.SortKey]string{
-		productrepo.ProductSortLatest:      "p.created_at",
-		productrepo.ProductSortName:        "p.name",
-		productrepo.ProductSortPrice:       "p.base_price",
-		productrepo.ProductSortViewCount:   "COALESCE(pp.view_count, 0)",
-		productrepo.ProductSortSales30d:    "COALESCE(ps.units_30d, 0)",
-		productrepo.ProductSortSales7d:     "COALESCE(ps.units_7d, 0)",
-		productrepo.ProductSortRevenue:     "COALESCE(ps.revenue_30d, 0)",
-		productrepo.ProductSortGrossMargin: "COALESCE(pp.gross_margin_pct, 0)",
+		product.ProductSortLatest:      "p.created_at",
+		product.ProductSortName:        "p.name",
+		product.ProductSortPrice:       "p.base_price",
+		product.ProductSortViewCount:   "COALESCE(pp.view_count, 0)",
+		product.ProductSortSales30d:    "COALESCE(ps.units_30d, 0)",
+		product.ProductSortSales7d:     "COALESCE(ps.units_7d, 0)",
+		product.ProductSortRevenue:     "COALESCE(ps.revenue_30d, 0)",
+		product.ProductSortGrossMargin: "COALESCE(pp.gross_margin_pct, 0)",
 	}
 
 	var sortClauses []string
@@ -300,9 +299,9 @@ func (r *ProductPerformanceRepository) GetProductStats(
 	}
 	defer rows.Close()
 
-	var results []productdomain.ProductStats
+	var results []product.ProductStats
 	for rows.Next() {
-		var item productdomain.ProductStats
+		var item product.ProductStats
 		var costPrice *int64
 		var supplierLeadTimeDays *int
 		var grossMarginPct *float64

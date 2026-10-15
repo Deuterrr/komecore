@@ -7,15 +7,14 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
+	"komecore/internal/modules/inventory"
 
 	"github.com/google/uuid"
 )
 
 type mockDeleteInventoryRepository struct {
-	inventoryrepo.InventoryRepository
-	inventory   *inventorydomain.Inventory
+	inventory.Repository
+	inventory   *inventory.Inventory
 	getErr      error
 	deleteErr   error
 	deleteCalls int
@@ -45,7 +44,7 @@ func (m *mockDeleteInventoryRepository) GetByProductIDAndShopID(
 	exec transaction.Executor,
 	productID uuid.UUID,
 	shopID uuid.UUID,
-) (*inventorydomain.Inventory, error) {
+) (*inventory.Inventory, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -68,7 +67,7 @@ func TestDeleteInventory_Success(t *testing.T) {
 	shopID := uuid.New()
 	invID := uuid.New()
 
-	existing := &inventorydomain.Inventory{
+	existing := &inventory.Inventory{
 		ID:            invID,
 		ProductID:     productID,
 		ShopID:        shopID,
@@ -132,7 +131,7 @@ func TestDeleteInventory_ConflictWithReservations(t *testing.T) {
 	shopID := uuid.New()
 	invID := uuid.New()
 
-	existing := &inventorydomain.Inventory{
+	existing := &inventory.Inventory{
 		ID:            invID,
 		ProductID:     productID,
 		ShopID:        shopID,
@@ -173,7 +172,7 @@ func TestDeleteInventory_RepoError(t *testing.T) {
 	shopID := uuid.New()
 	invID := uuid.New()
 
-	existing := &inventorydomain.Inventory{
+	existing := &inventory.Inventory{
 		ID:            invID,
 		ProductID:     productID,
 		ShopID:        shopID,

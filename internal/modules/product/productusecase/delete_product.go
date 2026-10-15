@@ -7,19 +7,19 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/infra/cache"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 
 	"github.com/google/uuid"
 )
 
 type DeleteProductUsecase struct {
-	productRepo productrepo.ProductRepository
+	productRepo product.Repository
 	executor    transaction.Executor
 	cache       cache.Cache
 }
 
 func NewDeleteProductUsecase(
-	productRepo productrepo.ProductRepository,
+	productRepo product.Repository,
 	executor transaction.Executor,
 ) *DeleteProductUsecase {
 	return &DeleteProductUsecase{

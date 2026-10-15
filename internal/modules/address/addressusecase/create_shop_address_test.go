@@ -7,7 +7,7 @@ import (
 
 	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 	"komecore/internal/modules/address/addressusecase"
 
 	"github.com/google/uuid"
@@ -18,19 +18,19 @@ import (
 type mockShopAddressRepo struct {
 	createCalls       int
 	createError       error
-	savedAddress      *addressdomain.ShopAddress
+	savedAddress      *address.ShopAddress
 	findByShopIDCalls int
 	findByShopIDError error
-	shopAddresses     []addressdomain.ShopAddress
+	shopAddresses     []address.ShopAddress
 }
 
-func (m *mockShopAddressRepo) Create(ctx context.Context, exec transaction.Executor, address addressdomain.ShopAddress) error {
+func (m *mockShopAddressRepo) Create(ctx context.Context, exec transaction.Executor, address address.ShopAddress) error {
 	m.createCalls++
 	m.savedAddress = &address
 	return m.createError
 }
 
-func (m *mockShopAddressRepo) FindByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) ([]addressdomain.ShopAddress, error) {
+func (m *mockShopAddressRepo) FindByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) ([]address.ShopAddress, error) {
 	m.findByShopIDCalls++
 	if m.findByShopIDError != nil {
 		return nil, m.findByShopIDError
@@ -38,7 +38,7 @@ func (m *mockShopAddressRepo) FindByShopID(ctx context.Context, exec transaction
 	return m.shopAddresses, nil
 }
 
-func (m *mockShopAddressRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*addressdomain.ShopAddress, error) {
+func (m *mockShopAddressRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*address.ShopAddress, error) {
 	return nil, nil
 }
 
@@ -46,7 +46,7 @@ func (m *mockShopAddressRepo) UnsetActiveByShopID(ctx context.Context, exec tran
 	return nil
 }
 
-func (m *mockShopAddressRepo) Update(ctx context.Context, exec transaction.Executor, address addressdomain.ShopAddress) error {
+func (m *mockShopAddressRepo) Update(ctx context.Context, exec transaction.Executor, address address.ShopAddress) error {
 	return nil
 }
 

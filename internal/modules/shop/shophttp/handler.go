@@ -7,7 +7,7 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/shop/shopdomain"
+	"komecore/internal/modules/shop"
 	"komecore/internal/modules/shop/shopusecase"
 	"komecore/internal/pagination"
 
@@ -144,7 +144,7 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 		return apperror.NewBadRequest("invalid shop id")
 	}
 
-	var result *shopdomain.Shop
+	var result *shop.Shop
 	if parsed, err := uuid.Parse(param); err == nil {
 		var getErr error
 		result, getErr = h.service.GetByID(r.Context(), parsed)

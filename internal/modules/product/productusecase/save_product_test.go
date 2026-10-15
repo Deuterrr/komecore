@@ -6,8 +6,7 @@ import (
 	"testing"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
+	"komecore/internal/modules/product"
 
 	"github.com/google/uuid"
 )
@@ -17,15 +16,15 @@ import (
 // ===========================================================================
 
 type mockProductRepository struct {
-	productrepo.ProductRepository
-	savedProduct *productdomain.Product
+	product.Repository
+	savedProduct *product.Product
 	saveErr      error
 }
 
 func (m *mockProductRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	product *productdomain.Product,
+	product *product.Product,
 ) error {
 	m.savedProduct = product
 	return m.saveErr
@@ -53,9 +52,9 @@ func (m *mockTransactor) WithinTransaction(
 }
 
 type mockProductPerformanceRepository struct {
-	productrepo.ProductPerformanceRepository
+	product.PerformanceRepository
 	upsertCalled bool
-	upsertPerf   productdomain.ProductPerformance
+	upsertPerf   product.ProductPerformance
 	upsertPrice  int64
 	upsertErr    error
 }
@@ -63,7 +62,7 @@ type mockProductPerformanceRepository struct {
 func (m *mockProductPerformanceRepository) UpsertPerformance(
 	ctx context.Context,
 	exec transaction.Executor,
-	perf productdomain.ProductPerformance,
+	perf product.ProductPerformance,
 	basePrice int64,
 ) error {
 	m.upsertCalled = true
@@ -127,7 +126,7 @@ func TestSaveProduct_Success_NewProduct(t *testing.T) {
 		t.Errorf("expected Description '%s', got '%s'", desc, *repo.savedProduct.Description)
 	}
 
-	if repo.savedProduct.Status != productdomain.ProductStatusActive {
+	if repo.savedProduct.Status != product.ProductStatusActive {
 		t.Errorf("expected Status 'active', got '%s'", repo.savedProduct.Status)
 	}
 
@@ -192,7 +191,7 @@ func TestSaveProduct_Success_UpdateProduct(t *testing.T) {
 		t.Errorf("expected Description '%s', got '%s'", desc, *repo.savedProduct.Description)
 	}
 
-	if repo.savedProduct.Status != productdomain.ProductStatusInactive {
+	if repo.savedProduct.Status != product.ProductStatusInactive {
 		t.Errorf("expected Status 'inactive', got '%s'", repo.savedProduct.Status)
 	}
 

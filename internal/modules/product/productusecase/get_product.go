@@ -7,12 +7,9 @@ import (
 	"komecore/internal/infra/cache"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shop"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,22 +18,22 @@ import (
 type GetProductUsecase struct {
 	executor       transaction.Executor
 	fileStore      storage.Provider
-	productRepo    productrepo.ProductRepository
-	inventoryRepo  inventoryrepo.InventoryRepository
-	productImgRepo productrepo.ProductImageRepository
-	shopRepo       shoprepo.ShopRepository
-	perfRepo       productrepo.ProductPerformanceRepository
+	productRepo    product.Repository
+	inventoryRepo  inventory.Repository
+	productImgRepo product.ImageRepository
+	shopRepo       shop.Repository
+	perfRepo       product.PerformanceRepository
 	cache          cache.Cache
 }
 
 func NewGetProductUsecase(
 	executor transaction.Executor,
 	fileStore storage.Provider,
-	productRepo productrepo.ProductRepository,
-	inventoryRepo inventoryrepo.InventoryRepository,
-	productImgRepo productrepo.ProductImageRepository,
-	shopRepo shoprepo.ShopRepository,
-	perfRepo productrepo.ProductPerformanceRepository,
+	productRepo product.Repository,
+	inventoryRepo inventory.Repository,
+	productImgRepo product.ImageRepository,
+	shopRepo shop.Repository,
+	perfRepo product.PerformanceRepository,
 ) *GetProductUsecase {
 	return &GetProductUsecase{
 		executor:       executor,
@@ -61,12 +58,12 @@ type ImageProductDetail struct {
 }
 
 type ProductDetailResult struct {
-	Product   productdomain.Product
+	Product   product.Product
 	Inventory struct {
 		TotalStock    int
 		ReservedStock int
 	}
-	ShopInventories []inventorydomain.Inventory
+	ShopInventories []inventory.Inventory
 	Images          []ImageProductDetail
 	Availability    []ShopAvailabilityResult
 }
@@ -84,40 +81,40 @@ func (u *GetProductUsecase) Execute(
 		}
 	}
 
-	product, err := u.productRepo.GetBySlug(ctx, u.executor, slug)
+	prod, err := u.productRepo.GetBySlug(ctx, u.executor, slug)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load products with inventory: %w", err)
 	}
-	if product == nil {
+	if prod == nil {
 		return nil, nil
 	}
 
 	if u.perfRepo != nil {
 		go func() {
-			_ = u.perfRepo.IncrementViewCount(context.Background(), u.executor, product.ID)
+			_ = u.perfRepo.IncrementViewCount(context.Background(), u.executor, prod.ID)
 		}()
 	}
 
-	var inventories []inventorydomain.Inventory
+	var inventories []inventory.Inventory
 	if u.inventoryRepo != nil {
 		var err error
-		inventories, err = u.inventoryRepo.ListByProductID(ctx, u.executor, product.ID)
+		inventories, err = u.inventoryRepo.ListByProductID(ctx, u.executor, prod.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load inventory by product: %w", err)
 		}
 	}
 
-	var images []productdomain.ProductImage
+	var images []product.ProductImage
 	if u.productImgRepo != nil {
 		var err error
-		images, err = u.productImgRepo.ListByProductID(ctx, u.executor, product.ID)
+		images, err = u.productImgRepo.ListByProductID(ctx, u.executor, prod.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load images by product: %w", err)
 		}
 	}
 
 	result := ProductDetailResult{
-		Product:         *product,
+		Product:         *prod,
 		ShopInventories: inventories,
 	}
 
@@ -127,21 +124,21 @@ func (u *GetProductUsecase) Execute(
 		for _, img := range images {
 			imageDetail := ImageProductDetail{}
 
-			if variant, ok := img.Variants[productdomain.ResolutionThumbnail]; ok {
+			if variant, ok := img.Variants[product.ResolutionThumbnail]; ok {
 				imageDetail.Thumbnail = u.fileStore.PublicURL(
 					variant.Key,
 					"public-assets",
 				)
 			}
 
-			if variant, ok := img.Variants[productdomain.ResolutionPreview]; ok {
+			if variant, ok := img.Variants[product.ResolutionPreview]; ok {
 				imageDetail.Preview = u.fileStore.PublicURL(
 					variant.Key,
 					"public-assets",
 				)
 			}
 
-			if variant, ok := img.Variants[productdomain.ResolutionDetail]; ok {
+			if variant, ok := img.Variants[product.ResolutionDetail]; ok {
 				imageDetail.Detail = u.fileStore.PublicURL(
 					variant.Key,
 					"public-assets",
@@ -169,7 +166,7 @@ func (u *GetProductUsecase) Execute(
 		return nil, fmt.Errorf("failed to load shops: %w", err)
 	}
 
-	shopsMap := make(map[uuid.UUID]shopdomain.Shop)
+	shopsMap := make(map[uuid.UUID]shop.Shop)
 	for _, s := range shops {
 		shopsMap[s.ID] = s
 	}
@@ -177,7 +174,7 @@ func (u *GetProductUsecase) Execute(
 	var (
 		totalStock          = 0
 		reservedStock       = 0
-		operableInventories []inventorydomain.Inventory
+		operableInventories []inventory.Inventory
 		availability        []ShopAvailabilityResult
 	)
 

@@ -1,4 +1,4 @@
-package addressdomain
+package address
 
 import "errors"
 

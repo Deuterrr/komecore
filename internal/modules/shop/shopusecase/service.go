@@ -9,10 +9,8 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
-	"komecore/internal/modules/address/addressrepo"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/shop"
 	"komecore/internal/pagination"
 	appclock "komecore/pkg/clock"
 	slug "komecore/pkg/slug"
@@ -76,16 +74,16 @@ type SaveShopInput struct {
 }
 
 type ShopService struct {
-	shopRepo    shoprepo.ShopRepository
-	addressRepo addressrepo.ShopAddressRepository
+	shopRepo    shop.Repository
+	addressRepo address.ShopAddressRepository
 	provider    ShopProductProvider
 	slugGen     slug.Generator
 	executor    transaction.Executor
 }
 
 func NewShopService(
-	shopRepo shoprepo.ShopRepository,
-	addressRepo addressrepo.ShopAddressRepository,
+	shopRepo shop.Repository,
+	addressRepo address.ShopAddressRepository,
 	provider ShopProductProvider,
 	slugGen slug.Generator,
 	executor transaction.Executor,
@@ -100,12 +98,12 @@ func NewShopService(
 }
 
 // FindShops queries shops with filtering, sorting, and pagination.
-func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]shopdomain.Shop, int, error) {
+func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]shop.Shop, int, error) {
 	var shopSortKeys = map[string]pagination.SortKey{
-		"name":     shoprepo.ShopSortName,
-		"active":   shoprepo.ShopSortActive,
-		"date":     shoprepo.ShopSortLatest,
-		"modified": shoprepo.ShopSortModify,
+		"name":     shop.ShopSortName,
+		"active":   shop.ShopSortActive,
+		"date":     shop.ShopSortLatest,
+		"modified": shop.ShopSortModify,
 	}
 
 	var sorts pagination.Sorts
@@ -141,7 +139,7 @@ func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]sh
 	if len(sorts) == 0 {
 		sorts = pagination.Sorts{
 			{
-				By:        shoprepo.ShopSortLatest,
+				By:        shop.ShopSortLatest,
 				Direction: pagination.SortDesc,
 			},
 		}
@@ -149,11 +147,11 @@ func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]sh
 
 	approvalStatus := input.ApprovalStatus
 	if approvalStatus == nil && input.IsActive != nil && *input.IsActive {
-		approvedStr := string(shopdomain.ShopApprovalStatusApproved)
+		approvedStr := string(shop.ShopApprovalStatusApproved)
 		approvalStatus = &approvedStr
 	}
 
-	params := shoprepo.FindShopsParams{
+	params := shop.FindShopsParams{
 		ID:             input.ID,
 		ShopIDs:        input.ShopIDs,
 		Name:           input.Name,
@@ -172,14 +170,14 @@ func (s *ShopService) FindShops(ctx context.Context, input FindShopsInput) ([]sh
 		return nil, 0, fmt.Errorf("failed to load shops: %w", err)
 	}
 	if len(shops) == 0 {
-		return []shopdomain.Shop{}, 0, nil
+		return []shop.Shop{}, 0, nil
 	}
 
 	return shops, total, nil
 }
 
 // GetByID finds a shop by its unique ID.
-func (s *ShopService) GetByID(ctx context.Context, shopID uuid.UUID) (*shopdomain.Shop, error) {
+func (s *ShopService) GetByID(ctx context.Context, shopID uuid.UUID) (*shop.Shop, error) {
 	shop, err := s.shopRepo.GetByID(ctx, s.executor, shopID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve shop: %w", err)
@@ -188,7 +186,7 @@ func (s *ShopService) GetByID(ctx context.Context, shopID uuid.UUID) (*shopdomai
 }
 
 // GetBySlug finds a shop by its unique slug.
-func (s *ShopService) GetBySlug(ctx context.Context, slug string) (*shopdomain.Shop, error) {
+func (s *ShopService) GetBySlug(ctx context.Context, slug string) (*shop.Shop, error) {
 	shop, err := s.shopRepo.GetBySlug(ctx, s.executor, slug)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve shop by slug: %w", err)
@@ -206,12 +204,12 @@ func (s *ShopService) SaveShop(ctx context.Context, actor authctx.Actor, input S
 		}
 	}
 
-	var shop shopdomain.Shop
+	var shp shop.Shop
 	now := appclock.Now()
 
 	if input.ID == nil {
 		shopID := uuid.New()
-		shop = shopdomain.Shop{
+		shp = shop.Shop{
 			ID:          shopID,
 			Name:        input.Name,
 			Slug:        s.slugGen.Generate(input.Name),
@@ -221,16 +219,16 @@ func (s *ShopService) SaveShop(ctx context.Context, actor authctx.Actor, input S
 
 		if isAdmin {
 			if input.IsActive != nil {
-				shop.IsActive = *input.IsActive
+				shp.IsActive = *input.IsActive
 			}
 			if input.ApprovalStatus != nil && *input.ApprovalStatus != "" {
-				shop.ApprovalStatus = shopdomain.ShopApprovalStatus(*input.ApprovalStatus)
+				shp.ApprovalStatus = shop.ShopApprovalStatus(*input.ApprovalStatus)
 			} else {
-				shop.ApprovalStatus = shopdomain.ShopApprovalStatusPending
+				shp.ApprovalStatus = shop.ShopApprovalStatusPending
 			}
 		} else {
-			shop.IsActive = false
-			shop.ApprovalStatus = shopdomain.ShopApprovalStatusPending
+			shp.IsActive = false
+			shp.ApprovalStatus = shop.ShopApprovalStatusPending
 		}
 	} else {
 		existing, err := s.shopRepo.GetByID(ctx, s.executor, *input.ID)
@@ -241,23 +239,23 @@ func (s *ShopService) SaveShop(ctx context.Context, actor authctx.Actor, input S
 			return apperror.NewNotFound("shop not found")
 		}
 
-		shop = *existing
-		shop.Name = input.Name
-		shop.Slug = s.slugGen.Generate(input.Name)
-		shop.Description = input.Description
-		shop.UpdatedAt = &now
+		shp = *existing
+		shp.Name = input.Name
+		shp.Slug = s.slugGen.Generate(input.Name)
+		shp.Description = input.Description
+		shp.UpdatedAt = &now
 
 		if isAdmin {
 			if input.IsActive != nil {
-				shop.IsActive = *input.IsActive
+				shp.IsActive = *input.IsActive
 			}
 			if input.ApprovalStatus != nil && *input.ApprovalStatus != "" {
-				shop.ApprovalStatus = shopdomain.ShopApprovalStatus(*input.ApprovalStatus)
+				shp.ApprovalStatus = shop.ShopApprovalStatus(*input.ApprovalStatus)
 			}
 		}
 	}
 
-	err := s.shopRepo.Save(ctx, s.executor, shop)
+	err := s.shopRepo.Save(ctx, s.executor, shp)
 	if err != nil {
 		return fmt.Errorf("failed to save shop: %w", err)
 	}
@@ -294,7 +292,7 @@ func (s *ShopService) DeleteShop(ctx context.Context, actor authctx.Actor, shopI
 }
 
 // GetShopAddresses retrieves the address list for a shop.
-func (s *ShopService) GetShopAddresses(ctx context.Context, shopID uuid.UUID) ([]addressdomain.ShopAddress, error) {
+func (s *ShopService) GetShopAddresses(ctx context.Context, shopID uuid.UUID) ([]address.ShopAddress, error) {
 	if s.addressRepo == nil {
 		return nil, fmt.Errorf("shop address repository not initialized")
 	}

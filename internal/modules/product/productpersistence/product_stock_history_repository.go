@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/product/productdomain"
+	"komecore/internal/modules/product"
 )
 
 type ProductStockHistoryRepository struct{}
@@ -17,7 +17,7 @@ func NewProductStockHistoryRepository() *ProductStockHistoryRepository {
 func (r *ProductStockHistoryRepository) RecordStockEvent(
 	ctx context.Context,
 	exec transaction.Executor,
-	event productdomain.ProductStockEvent,
+	event product.ProductStockEvent,
 ) error {
 	query := `
 		INSERT INTO product_stock_history (

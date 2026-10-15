@@ -1,11 +1,11 @@
 package productpersistence
 
 import (
-	"komecore/internal/modules/product/productdomain"
+	"komecore/internal/modules/product"
 	"komecore/pkg/money"
 )
 
-func (m *productModel) ToDomain() (*productdomain.Product, error) {
+func (m *productModel) ToDomain() (*product.Product, error) {
 	price, err := money.ParsePriceToInt64(m.BasePrice)
 	if err != nil {
 		return nil, err
@@ -20,12 +20,12 @@ func (m *productModel) ToDomain() (*productdomain.Product, error) {
 		weight = w
 	}
 
-	return &productdomain.Product{
+	return &product.Product{
 		ID:          m.ID,
 		SKU:         m.SKU,
 		Name:        m.Name,
 		Description: m.Description,
-		Status:      productdomain.ProductStatus(m.Status),
+		Status:      product.ProductStatus(m.Status),
 
 		Price:  price,
 		Weight: weight,
@@ -36,7 +36,7 @@ func (m *productModel) ToDomain() (*productdomain.Product, error) {
 	}, nil
 }
 
-func FromDomain(p *productdomain.Product) *productModel {
+func FromDomain(p *product.Product) *productModel {
 	basePrice := money.FormatInt64ToPrice(p.Price)
 
 	var weight *string

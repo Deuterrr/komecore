@@ -1,4 +1,4 @@
-package courierdomain
+package address
 
 import (
 	"time"
@@ -6,12 +6,17 @@ import (
 	"github.com/google/uuid"
 )
 
-type Courier struct {
+type ShopAddress struct {
 	ID uuid.UUID
 
-	Code     string
-	Name     string
+	ShopID uuid.UUID
+
+	Label string
+	Phone *string
+
 	IsActive bool
+
+	Detail AddressDetail
 
 	CreatedAt time.Time
 	UpdatedAt *time.Time

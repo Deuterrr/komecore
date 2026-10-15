@@ -8,12 +8,9 @@ import (
 	"komecore/internal/infra/cache"
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shop"
 	"komecore/internal/pagination"
 	"time"
 
@@ -21,20 +18,20 @@ import (
 )
 
 type FindProductsUsecase struct {
-	productRepo    productrepo.ProductRepository
-	inventoryRepo  inventoryrepo.InventoryRepository
-	productImgRepo productrepo.ProductImageRepository
-	shopRepo       shoprepo.ShopRepository
+	productRepo    product.Repository
+	inventoryRepo  inventory.Repository
+	productImgRepo product.ImageRepository
+	shopRepo       shop.Repository
 	fileStore      storage.Provider
 	executor       transaction.Executor
 	cache          cache.Cache
 }
 
 func NewFindProductsUsecase(
-	productRepo productrepo.ProductRepository,
-	inventoryRepo inventoryrepo.InventoryRepository,
-	productImgRepo productrepo.ProductImageRepository,
-	shopRepo shoprepo.ShopRepository,
+	productRepo product.Repository,
+	inventoryRepo inventory.Repository,
+	productImgRepo product.ImageRepository,
+	shopRepo shop.Repository,
 	fileStore storage.Provider,
 	executor transaction.Executor,
 ) *FindProductsUsecase {
@@ -66,12 +63,12 @@ type ShopAvailabilityResult struct {
 }
 
 type ProductCatalogResult struct {
-	Product   productdomain.Product
+	Product   product.Product
 	Inventory struct {
 		TotalStock    int
 		ReservedStock int
 	}
-	ShopInventories []inventorydomain.Inventory
+	ShopInventories []inventory.Inventory
 	Images          struct {
 		Thumbnail string
 	}
@@ -117,16 +114,16 @@ func (u *FindProductsUsecase) Execute(
 	}
 
 	var productSortKeys = map[string]pagination.SortKey{
-		"latest":    productrepo.ProductSortLatest,
-		"date":      productrepo.ProductSortLatest,
-		"name":      productrepo.ProductSortName,
-		"price":     productrepo.ProductSortPrice,
-		"weight":    productrepo.ProductSortWeight,
-		"status":    productrepo.ProductSortStatus,
-		"modified":  productrepo.ProductSortModified,
-		"archived":  productrepo.ProductSortArchived,
-		"stock":     productrepo.ProductSortStock,
-		"relevance": productrepo.ProductSortRelevance,
+		"latest":    product.ProductSortLatest,
+		"date":      product.ProductSortLatest,
+		"name":      product.ProductSortName,
+		"price":     product.ProductSortPrice,
+		"weight":    product.ProductSortWeight,
+		"status":    product.ProductSortStatus,
+		"modified":  product.ProductSortModified,
+		"archived":  product.ProductSortArchived,
+		"stock":     product.ProductSortStock,
+		"relevance": product.ProductSortRelevance,
 	}
 
 	var sorts pagination.Sorts
@@ -163,14 +160,14 @@ func (u *FindProductsUsecase) Execute(
 		if input.SearchQuery != nil && strings.TrimSpace(*input.SearchQuery) != "" {
 			sorts = pagination.Sorts{
 				{
-					By:        productrepo.ProductSortRelevance,
+					By:        product.ProductSortRelevance,
 					Direction: pagination.SortDesc,
 				},
 			}
 		} else {
 			sorts = pagination.Sorts{
 				{
-					By:        productrepo.ProductSortLatest,
+					By:        product.ProductSortLatest,
 					Direction: pagination.SortDesc,
 				},
 			}
@@ -184,7 +181,7 @@ func (u *FindProductsUsecase) Execute(
 		}
 	}
 
-	params := productrepo.FindProductParams{
+	params := product.FindProductParams{
 		ID:              input.ID,
 		Name:            input.Name,
 		SearchQuery:     input.SearchQuery,
@@ -238,7 +235,7 @@ func (u *FindProductsUsecase) Execute(
 		return nil, 0, fmt.Errorf("failed to load shops for inventories: %w", err)
 	}
 
-	shopsMap := make(map[uuid.UUID]shopdomain.Shop)
+	shopsMap := make(map[uuid.UUID]shop.Shop)
 	for _, s := range shops {
 		shopsMap[s.ID] = s
 	}
@@ -286,7 +283,7 @@ func (u *FindProductsUsecase) Execute(
 
 		images := imagesMap[p.Product.ID]
 		if len(images) > 0 {
-			key := images[0].Variants[productdomain.ResolutionThumbnail].Key
+			key := images[0].Variants[product.ResolutionThumbnail].Key
 			result.Images.Thumbnail = u.fileStore.PublicURL(key, "public-assets")
 		}
 

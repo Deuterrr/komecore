@@ -4,7 +4,7 @@ import (
 	"context"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
+	"komecore/internal/modules/address"
 
 	"github.com/google/uuid"
 )
@@ -28,7 +28,7 @@ func (m *mockTransactor) WithinTransaction(
 }
 
 type mockCustomerAddressRepo struct {
-	addresses       map[uuid.UUID]addressdomain.CustomerAddress
+	addresses       map[uuid.UUID]address.CustomerAddress
 	count           *int
 	getByIDError    error
 	countError      error
@@ -44,12 +44,12 @@ type mockCustomerAddressRepo struct {
 	deleteCalls       int
 	listCalls         int
 
-	savedAddresses []addressdomain.CustomerAddress
+	savedAddresses []address.CustomerAddress
 }
 
 func newMockCustomerAddressRepo() *mockCustomerAddressRepo {
 	return &mockCustomerAddressRepo{
-		addresses: make(map[uuid.UUID]addressdomain.CustomerAddress),
+		addresses: make(map[uuid.UUID]address.CustomerAddress),
 	}
 }
 
@@ -57,7 +57,7 @@ func (m *mockCustomerAddressRepo) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	addressID uuid.UUID,
-) (*addressdomain.CustomerAddress, error) {
+) (*address.CustomerAddress, error) {
 	m.getByIDCalls++
 	if m.getByIDError != nil {
 		return nil, m.getByIDError
@@ -100,7 +100,7 @@ func (m *mockCustomerAddressRepo) UnsetDefaultByCustomerID(
 func (m *mockCustomerAddressRepo) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	address addressdomain.CustomerAddress,
+	address address.CustomerAddress,
 ) error {
 	m.saveCalls++
 	if m.saveError != nil {
@@ -128,12 +128,12 @@ func (m *mockCustomerAddressRepo) ListByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
-) ([]addressdomain.CustomerAddress, error) {
+) ([]address.CustomerAddress, error) {
 	m.listCalls++
 	if m.listError != nil {
 		return nil, m.listError
 	}
-	var res []addressdomain.CustomerAddress
+	var res []address.CustomerAddress
 	for _, a := range m.addresses {
 		if a.CustomerID == customerID {
 			res = append(res, a)

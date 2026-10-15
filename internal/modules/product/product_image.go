@@ -1,4 +1,4 @@
-package productdomain
+package product
 
 import (
 	"fmt"

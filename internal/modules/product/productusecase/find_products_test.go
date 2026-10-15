@@ -6,65 +6,62 @@ import (
 
 	"komecore/internal/infra/storage"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shop"
 
 	"github.com/google/uuid"
 )
 
 type mockFindProductRepo struct {
-	productrepo.ProductRepository
-	capturedParams productrepo.FindProductParams
-	products       []productdomain.ProductWithInventory
+	product.Repository
+	capturedParams product.FindProductParams
+	products       []product.ProductWithInventory
 }
 
 func (m *mockFindProductRepo) FindProductsWithInventory(
 	ctx context.Context,
 	exec transaction.Executor,
-	params productrepo.FindProductParams,
-) ([]productdomain.ProductWithInventory, int, error) {
+	params product.FindProductParams,
+) ([]product.ProductWithInventory, int, error) {
 	m.capturedParams = params
 	return m.products, len(m.products), nil
 }
 
 type mockFindInventoryRepo struct {
-	inventoryrepo.InventoryRepository
+	inventory.Repository
 }
 
 func (m *mockFindInventoryRepo) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]inventorydomain.Inventory, error) {
-	return map[uuid.UUID][]inventorydomain.Inventory{}, nil
+) (map[uuid.UUID][]inventory.Inventory, error) {
+	return map[uuid.UUID][]inventory.Inventory{}, nil
 }
 
 type mockFindImgRepo struct {
-	productrepo.ProductImageRepository
+	product.ImageRepository
 }
 
 func (m *mockFindImgRepo) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]productdomain.ProductImage, error) {
-	return map[uuid.UUID][]productdomain.ProductImage{}, nil
+) (map[uuid.UUID][]product.ProductImage, error) {
+	return map[uuid.UUID][]product.ProductImage{}, nil
 }
 
 type mockFindShopRepo struct {
-	shoprepo.ShopRepository
+	shop.Repository
 }
 
 func (m *mockFindShopRepo) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	IDs []uuid.UUID,
-) ([]shopdomain.Shop, error) {
-	return []shopdomain.Shop{}, nil
+) ([]shop.Shop, error) {
+	return []shop.Shop{}, nil
 }
 
 type mockFileStore struct {
@@ -124,28 +121,28 @@ func TestFindProducts_WithShopFilter(t *testing.T) {
 }
 
 type mockCustomInvRepo struct {
-	inventoryrepo.InventoryRepository
-	inventories map[uuid.UUID][]inventorydomain.Inventory
+	inventory.Repository
+	inventories map[uuid.UUID][]inventory.Inventory
 }
 
 func (m *mockCustomInvRepo) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
-) (map[uuid.UUID][]inventorydomain.Inventory, error) {
+) (map[uuid.UUID][]inventory.Inventory, error) {
 	return m.inventories, nil
 }
 
 type mockCustomShopRepo struct {
-	shoprepo.ShopRepository
-	shops []shopdomain.Shop
+	shop.Repository
+	shops []shop.Shop
 }
 
 func (m *mockCustomShopRepo) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	IDs []uuid.UUID,
-) ([]shopdomain.Shop, error) {
+) ([]shop.Shop, error) {
 	return m.shops, nil
 }
 
@@ -157,19 +154,19 @@ func TestFindProducts_FiltersInactiveOrUnapprovedShops(t *testing.T) {
 	pendingShopID := uuid.New()
 
 	productRepo := &mockFindProductRepo{
-		products: []productdomain.ProductWithInventory{
+		products: []product.ProductWithInventory{
 			{
-				Product: productdomain.Product{
+				Product: product.Product{
 					ID:     prodID,
 					Name:   "Wireless Mouse",
-					Status: productdomain.ProductStatusActive,
+					Status: product.ProductStatusActive,
 				},
 			},
 		},
 	}
 
 	invRepo := &mockCustomInvRepo{
-		inventories: map[uuid.UUID][]inventorydomain.Inventory{
+		inventories: map[uuid.UUID][]inventory.Inventory{
 			prodID: {
 				{ShopID: activeShopID, TotalStock: 10},
 				{ShopID: inactiveShopID, TotalStock: 5},
@@ -179,27 +176,27 @@ func TestFindProducts_FiltersInactiveOrUnapprovedShops(t *testing.T) {
 	}
 
 	customShopRepo := &mockCustomShopRepo{
-		shops: []shopdomain.Shop{
+		shops: []shop.Shop{
 			{
 				ID:             activeShopID,
 				Name:           "Active Shop",
 				Slug:           "active-shop",
 				IsActive:       true,
-				ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+				ApprovalStatus: shop.ShopApprovalStatusApproved,
 			},
 			{
 				ID:             inactiveShopID,
 				Name:           "Inactive Shop",
 				Slug:           "inactive-shop",
 				IsActive:       false,
-				ApprovalStatus: shopdomain.ShopApprovalStatusApproved,
+				ApprovalStatus: shop.ShopApprovalStatusApproved,
 			},
 			{
 				ID:             pendingShopID,
 				Name:           "Pending Shop",
 				Slug:           "pending-shop",
 				IsActive:       true,
-				ApprovalStatus: shopdomain.ShopApprovalStatusPending,
+				ApprovalStatus: shop.ShopApprovalStatusPending,
 			},
 		},
 	}
@@ -258,7 +255,7 @@ func TestFindProducts_FullTextSearch(t *testing.T) {
 		t.Fatalf("expected sorts to be populated")
 	}
 
-	if productRepo.capturedParams.Sorts[0].By != productrepo.ProductSortRelevance {
+	if productRepo.capturedParams.Sorts[0].By != product.ProductSortRelevance {
 		t.Errorf("expected default sort to be relevance when search query provided, got %v", productRepo.capturedParams.Sorts[0].By)
 	}
 }
