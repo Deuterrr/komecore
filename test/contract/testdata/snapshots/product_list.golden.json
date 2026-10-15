@@ -1,0 +1,30 @@
+{
+  "items": [
+    {
+      "id": "b0000000-0000-0000-0000-000000000001",
+      "sku": "PRD-001",
+      "name": "Organic Japonica Rice 5kg",
+      "slug": "organic-japonica-rice-5kg",
+      "status": "active",
+      "is_available": false,
+      "price": 75000,
+      "stock": 0,
+      "average_rating": 0,
+      "review_count": 0,
+      "banner": {
+        "thumbnail": null,
+        "preview": null,
+        "detail": null
+      },
+      "availability": []
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total_items": 1,
+    "total_pages": 1,
+    "next_cursor": null
+  }
+}
+

@@ -1,0 +1,46 @@
+{
+  "address": {
+    "id": "e0000000-0000-0000-0000-000000000001",
+    "recipient_name": "John Doe",
+    "phone": null,
+    "full_address": "Jl. Sudirman No. 1, Jakarta"
+  },
+  "shops": [
+    {
+      "shop_id": "c0000000-0000-0000-0000-000000000001",
+      "name": "Kome Central Store",
+      "slug": "kome-central-store",
+      "subtotal": 150000,
+      "total": 160000,
+      "selected_courier": {
+        "code": "jne",
+        "service": "REG",
+        "fee": 10000
+      },
+      "items": [
+        {
+          "product_id": "b0000000-0000-0000-0000-000000000001",
+          "shop_id": "c0000000-0000-0000-0000-000000000001",
+          "name": "Organic Japonica Rice 5kg",
+          "price": 75000,
+          "quantity": 2,
+          "subtotal": 150000
+        }
+      ]
+    }
+  ],
+  "subtotal": 150000,
+  "total_shipping": 10000,
+  "discount_amount": 0,
+  "total": 160000,
+  "selected_payment_method": {
+    "id": "d0000000-0000-0000-0000-000000000001",
+    "name": "BCA Virtual Account",
+    "type": "bank_transfer",
+    "description": "Transfer via BCA Virtual Account",
+    "fee": 4000,
+    "subtotal": 160000,
+    "total": 164000
+  }
+}
+

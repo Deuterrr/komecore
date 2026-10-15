@@ -1,0 +1,9 @@
+{
+  "type": "BAD_REQUEST",
+  "status_code": 400,
+  "message": "coupon code is required",
+  "code": "BAD_REQUEST",
+  "request_id": "00000000-0000-0000-0000-000000000000",
+  "details": []
+}
+

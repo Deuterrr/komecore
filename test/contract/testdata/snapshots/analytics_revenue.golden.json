@@ -1,0 +1,14 @@
+{
+  "range": "30d",
+  "interval": "day",
+  "total_revenue": 12500000,
+  "total_orders": 42,
+  "buckets": [
+    {
+      "bucket": "2026-10-01T00:00:00Z",
+      "revenue": 12500000,
+      "count": 42
+    }
+  ]
+}
+
