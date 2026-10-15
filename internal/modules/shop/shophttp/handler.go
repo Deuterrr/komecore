@@ -9,6 +9,7 @@ import (
 	"komecore/internal/httpx"
 	"komecore/internal/modules/shop/shopdomain"
 	"komecore/internal/modules/shop/shopusecase"
+	"komecore/internal/pagination"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -101,13 +102,8 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		if len(assignedIDs) == 0 {
-			res := listShopsResponse{
-				Page:  page,
-				Limit: limit,
-				Total: 0,
-				Shops: []getShopResponse{},
-			}
-			httpx.WriteJSON(w, http.StatusOK, res)
+			meta := pagination.NewPaginationMeta(page, limit, 0)
+			httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse([]getShopResponse{}, meta))
 			return nil
 		}
 		input.ShopIDs = assignedIDs
@@ -118,7 +114,7 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	var shopsResponse []getShopResponse
+	shopsResponse := make([]getShopResponse, 0, len(shops))
 	for _, shop := range shops {
 		s := getShopResponse{
 			ID:             shop.ID,
@@ -127,21 +123,15 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 			Description:    shop.Description,
 			IsActive:       shop.IsActive,
 			ApprovalStatus: string(shop.ApprovalStatus),
-			CreatedAt:      shop.CreatedAt,
-			UpdatedAt:      shop.UpdatedAt,
+			CreatedAt:      shop.CreatedAt.UTC(),
+			UpdatedAt:      httpx.ToUTCPtr(shop.UpdatedAt),
 		}
 
 		shopsResponse = append(shopsResponse, s)
 	}
 
-	response := map[string]any{
-		"shops": shopsResponse,
-		"page":  page,
-		"limit": limit,
-		"total": total,
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, response)
+	meta := pagination.NewPaginationMeta(page, limit, int64(total))
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse(shopsResponse, meta))
 	return nil
 }
 
@@ -168,7 +158,6 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 			return getErr
 		}
 	}
-
 	if result == nil {
 		return apperror.NewNotFound("shop not found")
 	}
@@ -181,11 +170,10 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 			Description:    result.Description,
 			IsActive:       result.IsActive,
 			ApprovalStatus: string(result.ApprovalStatus),
-			CreatedAt:      result.CreatedAt,
-			UpdatedAt:      result.UpdatedAt,
+			CreatedAt:      result.CreatedAt.UTC(),
+			UpdatedAt:      httpx.ToUTCPtr(result.UpdatedAt),
 		},
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -200,7 +188,6 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
-
 	if req.Name == "" {
 		return apperror.NewBadRequest("invalid name")
 	}
@@ -231,12 +218,7 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 		IsActive:       isActivePtr,
 		ApprovalStatus: req.ApprovalStatus,
 	}
-
-	err := h.service.SaveShop(
-		r.Context(),
-		*actor,
-		input,
-	)
+	err := h.service.SaveShop(r.Context(), *actor, input)
 	if err != nil {
 		return err
 	}
@@ -244,7 +226,6 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 	response := map[string]string{
 		"message": "shop successfully saved",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -274,8 +255,8 @@ func (h *ShopHandler) GetShopAddresses(w http.ResponseWriter, r *http.Request) e
 			PostalCode:  a.Detail.PostalCode,
 			Latitude:    a.Detail.Latitude,
 			Longitude:   a.Detail.Longitude,
-			CreatedAt:   a.CreatedAt,
-			UpdatedAt:   a.UpdatedAt,
+			CreatedAt:   a.CreatedAt.UTC(),
+			UpdatedAt:   httpx.ToUTCPtr(a.UpdatedAt),
 		})
 	}
 
@@ -313,8 +294,8 @@ func (h *ShopHandler) GetShopProducts(w http.ResponseWriter, r *http.Request) er
 				ReservedStock: item.Inventory.ReservedStock,
 				Available:     item.Inventory.Available(),
 			},
-			CreatedAt: item.Product.CreatedAt,
-			UpdatedAt: item.Product.UpdatedAt,
+			CreatedAt: item.Product.CreatedAt.UTC(),
+			UpdatedAt: httpx.ToUTCPtr(item.Product.UpdatedAt),
 		})
 	}
 
@@ -335,7 +316,6 @@ func (h *ShopHandler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-
 	if err := h.service.DeleteShop(r.Context(), *actor, shopID); err != nil {
 		return err
 	}
@@ -343,7 +323,6 @@ func (h *ShopHandler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
 	response := map[string]string{
 		"message": "shop successfully deleted",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

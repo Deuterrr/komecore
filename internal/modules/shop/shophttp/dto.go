@@ -3,6 +3,8 @@ package shophttp
 import (
 	"time"
 
+	"komecore/internal/httpx"
+
 	"github.com/google/uuid"
 )
 
@@ -25,12 +27,7 @@ type getShopResponse struct {
 	UpdatedAt      *time.Time `json:"updated_at"`
 }
 
-type listShopsResponse struct {
-	Page  int               `json:"page"`
-	Limit int               `json:"limit"`
-	Total int               `json:"total"`
-	Shops []getShopResponse `json:"shops"`
-}
+type listShopsResponse = httpx.PaginatedResponse[getShopResponse]
 
 type shopAddressResponse struct {
 	ID          uuid.UUID  `json:"id"`
@@ -40,14 +37,14 @@ type shopAddressResponse struct {
 	Province    string     `json:"province"`
 	City        string     `json:"city"`
 	District    string     `json:"district"`
-	ProvinceID  string     `json:"province_id,omitempty"`
-	CityID      string     `json:"city_id,omitempty"`
-	DistrictID  string     `json:"district_id,omitempty"`
-	VillageID   string     `json:"village_id,omitempty"`
+	ProvinceID  string     `json:"province_id"`
+	CityID      string     `json:"city_id"`
+	DistrictID  string     `json:"district_id"`
+	VillageID   string     `json:"village_id"`
 	FullAddress string     `json:"full_address"`
 	PostalCode  string     `json:"postal_code"`
-	Latitude    *float64   `json:"latitude,omitempty"`
-	Longitude   *float64   `json:"longitude,omitempty"`
+	Latitude    *float64   `json:"latitude"`
+	Longitude   *float64   `json:"longitude"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
 }

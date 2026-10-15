@@ -15,6 +15,7 @@ import (
 	"komecore/internal/modules/payment/paymentdomain"
 	"komecore/internal/modules/shipment/shipmentdomain"
 	"komecore/internal/modules/shop/shopusecase"
+	"komecore/internal/pagination"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -85,7 +86,6 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		Limit: limit,
 		Sort:  sort,
 	}
-
 	if idStr != "" {
 		id, err := uuid.Parse(idStr)
 		if err != nil {
@@ -93,11 +93,9 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		}
 		input.ID = &id
 	}
-
 	if number != "" {
 		input.Number = &number
 	}
-
 	if customerIDStr != "" {
 		customerID, err := uuid.Parse(customerIDStr)
 		if err != nil {
@@ -105,7 +103,6 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		}
 		input.CustomerID = &customerID
 	}
-
 	if status != "" {
 		input.Status = &status
 	} else if statusesParam := httpx.Query(r, "statuses"); statusesParam != "" {
@@ -119,7 +116,6 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		}
 		input.Statuses = parsedStatuses
 	}
-
 	fromDateStr := httpx.Query(r, "from_date")
 	if fromDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, fromDateStr); err == nil {
@@ -130,7 +126,6 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 			return apperror.NewBadRequest("invalid from_date format")
 		}
 	}
-
 	toDateStr := httpx.Query(r, "to_date")
 	if toDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, toDateStr); err == nil {
@@ -168,7 +163,6 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 				assignedIDs = append(assignedIDs, sID)
 			}
 		}
-
 		if len(assignedIDs) == 0 {
 			httpx.WriteJSON(w, http.StatusOK, map[string]any{
 				"orders": []orderResponse{},
@@ -198,12 +192,8 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		results[i] = buildOrderResponse(o)
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{
-		"orders": results,
-		"page":   page,
-		"limit":  limit,
-		"total":  total,
-	})
+	meta := pagination.NewPaginationMeta(page, limit, int64(total))
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse(results, meta))
 	return nil
 }
 
@@ -274,7 +264,6 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 		Shipment:    result.Shipment,
 		Shipments:   result.Shipments,
 	})
-
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
@@ -304,7 +293,6 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 		Sort:       sort,
 		CustomerID: &customerID,
 	}
-
 	if status != "" {
 		input.Status = &status
 	} else if statusesParam := httpx.Query(r, "statuses"); statusesParam != "" {
@@ -318,7 +306,6 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 		}
 		input.Statuses = parsedStatuses
 	}
-
 	fromDateStr := httpx.Query(r, "from_date")
 	if fromDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, fromDateStr); err == nil {
@@ -329,7 +316,6 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 			return apperror.NewBadRequest("invalid from_date format")
 		}
 	}
-
 	toDateStr := httpx.Query(r, "to_date")
 	if toDateStr != "" {
 		if t, err := time.Parse(time.RFC3339, toDateStr); err == nil {
@@ -348,12 +334,8 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 	}
 	if shopSpecified {
 		if shopID == nil {
-			httpx.WriteJSON(w, http.StatusOK, map[string]any{
-				"orders": []orderResponse{},
-				"page":   page,
-				"limit":  limit,
-				"total":  0,
-			})
+			meta := pagination.NewPaginationMeta(page, limit, 0)
+			httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse([]orderResponse{}, meta))
 			return nil
 		}
 		input.ShopID = shopID
@@ -369,12 +351,8 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 		results[i] = buildOrderResponse(o)
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{
-		"orders": results,
-		"page":   page,
-		"limit":  limit,
-		"total":  total,
-	})
+	meta := pagination.NewPaginationMeta(page, limit, int64(total))
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse(results, meta))
 	return nil
 }
 
@@ -420,7 +398,6 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-
 	userID := authCtx.UserID
 
 	var req createOrderRequest
@@ -532,7 +509,6 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 			ExpiresAt:   result.ChannelData.ExpiresAt,
 		}
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
@@ -719,7 +695,6 @@ func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 	if result == nil {
 		return apperror.NewNotFound("tracking information not found")
 	}
-
 	if result.Warning != nil {
 		w.Header().Set("X-Warning", *result.Warning)
 	}
@@ -768,7 +743,6 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 		OrderID:    orderID,
 		CustomerID: uuid.Nil,
 	}
-
 	result, err := h.getOrderTracking.Execute(r.Context(), input)
 	if err != nil {
 		return err
@@ -809,6 +783,9 @@ func buildOrderResponse(o orderusecase.OrderSearchResult) orderResponse {
 			ShippingFeeTotal: item.ShippingFee,
 			ItemOptions:      item.ItemOptions.Normalized(),
 		}
+		if items[j].ItemOptions == nil {
+			items[j].ItemOptions = make(map[string]string)
+		}
 	}
 
 	shipments := make([]shipmentDetailResponse, len(o.Shipments))
@@ -825,10 +802,10 @@ func buildOrderResponse(o orderusecase.OrderSearchResult) orderResponse {
 		Subtotal:          o.Order.Subtotal,
 		ShippingFee:       o.Order.ShippingFee,
 		Total:             o.Order.Total,
-		ConfirmedAt:       o.Order.ConfirmedAt,
-		HandlingExpiresAt: o.Order.HandlingExpiresAt,
-		CreatedAt:         o.Order.CreatedAt,
-		UpdatedAt:         o.Order.UpdatedAt,
+		ConfirmedAt:       httpx.ToUTCPtr(o.Order.ConfirmedAt),
+		HandlingExpiresAt: httpx.ToUTCPtr(o.Order.HandlingExpiresAt),
+		CreatedAt:         o.Order.CreatedAt.UTC(),
+		UpdatedAt:         httpx.ToUTCPtr(o.Order.UpdatedAt),
 		Items:             items,
 		Shipments:         shipments,
 	}
@@ -851,6 +828,10 @@ func buildOrderResponse(o orderusecase.OrderSearchResult) orderResponse {
 			Province:     o.Address.Detail.Province,
 			City:         o.Address.Detail.City,
 			District:     o.Address.Detail.District,
+			ProvinceID:   o.Address.Detail.Province,
+			CityID:       o.Address.Detail.City,
+			DistrictID:   o.Address.Detail.District,
+			VillageID:    "",
 			FullAddress:  o.Address.Detail.FullAddress,
 			PostalCode:   o.Address.Detail.PostalCode,
 			Latitude:     o.Address.Detail.Latitude,
@@ -867,15 +848,15 @@ func mapPaymentDetail(p *paymentdomain.Payment, cd *paymentdomain.PaymentChannel
 		Status:    string(p.Status),
 		Provider:  p.Provider,
 		Amount:    p.Amount,
-		ExpiresAt: p.ExpiresAt,
-		CreatedAt: p.CreatedAt,
+		ExpiresAt: httpx.ToUTCPtr(p.ExpiresAt),
+		CreatedAt: p.CreatedAt.UTC(),
 	}
 	if cd != nil {
 		resp.ChannelData = &paymentChannelDataResponse{
 			ChannelType: string(cd.ChannelType),
 			DisplayName: cd.DisplayName,
 			ActionURL:   cd.ActionURL,
-			ExpiresAt:   cd.ExpiresAt,
+			ExpiresAt:   httpx.ToUTCPtr(cd.ExpiresAt),
 		}
 	}
 
@@ -892,7 +873,9 @@ func mapShipmentDetail(s *shipmentdomain.Shipment) *shipmentDetailResponse {
 		Service:           s.Service,
 		TrackingNumber:    s.TrackingNumber,
 		Cost:              s.Cost,
-		CreatedAt:         s.CreatedAt,
+		CreatedAt:         s.CreatedAt.UTC(),
+		Events:            make([]shipmentEventResponse, 0),
+		ItemIDs:           make([]string, 0),
 	}
 }
 

@@ -3,8 +3,13 @@ package producthttp
 import (
 	"time"
 
+	"komecore/internal/httpx"
+
 	"github.com/google/uuid"
 )
+
+type paginatedProductsResponse = httpx.PaginatedResponse[productCatalogResponse]
+type paginatedProductStatsResponse = httpx.PaginatedResponse[productStatsResponse]
 
 type productStatusDTO string
 

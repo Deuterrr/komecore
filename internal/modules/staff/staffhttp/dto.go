@@ -3,8 +3,12 @@ package staffhttp
 import (
 	"time"
 
+	"komecore/internal/httpx"
+
 	"github.com/google/uuid"
 )
+
+type paginatedStaffResponse = httpx.PaginatedResponse[staffResponse]
 
 type addStaffAccountRequest struct {
 	Email    string `json:"email"`

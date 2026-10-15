@@ -8,6 +8,7 @@ import (
 	"komecore/internal/httpx"
 	"komecore/internal/modules/discount/discountdomain"
 	"komecore/internal/modules/discount/discountusecase"
+	"komecore/internal/pagination"
 )
 
 type DiscountHandler struct {
@@ -48,7 +49,6 @@ func (h *DiscountHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request)
 		ShippingFee:    result.ShippingFee,
 		FinalTotal:     result.FinalTotal,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
@@ -114,10 +114,8 @@ func (h *DiscountHandler) ListCoupons(w http.ResponseWriter, r *http.Request) er
 		items = append(items, toCouponResponse(c))
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, ListCouponsResponse{
-		Items: items,
-		Total: total,
-	})
+	meta := pagination.NewPaginationMeta(page, limit, int64(total))
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse(items, meta))
 	return nil
 }
 
@@ -132,11 +130,11 @@ func toCouponResponse(c discountdomain.Coupon) CouponResponse {
 		MaxDiscount:    c.MaxDiscount,
 		QuotaTotal:     c.QuotaTotal,
 		QuotaRemaining: c.QuotaRemaining,
-		StartsAt:       c.StartsAt,
-		ExpiresAt:      c.ExpiresAt,
+		StartsAt:       c.StartsAt.UTC(),
+		ExpiresAt:      c.ExpiresAt.UTC(),
 		IsActive:       c.IsActive,
-		CreatedAt:      c.CreatedAt,
-		UpdatedAt:      c.UpdatedAt,
+		CreatedAt:      c.CreatedAt.UTC(),
+		UpdatedAt:      httpx.ToUTCPtr(c.UpdatedAt),
 	}
 }
 

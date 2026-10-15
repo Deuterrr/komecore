@@ -9,6 +9,7 @@ import (
 	"komecore/internal/httpx"
 	appmultipart "komecore/internal/httpx/multipart"
 	"komecore/internal/modules/product/productusecase"
+	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
@@ -54,11 +55,10 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 	q := httpx.Query(r, "q")
 	id := httpx.Query(r, "id")
 	sort := httpx.Query(r, "sort")
-	shopID := httpx.Query(r, "shop_id")
 	shopSlug := httpx.Query(r, "shop_slug")
 	status := httpx.Query(r, "status")
 	includeArchived := httpx.Query(r, "include_archived") == "true"
-
+	shopID := httpx.Query(r, "shop_id")
 	if shopID == "" && shopSlug == "" {
 		shopID = r.Header.Get("X-Shop-ID")
 	}
@@ -88,9 +88,7 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 	} else if !includeArchived && status != "all" && status != "any" {
 		input.ExcludeArchived = true
 	}
-
 	products, total, err := h.findProducts.Execute(r.Context(), input)
-
 	if err != nil {
 		return err
 	}
@@ -108,7 +106,6 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 		}
 
 		var result productCatalogResponse
-
 		result = productCatalogResponse{
 			productBaseResponse: productBaseResponse{
 				ID:     p.Product.ID,
@@ -128,24 +125,16 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 			},
 			Availability: availabilities,
 		}
-
 		if *result.Banner.Thumbnail == "" {
 			result.Banner = productImageResponse{
 				Thumbnail: nil,
 			}
 		}
-
 		results = append(results, result)
 	}
 
-	response := map[string]interface{}{
-		"products": results,
-		"page":     page,
-		"limit":    limit,
-		"total":    total,
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, response)
+	meta := pagination.NewPaginationMeta(page, limit, int64(total))
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse(results, meta))
 	return nil
 }
 
@@ -227,25 +216,22 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) erro
 		},
 		Description:  productDetail.Product.Description,
 		Weight:       productDetail.Product.Weight,
-		UpdatedAt:    productDetail.Product.UpdatedAt,
+		UpdatedAt:    httpx.ToUTCPtr(productDetail.Product.UpdatedAt),
 		Gallery:      images,
 		Availability: availabilities,
 	}
 	response.IsAvailable =
 		productStatusDTO(productDetail.Product.Status) == ProductStatusActive &&
 			available > 0
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
 func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) error {
 	var req saveProductRequest
-
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
-
 	if req.Name == "" {
 		return apperror.NewBadRequest("invalid name")
 	}
@@ -279,7 +265,6 @@ func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) err
 		CostPrice:            req.CostPrice,
 		SupplierLeadTimeDays: req.SupplierLeadTimeDays,
 	}
-
 	err := h.saveProduct.Execute(r.Context(), input)
 	if err != nil {
 		return err
@@ -288,7 +273,6 @@ func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) err
 	response := map[string]string{
 		"message": "product successfully saved",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -330,7 +314,6 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 		ProductID: productID,
 		Images:    images,
 	}
-
 	err = h.addProductImage.Execute(r.Context(), input)
 	if err != nil {
 		return err
@@ -339,7 +322,6 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 	response := map[string]string{
 		"message": "product image successfully added",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -358,7 +340,6 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) e
 	response := map[string]string{
 		"message": "product successfully deleted",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -399,7 +380,6 @@ func (h *ProductHandler) GetProductStats(w http.ResponseWriter, r *http.Request)
 	if id != "" {
 		input.ID = &id
 	}
-
 	stats, total, err := h.getProductStats.Execute(r.Context(), input)
 	if err != nil {
 		return err
@@ -437,13 +417,7 @@ func (h *ProductHandler) GetProductStats(w http.ResponseWriter, r *http.Request)
 		})
 	}
 
-	response := map[string]interface{}{
-		"stats": results,
-		"page":  page,
-		"limit": limit,
-		"total": total,
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, response)
+	meta := pagination.NewPaginationMeta(page, limit, int64(total))
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse(results, meta))
 	return nil
 }

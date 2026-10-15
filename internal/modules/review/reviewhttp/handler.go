@@ -7,6 +7,7 @@ import (
 	"komecore/internal/authctx"
 	"komecore/internal/httpx"
 	"komecore/internal/modules/review/reviewusecase"
+	"komecore/internal/pagination"
 )
 
 type ReviewHandler struct {
@@ -50,17 +51,18 @@ func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) err
 	}
 
 	resp := reviewResponse{
-		ID:         review.ID,
-		ProductID:  review.ProductID,
-		CustomerID: review.CustomerID,
-		OrderID:    review.OrderID,
-		Rating:     review.Rating,
-		Title:      review.Title,
-		Comment:    review.Comment,
-		CreatedAt:  review.CreatedAt,
-		UpdatedAt:  review.UpdatedAt,
+		ID:           review.ID,
+		ProductID:    review.ProductID,
+		CustomerID:   review.CustomerID,
+		OrderID:      review.OrderID,
+		Rating:       review.Rating,
+		Title:        review.Title,
+		Comment:      review.Comment,
+		HelpfulCount: 0,
+		Media:        make([]string, 0),
+		CreatedAt:    review.CreatedAt.UTC(),
+		UpdatedAt:    httpx.ToUTCPtr(review.UpdatedAt),
 	}
-
 	httpx.WriteJSON(w, http.StatusCreated, resp)
 	return nil
 }
@@ -95,20 +97,21 @@ func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Reques
 			Rating:       rev.Review.Rating,
 			Title:        rev.Review.Title,
 			Comment:      rev.Review.Comment,
-			CreatedAt:    rev.Review.CreatedAt,
-			UpdatedAt:    rev.Review.UpdatedAt,
+			HelpfulCount: 0,
+			Media:        make([]string, 0),
+			CreatedAt:    rev.Review.CreatedAt.UTC(),
+			UpdatedAt:    httpx.ToUTCPtr(rev.Review.UpdatedAt),
 		})
 	}
 
 	resp := listReviewsResponse{
-		Reviews:       items,
-		AverageRating: result.AverageRating,
-		ReviewCount:   result.ReviewCount,
-		Page:          result.Page,
-		Limit:         result.Limit,
-		Total:         result.Total,
+		Items:      items,
+		Pagination: pagination.NewPaginationMeta(result.Page, result.Limit, int64(result.Total)),
+		RatingSummary: RatingSummaryResponse{
+			AverageRating: result.AverageRating,
+			ReviewsCount:  result.ReviewCount,
+		},
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }

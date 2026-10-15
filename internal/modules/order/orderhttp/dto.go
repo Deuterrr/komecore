@@ -69,21 +69,21 @@ type updateOrderStatusRequest struct {
 
 type createOrderPaymentAccountResponse struct {
 	AccountName   string  `json:"account_name"`
-	AccountNumber *string `json:"account_number,omitempty"`
-	PhoneNumber   *string `json:"phone_number,omitempty"`
-	QRString      *string `json:"qr_string,omitempty"`
+	AccountNumber *string `json:"account_number"`
+	PhoneNumber   *string `json:"phone_number"`
+	QRString      *string `json:"qr_string"`
 }
 
 type createOrderResponse struct {
 	OrderID        string                             `json:"order_id"`
 	Instruction    *string                            `json:"instruction"`
-	PaymentAccount *createOrderPaymentAccountResponse `json:"payment_account,omitempty"`
-	ChannelData    *paymentChannelDataResponse        `json:"channel_data,omitempty"`
+	PaymentAccount *createOrderPaymentAccountResponse `json:"payment_account"`
+	ChannelData    *paymentChannelDataResponse        `json:"channel_data"`
 }
 
 type orderItemResponse struct {
 	ID               string            `json:"id"`
-	ShipmentID       *string           `json:"shipment_id,omitempty"`
+	ShipmentID       *string           `json:"shipment_id"`
 	ProductID        string            `json:"product_id"`
 	ProductName      string            `json:"product_name"`
 	Quantity         int               `json:"quantity"`
@@ -91,17 +91,17 @@ type orderItemResponse struct {
 	Subtotal         int64             `json:"subtotal"`
 	ShopID           string            `json:"shop_id"`
 	ShopName         string            `json:"shop_name"`
-	CourierCode      *string           `json:"courier_code,omitempty"`
-	CourierService   *string           `json:"courier_service,omitempty"`
+	CourierCode      *string           `json:"courier_code"`
+	CourierService   *string           `json:"courier_service"`
 	ShippingFeeTotal int64             `json:"shipping_fee"`
-	ItemOptions      map[string]string `json:"item_options,omitempty"`
+	ItemOptions      map[string]string `json:"item_options"`
 }
 
 type paymentChannelDataResponse struct {
 	ChannelType string     `json:"channel_type"`
 	DisplayName string     `json:"display_name"`
-	ActionURL   *string    `json:"action_url,omitempty"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	ActionURL   *string    `json:"action_url"`
+	ExpiresAt   *time.Time `json:"expires_at"`
 }
 
 type paymentDetailResponse struct {
@@ -109,8 +109,8 @@ type paymentDetailResponse struct {
 	Status      string                      `json:"status"`
 	Provider    string                      `json:"provider"`
 	Amount      int64                       `json:"amount"`
-	ExpiresAt   *time.Time                  `json:"expires_at,omitempty"`
-	ChannelData *paymentChannelDataResponse `json:"channel_data,omitempty"`
+	ExpiresAt   *time.Time                  `json:"expires_at"`
+	ChannelData *paymentChannelDataResponse `json:"channel_data"`
 	CreatedAt   time.Time                   `json:"created_at"`
 }
 
@@ -129,30 +129,30 @@ type shipmentDetailResponse struct {
 	FulfillmentMethod string                  `json:"fulfillment_method"`
 	Courier           string                  `json:"courier"`
 	Service           string                  `json:"service"`
-	TrackingNumber    *string                 `json:"tracking_number,omitempty"`
+	TrackingNumber    *string                 `json:"tracking_number"`
 	Cost              int64                   `json:"cost"`
 	CreatedAt         time.Time               `json:"created_at"`
-	Events            []shipmentEventResponse `json:"events,omitempty"`
-	ItemIDs           []string                `json:"item_ids,omitempty"`
+	Events            []shipmentEventResponse `json:"events"`
+	ItemIDs           []string                `json:"item_ids"`
 }
 
 type orderAddressResponse struct {
 	ID           string   `json:"id"`
 	CustomerID   string   `json:"customer_id"`
 	ReceiverName string   `json:"receiver_name"`
-	Phone        *string  `json:"phone,omitempty"`
+	Phone        *string  `json:"phone"`
 	IsDefault    bool     `json:"is_default"`
 	Province     string   `json:"province"`
 	City         string   `json:"city"`
 	District     string   `json:"district"`
-	ProvinceID   string   `json:"province_id,omitempty"`
-	CityID       string   `json:"city_id,omitempty"`
-	DistrictID   string   `json:"district_id,omitempty"`
-	VillageID    string   `json:"village_id,omitempty"`
+	ProvinceID   string   `json:"province_id"`
+	CityID       string   `json:"city_id"`
+	DistrictID   string   `json:"district_id"`
+	VillageID    string   `json:"village_id"`
 	FullAddress  string   `json:"full_address"`
 	PostalCode   string   `json:"postal_code"`
-	Latitude     *float64 `json:"latitude,omitempty"`
-	Longitude    *float64 `json:"longitude,omitempty"`
+	Latitude     *float64 `json:"latitude"`
+	Longitude    *float64 `json:"longitude"`
 }
 
 type orderResponse struct {
@@ -164,13 +164,13 @@ type orderResponse struct {
 	Subtotal          int64                    `json:"subtotal"`
 	ShippingFee       int64                    `json:"shipping_fee"`
 	Total             int64                    `json:"total"`
-	ConfirmedAt       *time.Time               `json:"confirmed_at,omitempty"`
-	HandlingExpiresAt *time.Time               `json:"handling_expires_at,omitempty"`
+	ConfirmedAt       *time.Time               `json:"confirmed_at"`
+	HandlingExpiresAt *time.Time               `json:"handling_expires_at"`
 	CreatedAt         time.Time                `json:"created_at"`
-	UpdatedAt         *time.Time               `json:"updated_at,omitempty"`
+	UpdatedAt         *time.Time               `json:"updated_at"`
 	Items             []orderItemResponse      `json:"items"`
-	Payment           *paymentDetailResponse   `json:"payment,omitempty"`
-	Shipment          *shipmentDetailResponse  `json:"shipment,omitempty"`
+	Payment           *paymentDetailResponse   `json:"payment"`
+	Shipment          *shipmentDetailResponse  `json:"shipment"`
 	Shipments         []shipmentDetailResponse `json:"shipments"`
-	Address           *orderAddressResponse    `json:"address,omitempty"`
+	Address           *orderAddressResponse    `json:"address"`
 }

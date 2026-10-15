@@ -3,6 +3,8 @@ package reviewhttp
 import (
 	"time"
 
+	"komecore/internal/pagination"
+
 	"github.com/google/uuid"
 )
 
@@ -14,15 +16,17 @@ type createReviewRequest struct {
 }
 
 type reviewResponse struct {
-	ID         uuid.UUID  `json:"id"`
-	ProductID  uuid.UUID  `json:"product_id"`
-	CustomerID uuid.UUID  `json:"customer_id"`
-	OrderID    uuid.UUID  `json:"order_id"`
-	Rating     int        `json:"rating"`
-	Title      *string    `json:"title"`
-	Comment    *string    `json:"comment"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	ID           uuid.UUID  `json:"id"`
+	ProductID    uuid.UUID  `json:"product_id"`
+	CustomerID   uuid.UUID  `json:"customer_id"`
+	OrderID      uuid.UUID  `json:"order_id"`
+	Rating       int        `json:"rating"`
+	Title        *string    `json:"title"`
+	Comment      *string    `json:"comment"`
+	HelpfulCount int        `json:"helpful_count"`
+	Media        []string   `json:"media"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
 }
 
 type reviewListItemResponse struct {
@@ -35,17 +39,21 @@ type reviewListItemResponse struct {
 	Rating       int        `json:"rating"`
 	Title        *string    `json:"title"`
 	Comment      *string    `json:"comment"`
+	HelpfulCount int        `json:"helpful_count"`
+	Media        []string   `json:"media"`
 	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
+	UpdatedAt    *time.Time `json:"updated_at"`
+}
+
+type RatingSummaryResponse struct {
+	AverageRating float64 `json:"average_rating"`
+	ReviewsCount  int     `json:"reviews_count"`
 }
 
 type listReviewsResponse struct {
-	Reviews       []reviewListItemResponse `json:"reviews"`
-	AverageRating float64                  `json:"average_rating"`
-	ReviewCount   int                      `json:"review_count"`
-	Page          int                      `json:"page"`
-	Limit         int                      `json:"limit"`
-	Total         int                      `json:"total"`
+	Items         []reviewListItemResponse  `json:"items"`
+	Pagination    pagination.PaginationMeta `json:"pagination"`
+	RatingSummary RatingSummaryResponse     `json:"rating_summary"`
 }
 
 type messageResponse struct {

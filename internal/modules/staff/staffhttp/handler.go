@@ -7,6 +7,7 @@ import (
 	"komecore/internal/authctx"
 	"komecore/internal/httpx"
 	"komecore/internal/modules/staff/staffusecase"
+	"komecore/internal/pagination"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -45,7 +46,6 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
 	}
-
 	if req.Email == "" {
 		return apperror.NewBadRequest("email is required")
 	}
@@ -60,7 +60,6 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 		Email:          req.Email,
 		Password:       req.Password,
 	}
-
 	err = h.service.AddStaffAccount(r.Context(), input)
 	if err != nil {
 		return err
@@ -69,7 +68,6 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 	response := map[string]string{
 		"message": "staff account successfully created",
 	}
-
 	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
@@ -79,7 +77,6 @@ func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
 	}
-
 	if req.Name == "" {
 		return apperror.NewBadRequest("name is required")
 	}
@@ -94,7 +91,6 @@ func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 		LogoUrl:     req.LogoUrl,
 		BannerUrl:   req.BannerUrl,
 	}
-
 	err := h.service.CreateStaff(r.Context(), input)
 	if err != nil {
 		return err
@@ -103,7 +99,6 @@ func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 	response := map[string]string{
 		"message": "staff successfully created",
 	}
-
 	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
@@ -148,18 +143,12 @@ func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 			Username:  m.Username,
 			Phone:     m.Phone,
 			AvatarURL: m.AvatarURL,
-			CreatedAt: m.CreatedAt,
+			CreatedAt: m.CreatedAt.UTC(),
 		})
 	}
 
-	response := map[string]interface{}{
-		"staff": results,
-		"page":  page,
-		"limit": limit,
-		"total": total,
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, response)
+	meta := pagination.NewPaginationMeta(page, limit, int64(total))
+	httpx.WriteJSON(w, http.StatusOK, httpx.NewPaginatedResponse(results, meta))
 	return nil
 }
 
@@ -183,7 +172,6 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 		ActorStaffID:   *actor.StaffID,
 		StaffID:        staffID,
 	}
-
 	accounts, err := h.service.ListStaffAccounts(r.Context(), input)
 	if err != nil {
 		return err
@@ -204,8 +192,8 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 				Code: string(m.Role.Code),
 				Name: m.Role.Name,
 			},
-			LastLoginAt: m.LastLoginAt,
-			CreatedAt:   m.CreatedAt,
+			LastLoginAt: httpx.ToUTCPtr(m.LastLoginAt),
+			CreatedAt:   m.CreatedAt.UTC(),
 		})
 	}
 
@@ -214,7 +202,6 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 		Total:    len(results),
 		Accounts: results,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -238,7 +225,6 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
 	}
-
 	if req.Name == "" {
 		return apperror.NewBadRequest("name is required")
 	}
@@ -252,7 +238,6 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 		LogoUrl:        req.LogoUrl,
 		BannerUrl:      req.BannerUrl,
 	}
-
 	err = h.service.UpdateStaff(r.Context(), input)
 	if err != nil {
 		return err
@@ -261,7 +246,6 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 	response := map[string]string{
 		"message": "staff successfully updated",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -286,7 +270,6 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 		ActorStaffID:   *actor.StaffID,
 		StaffID:        staffID,
 	}
-
 	err = h.service.DeleteStaff(r.Context(), input)
 	if err != nil {
 		return err
@@ -295,7 +278,6 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 	response := map[string]string{
 		"message": "staff successfully deleted",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -327,7 +309,6 @@ func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request
 		StaffID:        staffID,
 		AccountID:      accountID,
 	}
-
 	err = h.service.RemoveStaffAccount(r.Context(), input)
 	if err != nil {
 		return err
@@ -336,7 +317,6 @@ func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request
 	response := map[string]string{
 		"message": "staff account successfully removed",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

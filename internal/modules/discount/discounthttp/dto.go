@@ -3,6 +3,7 @@ package discounthttp
 import (
 	"time"
 
+	"komecore/internal/httpx"
 	"komecore/internal/modules/discount/discountdomain"
 
 	"github.com/google/uuid"
@@ -40,21 +41,18 @@ type CreateCouponRequest struct {
 type CouponResponse struct {
 	ID             uuid.UUID                 `json:"id"`
 	Code           string                    `json:"code"`
-	Description    *string                   `json:"description,omitempty"`
+	Description    *string                   `json:"description"`
 	Type           discountdomain.CouponType `json:"type"`
 	DiscountValue  int64                     `json:"discount_value"`
 	MinSpend       int64                     `json:"min_spend"`
-	MaxDiscount    *int64                    `json:"max_discount,omitempty"`
+	MaxDiscount    *int64                    `json:"max_discount"`
 	QuotaTotal     int                       `json:"quota_total"`
 	QuotaRemaining int                       `json:"quota_remaining"`
 	StartsAt       time.Time                 `json:"starts_at"`
 	ExpiresAt      time.Time                 `json:"expires_at"`
 	IsActive       bool                      `json:"is_active"`
 	CreatedAt      time.Time                 `json:"created_at"`
-	UpdatedAt      *time.Time                `json:"updated_at,omitempty"`
+	UpdatedAt      *time.Time                `json:"updated_at"`
 }
 
-type ListCouponsResponse struct {
-	Items []CouponResponse `json:"items"`
-	Total int              `json:"total"`
-}
+type ListCouponsResponse = httpx.PaginatedResponse[CouponResponse]

@@ -208,7 +208,11 @@ func TestDiscountHandler_ListCoupons(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, resp.Total)
+	assert.Equal(t, int64(1), resp.Pagination.TotalItems)
+	assert.Equal(t, 1, resp.Pagination.Page)
+	assert.Equal(t, 10, resp.Pagination.Limit)
+	assert.Equal(t, 1, resp.Pagination.TotalPages)
+	assert.Nil(t, resp.Pagination.NextCursor)
 	assert.Len(t, resp.Items, 1)
 	assert.Equal(t, "COUPON1", resp.Items[0].Code)
 }
