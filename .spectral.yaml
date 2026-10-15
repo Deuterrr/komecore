@@ -1,0 +1,18 @@
+extends: spectral:oas
+
+rules:
+  # Enforce operation tagging and tag consistency
+  operation-tags: error
+  operation-tag-defined: error
+
+  # Path and parameter validations
+  path-params: error
+
+  # Metadata & optional constraints
+  operation-operationId: off
+  operation-description: off
+  info-contact: off
+  info-description: off
+  tag-description: off
+  no-eval-in-markdown: off
+  oas3-unused-component: off

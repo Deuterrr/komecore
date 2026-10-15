@@ -2417,6 +2417,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
               example:
+                message: "notification handled"
   # ==============================================================================
   # PROMOTIONS & COUPONS
   # ==============================================================================
@@ -3976,4 +3977,3 @@ components:
         product_name: { type: string, example: "Wireless Bluetooth Earbuds" }
         quantity_sold: { type: integer, format: int64, example: 85 }
         total_revenue: { type: integer, format: int64, example: 25500000 }
-
