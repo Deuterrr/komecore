@@ -30,24 +30,23 @@ import (
 	"komecore/internal/modules/user/userpersistence"
 	"komecore/internal/modules/wishlist/wishlistpersistence"
 
-	"komecore/internal/modules/auth/authrepo"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/auth"
 	"komecore/internal/modules/auth/authsvc"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/courier"
+	"komecore/internal/modules/discount"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/order"
 	"komecore/internal/modules/order/ordersvc"
-
-	"komecore/internal/modules/address/addressrepo"
-	"komecore/internal/modules/cart/cartrepo"
-	"komecore/internal/modules/courier/courierrepo"
-	"komecore/internal/modules/discount/discountrepo"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/payment/paymentrepo"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/review/reviewrepo"
-	"komecore/internal/modules/shipment/shipmentrepo"
-	"komecore/internal/modules/shop/shoprepo"
-	"komecore/internal/modules/staff/staffrepo"
-	"komecore/internal/modules/user/userrepo"
-	"komecore/internal/modules/wishlist/wishlistrepo"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/review"
+	"komecore/internal/modules/shipment"
+	"komecore/internal/modules/shop"
+	"komecore/internal/modules/staff"
+	"komecore/internal/modules/user"
+	"komecore/internal/modules/wishlist"
 
 	"komecore/internal/modules/address/addressusecase"
 	"komecore/internal/modules/auth/authusecase"
@@ -75,14 +74,14 @@ type Container struct {
 	Logger             applogger.Logger
 	AuditLogger        applogger.AuditLogger
 	CORSAllowedOrigins []string
-	Authenticator      authrepo.Authenticator
-	Authorizer         authrepo.Authorizer
+	Authenticator      authsvc.Authenticator
+	Authorizer         authsvc.Authorizer
 	DBExecutor         transaction.Executor
 	DBTransactor       transaction.Transactor
 	GoogleOAuth        appconfig.GoogleOAuthConfig
 	Cache              cache.Cache
 	Idempotency        *appmiddleware.IdempotencyMiddleware
-	paymentMethodRepo  paymentrepo.PaymentMethodRepository
+	paymentMethodRepo  payment.MethodRepository
 	paymentGateway     paymentgateway.Provider
 	OutboxWorker       *outbox.Worker
 	OutboxRepo         outbox.Repository
@@ -163,41 +162,41 @@ func NewContainer(cfg Config, infra *Dependency) *Container {
 }
 
 type repositories struct {
-	product             productrepo.ProductRepository
-	productImage        productrepo.ProductImageRepository
-	productPerformance  productrepo.ProductPerformanceRepository
-	productStockHistory productrepo.ProductStockHistoryRepository
-	inventory           inventoryrepo.InventoryRepository
-	account             authrepo.AccountRepository
-	challenge           authrepo.VerificationChallengeRepository
-	oauth               authrepo.OAuthConnectionRepository
-	session             authrepo.SessionRepository
-	refreshToken        authrepo.RefreshTokenRepository
-	cart                cartrepo.CartRepository
-	user                userrepo.UserRepository
-	address             addressrepo.CustomerAddressRepository
-	addressShop         addressrepo.ShopAddressRepository
-	payment             paymentrepo.PaymentRepository
-	paymentMethod       paymentrepo.PaymentMethodRepository
-	paymentEvent        paymentrepo.PaymentEventRepository
-	paymentInstruction  paymentrepo.PaymentInstructionRepository
-	paymentChannelData  paymentrepo.PaymentChannelDataRepository
-	paymentWebhookEvent paymentrepo.PaymentWebhookEventRepository
-	shop                shoprepo.ShopRepository
-	courier             courierrepo.CourierRepository
-	staff               staffrepo.StaffRepository
-	customer            authrepo.CustomerRepository
-	membership          staffrepo.StaffMembershipRepository
-	role                staffrepo.RoleRepository
-	order               orderrepo.OrderRepository
-	orderItem           orderrepo.OrderItemRepository
-	invoice             orderrepo.InvoiceRepository
-	invoiceItem         orderrepo.InvoiceItemRepository
-	shipment            shipmentrepo.ShipmentRepository
-	wishlist            wishlistrepo.WishlistRepository
-	review              reviewrepo.ReviewRepository
-	coupon              discountrepo.CouponRepository
-	analytics           staffrepo.AnalyticsRepository
+	product             product.Repository
+	productImage        product.ImageRepository
+	productPerformance  product.PerformanceRepository
+	productStockHistory product.StockHistoryRepository
+	inventory           inventory.Repository
+	account             auth.AccountRepository
+	challenge           auth.VerificationChallengeRepository
+	oauth               auth.OAuthConnectionRepository
+	session             auth.SessionRepository
+	refreshToken        auth.RefreshTokenRepository
+	cart                cart.Repository
+	user                user.Repository
+	address             address.CustomerAddressRepository
+	addressShop         address.ShopAddressRepository
+	payment             payment.Repository
+	paymentMethod       payment.MethodRepository
+	paymentEvent        payment.EventRepository
+	paymentInstruction  payment.InstructionRepository
+	paymentChannelData  payment.ChannelDataRepository
+	paymentWebhookEvent payment.WebhookEventRepository
+	shop                shop.Repository
+	courier             courier.Repository
+	staff               staff.Repository
+	customer            auth.CustomerRepository
+	membership          staff.MembershipRepository
+	role                staff.RoleRepository
+	order               order.Repository
+	orderItem           order.ItemRepository
+	invoice             order.InvoiceRepository
+	invoiceItem         order.InvoiceItemRepository
+	shipment            shipment.Repository
+	wishlist            wishlist.Repository
+	review              review.Repository
+	coupon              discount.Repository
+	analytics           staff.AnalyticsRepository
 	outbox              outbox.Repository
 }
 
@@ -243,18 +242,18 @@ func initRepositories() *repositories {
 }
 
 type sharedServices struct {
-	tokenSvc             authrepo.TokenService
-	pwHasher             authrepo.PasswordHasher
-	tokenHasher          authrepo.TokenHasher
-	authMidd             authrepo.Authenticator
-	userDeletionSvc      authrepo.UserDeletionService
-	authorMdwr           authrepo.Authorizer
+	tokenSvc             auth.TokenService
+	pwHasher             auth.PasswordHasher
+	tokenHasher          auth.TokenHasher
+	authMidd             authsvc.Authenticator
+	userDeletionSvc      auth.UserDeletionService
+	authorMdwr           authsvc.Authorizer
 	slugGen              sGen.Generator
 	mailSender           mailerSvc.Sender
 	otpGen               otpSvc.Generator
 	imageTransformer     imgSvc.ImageTransformer
 	imageVariantProvider imgSvc.VariantCreator
-	pricingService       orderrepo.PricingService
+	pricingService       order.PricingService
 	discountService      *discountusecase.DiscountService
 }
 

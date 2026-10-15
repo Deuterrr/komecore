@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"komecore/internal/modules/auth/authsvc"
 	"net/http"
 
 	"komecore/internal/authctx"
@@ -11,7 +12,6 @@ import (
 
 	"komecore/internal/modules/address/addresshttp"
 	"komecore/internal/modules/auth/authhttp"
-	"komecore/internal/modules/auth/authrepo"
 	"komecore/internal/modules/cart/carthttp"
 	"komecore/internal/modules/courier/courierhttp"
 	"komecore/internal/modules/discount/discounthttp"
@@ -130,7 +130,7 @@ func NewRouteChains(c *Container) *RouteChains {
 	}
 }
 
-func (rc *RouteChains) StaffWithPerm(authorizer authrepo.Authorizer, permission string, h httpx.AppHandler) http.HandlerFunc {
+func (rc *RouteChains) StaffWithPerm(authorizer authsvc.Authorizer, permission string, h httpx.AppHandler) http.HandlerFunc {
 	return rc.StaffOnly(authorizer.RequirePermission(permission)(h))
 }
 

@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"komecore/internal/modules/auth/authsvc"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	appcookie "komecore/internal/httpx/cookie"
 	appmiddleware "komecore/internal/httpx/middleware"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authrepo"
 	applogger "komecore/pkg/logger"
 	applimiter "komecore/pkg/ratelimit"
 
@@ -136,8 +136,8 @@ func (m *mockRouterAuthorizer) OptionalLoadActor(_ transaction.Executor) appmidd
 	}
 }
 
-var _ authrepo.Authenticator = (*mockRouterAuthenticator)(nil)
-var _ authrepo.Authorizer = (*mockRouterAuthorizer)(nil)
+var _ authsvc.Authenticator = (*mockRouterAuthenticator)(nil)
+var _ authsvc.Authorizer = (*mockRouterAuthorizer)(nil)
 
 func createTestContainer(authenticated bool, authCtx *authctx.AuthContext) *Container {
 	log := applogger.NewSlogLogger("test")
