@@ -10,14 +10,12 @@ import (
 
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authdomain"
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/user/userdomain"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/auth"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/user"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -49,31 +47,31 @@ func (t *coFailingTransactor) WithinTransaction(_ context.Context, _ func(transa
 // --- pricing service ---
 
 type coMockPricingService struct {
-	result *orderrepo.PricingResult
+	result *order.PricingResult
 	err    error
 }
 
-func (m *coMockPricingService) Calculate(_ context.Context, _ transaction.Executor, _ orderrepo.PricingInput) (*orderrepo.PricingResult, error) {
+func (m *coMockPricingService) Calculate(_ context.Context, _ transaction.Executor, _ order.PricingInput) (*order.PricingResult, error) {
 	return m.result, m.err
 }
 
 // --- user repo ---
 
 type coMockUserRepo struct {
-	user *userdomain.User
+	user *user.User
 	err  error
 }
 
-func (m *coMockUserRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*userdomain.User, error) {
+func (m *coMockUserRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*user.User, error) {
 	return m.user, m.err
 }
-func (m *coMockUserRepo) GetByUsername(_ context.Context, _ transaction.Executor, _ string) (*userdomain.User, error) {
+func (m *coMockUserRepo) GetByUsername(_ context.Context, _ transaction.Executor, _ string) (*user.User, error) {
 	return nil, nil
 }
-func (m *coMockUserRepo) CreateUser(_ context.Context, _ transaction.Executor, _ userrepo.CreateUserProps) error {
+func (m *coMockUserRepo) CreateUser(_ context.Context, _ transaction.Executor, _ user.CreateUserProps) error {
 	return nil
 }
-func (m *coMockUserRepo) SaveProfile(_ context.Context, _ transaction.Executor, _ userrepo.SaveProfileProps) error {
+func (m *coMockUserRepo) SaveProfile(_ context.Context, _ transaction.Executor, _ user.SaveProfileProps) error {
 	return nil
 }
 func (m *coMockUserRepo) Delete(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
@@ -83,23 +81,23 @@ func (m *coMockUserRepo) Delete(_ context.Context, _ transaction.Executor, _ uui
 // --- account repo ---
 
 type coMockAccountRepo struct {
-	account *authdomain.Account
+	account *auth.Account
 	err     error
 }
 
-func (m *coMockAccountRepo) GetByEmail(_ context.Context, _ transaction.Executor, _ string) (*authdomain.Account, error) {
+func (m *coMockAccountRepo) GetByEmail(_ context.Context, _ transaction.Executor, _ string) (*auth.Account, error) {
 	return nil, nil
 }
-func (m *coMockAccountRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.Account, error) {
+func (m *coMockAccountRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.Account, error) {
 	return nil, nil
 }
-func (m *coMockAccountRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*authdomain.Account, error) {
+func (m *coMockAccountRepo) GetByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*auth.Account, error) {
 	return m.account, m.err
 }
 func (m *coMockAccountRepo) ActivateByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
 	return nil
 }
-func (m *coMockAccountRepo) Create(_ context.Context, _ transaction.Executor, _ authdomain.Account) error {
+func (m *coMockAccountRepo) Create(_ context.Context, _ transaction.Executor, _ auth.Account) error {
 	return nil
 }
 func (m *coMockAccountRepo) UpdatePasswordByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ string) error {
@@ -115,33 +113,33 @@ func (m *coMockAccountRepo) UpdateLastLoginAt(_ context.Context, _ transaction.E
 // --- payment method repo ---
 
 type coMockPaymentMethodRepo struct {
-	method *paymentdomain.PaymentMethod
+	method *payment.PaymentMethod
 	err    error
 }
 
-func (m *coMockPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentMethod) error {
+func (m *coMockPaymentMethodRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentMethod) error {
 	return nil
 }
-func (m *coMockPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*paymentdomain.PaymentMethod, error) {
+func (m *coMockPaymentMethodRepo) FindByName(_ context.Context, _ transaction.Executor, _ string) (*payment.PaymentMethod, error) {
 	return nil, nil
 }
-func (m *coMockPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.PaymentMethod, error) {
+func (m *coMockPaymentMethodRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.PaymentMethod, error) {
 	return m.method, m.err
 }
-func (m *coMockPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]paymentdomain.PaymentMethod, error) {
+func (m *coMockPaymentMethodRepo) ListAll(_ context.Context, _ transaction.Executor, _ pagination.Sorts) ([]payment.PaymentMethod, error) {
 	return nil, nil
 }
 
 // --- payment repo ---
 
 type coMockPaymentRepo struct {
-	payments map[uuid.UUID]*paymentdomain.Payment
+	payments map[uuid.UUID]*payment.Payment
 }
 
-func (m *coMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *coMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*payment.Payment, error) {
 	return m.payments[id], nil
 }
-func (m *coMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *coMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	for _, p := range m.payments {
 		if p.OrderID == orderID {
 			return p, nil
@@ -149,23 +147,23 @@ func (m *coMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Execut
 	}
 	return nil, nil
 }
-func (m *coMockPaymentRepo) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *coMockPaymentRepo) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	return m.GetByOrderID(ctx, exec, orderID)
 }
-func (m *coMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]paymentdomain.Payment, error) {
+func (m *coMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *coMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ paymentdomain.PaymentStatus) error {
+func (m *coMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ payment.PaymentStatus) error {
 	return nil
 }
-func (m *coMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, payment paymentdomain.Payment) error {
+func (m *coMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, payment payment.Payment) error {
 	m.payments[payment.ID] = &payment
 	return nil
 }
-func (m *coMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]paymentdomain.Payment, error) {
+func (m *coMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *coMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]paymentdomain.Payment, error) {
+func (m *coMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]payment.Payment, error) {
 	return nil, nil
 }
 
@@ -176,16 +174,16 @@ type coMockPaymentAccountRepo struct{}
 // --- payment event repo ---
 
 type coMockPaymentEventRepo struct {
-	events []paymentdomain.PaymentEvent
+	events []payment.PaymentEvent
 }
 
-func (m *coMockPaymentEventRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.PaymentEvent, error) {
+func (m *coMockPaymentEventRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.PaymentEvent, error) {
 	return nil, nil
 }
-func (m *coMockPaymentEventRepo) ListByPaymentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]paymentdomain.PaymentEvent, error) {
+func (m *coMockPaymentEventRepo) ListByPaymentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]payment.PaymentEvent, error) {
 	return nil, nil
 }
-func (m *coMockPaymentEventRepo) Create(_ context.Context, _ transaction.Executor, event paymentdomain.PaymentEvent) error {
+func (m *coMockPaymentEventRepo) Create(_ context.Context, _ transaction.Executor, event payment.PaymentEvent) error {
 	m.events = append(m.events, event)
 	return nil
 }
@@ -193,53 +191,53 @@ func (m *coMockPaymentEventRepo) Create(_ context.Context, _ transaction.Executo
 // --- payment instruction repo ---
 
 type coMockPaymentInstructionRepo struct {
-	instruction *paymentdomain.PaymentInstruction
+	instruction *payment.PaymentInstruction
 }
 
-func (m *coMockPaymentInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.PaymentInstruction, error) {
+func (m *coMockPaymentInstructionRepo) GetByPaymentMethodID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.PaymentInstruction, error) {
 	return m.instruction, nil
 }
-func (m *coMockPaymentInstructionRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentInstruction) error {
+func (m *coMockPaymentInstructionRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentInstruction) error {
 	return nil
 }
 
 // --- payment channel data repo ---
 
 type coMockChannelDataRepo struct {
-	saved []paymentdomain.PaymentChannelData
+	saved []payment.PaymentChannelData
 }
 
-func (m *coMockChannelDataRepo) Save(_ context.Context, _ transaction.Executor, data paymentdomain.PaymentChannelData) error {
+func (m *coMockChannelDataRepo) Save(_ context.Context, _ transaction.Executor, data payment.PaymentChannelData) error {
 	m.saved = append(m.saved, data)
 	return nil
 }
-func (m *coMockChannelDataRepo) GetByPaymentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.PaymentChannelData, error) {
+func (m *coMockChannelDataRepo) GetByPaymentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.PaymentChannelData, error) {
 	return nil, nil
 }
-func (m *coMockChannelDataRepo) ListByPaymentIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]*paymentdomain.PaymentChannelData, error) {
-	return map[uuid.UUID]*paymentdomain.PaymentChannelData{}, nil
+func (m *coMockChannelDataRepo) ListByPaymentIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]*payment.PaymentChannelData, error) {
+	return map[uuid.UUID]*payment.PaymentChannelData{}, nil
 }
 
 // --- order repo ---
 
 type coMockOrderRepo struct {
-	orders  map[uuid.UUID]*orderdomain.Order
+	orders  map[uuid.UUID]*order.Order
 	saveErr error
 }
 
-func (m *coMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*orderdomain.Order, error) {
+func (m *coMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*order.Order, error) {
 	return m.orders[id], nil
 }
-func (m *coMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*orderdomain.Order, error) {
+func (m *coMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*order.Order, error) {
 	return nil, nil
 }
-func (m *coMockOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status orderdomain.OrderStatus) error {
+func (m *coMockOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status order.OrderStatus) error {
 	if o, ok := m.orders[id]; ok {
 		o.Status = status
 	}
 	return nil
 }
-func (m *coMockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, id uuid.UUID, status orderdomain.OrderStatus, confirmedAt *time.Time, expiresAt *time.Time) error {
+func (m *coMockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, id uuid.UUID, status order.OrderStatus, confirmedAt *time.Time, expiresAt *time.Time) error {
 	if o, ok := m.orders[id]; ok {
 		o.Status = status
 		if confirmedAt != nil {
@@ -251,40 +249,40 @@ func (m *coMockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.E
 	}
 	return nil
 }
-func (m *coMockOrderRepo) Save(_ context.Context, _ transaction.Executor, order orderdomain.Order) error {
+func (m *coMockOrderRepo) Save(_ context.Context, _ transaction.Executor, order order.Order) error {
 	if m.saveErr != nil {
 		return m.saveErr
 	}
 	m.orders[order.ID] = &order
 	return nil
 }
-func (m *coMockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ orderrepo.FindOrderParams) ([]orderdomain.Order, int, error) {
+func (m *coMockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ order.FindOrderParams) ([]order.Order, int, error) {
 	return nil, 0, nil
 }
 func (m *coMockOrderRepo) SetConfirmedAndExpiry(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ time.Time, _ time.Time) error {
 	return nil
 }
-func (m *coMockOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]orderdomain.Order, error) {
+func (m *coMockOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]order.Order, error) {
 	return nil, nil
 }
 
 // --- order item repo ---
 
 type coMockOrderItemRepo struct {
-	items map[uuid.UUID][]orderdomain.OrderItem
+	items map[uuid.UUID][]order.OrderItem
 }
 
-func (m *coMockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *coMockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]order.OrderItem, error) {
 	return m.items[orderID], nil
 }
-func (m *coMockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *coMockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]order.OrderItem, error) {
 	return nil, nil
 }
-func (m *coMockOrderItemRepo) ListByShipmentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *coMockOrderItemRepo) ListByShipmentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]order.OrderItem, error) {
 	return nil, nil
 }
 
-func (m *coMockOrderItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []orderdomain.OrderItem) error {
+func (m *coMockOrderItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []order.OrderItem) error {
 	return nil
 }
 
@@ -296,22 +294,22 @@ func (m *coMockOrderItemRepo) AssignShipment(_ context.Context, _ transaction.Ex
 
 type coMockInvoiceRepo struct{}
 
-func (m *coMockInvoiceRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*orderdomain.Invoice, error) {
+func (m *coMockInvoiceRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*order.Invoice, error) {
 	return nil, nil
 }
-func (m *coMockInvoiceRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*orderdomain.Invoice, error) {
+func (m *coMockInvoiceRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*order.Invoice, error) {
 	return nil, nil
 }
-func (m *coMockInvoiceRepo) Save(_ context.Context, _ transaction.Executor, _ orderdomain.Invoice) error {
+func (m *coMockInvoiceRepo) Save(_ context.Context, _ transaction.Executor, _ order.Invoice) error {
 	return nil
 }
 
 type coMockInvoiceItemRepo struct{}
 
-func (m *coMockInvoiceItemRepo) ListByInvoiceID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]orderdomain.InvoiceItem, error) {
+func (m *coMockInvoiceItemRepo) ListByInvoiceID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]order.InvoiceItem, error) {
 	return nil, nil
 }
-func (m *coMockInvoiceItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []orderdomain.InvoiceItem) error {
+func (m *coMockInvoiceItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []order.InvoiceItem) error {
 	return nil
 }
 
@@ -322,19 +320,19 @@ type coMockInventoryRepo struct {
 	reserveErr   error
 }
 
-func (m *coMockInventoryRepo) GetByProductIDAndShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID) (*inventorydomain.Inventory, error) {
+func (m *coMockInventoryRepo) GetByProductIDAndShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID) (*inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *coMockInventoryRepo) ListByProductID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventorydomain.Inventory, error) {
+func (m *coMockInventoryRepo) ListByProductID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *coMockInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]inventorydomain.Inventory, error) {
+func (m *coMockInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *coMockInventoryRepo) ListByShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventorydomain.Inventory, error) {
+func (m *coMockInventoryRepo) ListByShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *coMockInventoryRepo) Create(_ context.Context, _ transaction.Executor, _ *inventorydomain.Inventory) error {
+func (m *coMockInventoryRepo) Create(_ context.Context, _ transaction.Executor, _ *inventory.Inventory) error {
 	return nil
 }
 func (m *coMockInventoryRepo) Reserve(_ context.Context, _ transaction.Executor, productID uuid.UUID, shopID uuid.UUID, qty int) error {
@@ -350,7 +348,7 @@ func (m *coMockInventoryRepo) Commit(_ context.Context, _ transaction.Executor, 
 func (m *coMockInventoryRepo) Restock(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID, _ int) error {
 	return nil
 }
-func (m *coMockInventoryRepo) Update(_ context.Context, _ transaction.Executor, _ *inventorydomain.Inventory) error {
+func (m *coMockInventoryRepo) Update(_ context.Context, _ transaction.Executor, _ *inventory.Inventory) error {
 	return nil
 }
 func (m *coMockInventoryRepo) Delete(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID) error {
@@ -360,17 +358,17 @@ func (m *coMockInventoryRepo) Delete(_ context.Context, _ transaction.Executor, 
 // --- cart repo ---
 
 type coMockCartRepo struct {
-	cart  *cartdomain.Cart
+	cart  *cart.Cart
 	saved bool
 }
 
-func (m *coMockCartRepo) GetWithItemsByCustomerID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*cartdomain.Cart, error) {
+func (m *coMockCartRepo) GetWithItemsByCustomerID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*cart.Cart, error) {
 	return m.cart, nil
 }
-func (m *coMockCartRepo) NewCart(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*cartdomain.Cart, error) {
+func (m *coMockCartRepo) NewCart(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*cart.Cart, error) {
 	return nil, nil
 }
-func (m *coMockCartRepo) Save(_ context.Context, _ transaction.Executor, _ *cartdomain.Cart) error {
+func (m *coMockCartRepo) Save(_ context.Context, _ transaction.Executor, _ *cart.Cart) error {
 	m.saved = true
 	return nil
 }
@@ -440,32 +438,32 @@ func (c *capturingGateway) Supports(_ string) bool {
 // Test helpers
 // ===========================================================================
 
-func coDefaultUser() *userdomain.User {
+func coDefaultUser() *user.User {
 	ph := "+628111111111"
-	return &userdomain.User{ID: uuid.New(), Name: "Test User", Phone: &ph}
+	return &user.User{ID: uuid.New(), Name: "Test User", Phone: &ph}
 }
 
-func coDefaultAccount(userID uuid.UUID) *authdomain.Account {
-	return &authdomain.Account{ID: uuid.New(), UserID: userID, Email: "test@komecore.com"}
+func coDefaultAccount(userID uuid.UUID) *auth.Account {
+	return &auth.Account{ID: uuid.New(), UserID: userID, Email: "test@komecore.com"}
 }
 
-func coDefaultMethod(methodID uuid.UUID, name string) *paymentdomain.PaymentMethod {
-	return &paymentdomain.PaymentMethod{ID: methodID, Name: name, Code: name, Provider: "midtrans", Type: paymentdomain.TypeQRCode, IsActive: true}
+func coDefaultMethod(methodID uuid.UUID, name string) *payment.PaymentMethod {
+	return &payment.PaymentMethod{ID: methodID, Name: name, Code: name, Provider: "midtrans", Type: payment.TypeQRCode, IsActive: true}
 }
 
-func coDefaultPricing(productID, shopID uuid.UUID) *orderrepo.PricingResult {
-	return &orderrepo.PricingResult{
+func coDefaultPricing(productID, shopID uuid.UUID) *order.PricingResult {
+	return &order.PricingResult{
 		Subtotal:         100000,
 		TotalShippingFee: 15000,
 		GrandTotal:       115000,
-		Shops: []orderrepo.PricingShopResult{
+		Shops: []order.PricingShopResult{
 			{
 				ShopID:   shopID,
 				ShopName: "Kome Store",
-				Items: []orderrepo.PricingItemResult{
+				Items: []order.PricingItemResult{
 					{ProductID: productID, ProductName: "Product A", Quantity: 2, UnitPrice: 50000, Subtotal: 100000},
 				},
-				SelectedCourier: orderrepo.SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
+				SelectedCourier: order.SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
 			},
 		},
 	}
@@ -529,7 +527,7 @@ func buildUCWith(
 		transactor,
 		accountRepo,
 		orderStore,
-		&coMockOrderItemRepo{items: map[uuid.UUID][]orderdomain.OrderItem{}},
+		&coMockOrderItemRepo{items: map[uuid.UUID][]order.OrderItem{}},
 		&coMockInvoiceRepo{},
 		&coMockInvoiceItemRepo{},
 		paymentStore,
@@ -592,8 +590,8 @@ func TestCreateOrder_Gateway_Success(t *testing.T) {
 		},
 	}
 
-	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}}
-	orderStore := &coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}}
+	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}}
+	orderStore := &coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}}
 
 	uc := buildUC(nil, gateway,
 		&coMockPricingService{result: pricing},
@@ -632,7 +630,7 @@ func TestCreateOrder_Gateway_Success_NilPhone(t *testing.T) {
 	shopID := uuid.New()
 	methodID := uuid.New()
 
-	user := &userdomain.User{ID: uuid.New(), Name: "Test User", Phone: nil}
+	user := &user.User{ID: uuid.New(), Name: "Test User", Phone: nil}
 	acc := coDefaultAccount(user.ID)
 	method := coDefaultMethod(methodID, "qris")
 	pricing := coDefaultPricing(productID, shopID)
@@ -654,8 +652,8 @@ func TestCreateOrder_Gateway_Success_NilPhone(t *testing.T) {
 		captured: &capturedReq,
 	}
 
-	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}}
-	orderStore := &coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}}
+	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}}
+	orderStore := &coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}}
 
 	uc := buildUC(nil, gateway,
 		&coMockPricingService{result: pricing},
@@ -720,8 +718,8 @@ func TestCreateOrder_Gateway_ChannelDataPersisted(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 		channelRepo,
 	)
@@ -736,8 +734,8 @@ func TestCreateOrder_Gateway_ChannelDataPersisted(t *testing.T) {
 	if result.ChannelData == nil {
 		t.Fatal("expected ChannelData to be set in CreateOrderResult, got nil")
 	}
-	if result.ChannelData.ChannelType != paymentdomain.TypeQRCode {
-		t.Errorf("ChannelType = %q, want %q", result.ChannelData.ChannelType, paymentdomain.TypeQRCode)
+	if result.ChannelData.ChannelType != payment.TypeQRCode {
+		t.Errorf("ChannelType = %q, want %q", result.ChannelData.ChannelType, payment.TypeQRCode)
 	}
 	if result.ChannelData.ActionURL == nil || *result.ChannelData.ActionURL != "data:image/png;base64,qrdata" {
 		t.Errorf("ActionURL = %v, want qrdata", result.ChannelData.ActionURL)
@@ -748,8 +746,8 @@ func TestCreateOrder_Gateway_ChannelDataPersisted(t *testing.T) {
 		t.Fatalf("expected 1 channel data record saved, got %d", len(channelRepo.saved))
 	}
 	cd := channelRepo.saved[0]
-	if cd.ChannelType != paymentdomain.TypeQRCode {
-		t.Errorf("saved ChannelType = %q, want %q", cd.ChannelType, paymentdomain.TypeQRCode)
+	if cd.ChannelType != payment.TypeQRCode {
+		t.Errorf("saved ChannelType = %q, want %q", cd.ChannelType, payment.TypeQRCode)
 	}
 	if cd.DisplayName != "QRIS Payment" {
 		t.Errorf("saved DisplayName = %q, want \"QRIS Payment\"", cd.DisplayName)
@@ -794,8 +792,8 @@ func TestCreateOrder_ChargeResponse_QRIS_PopulatesActionURLAndQRString(t *testin
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 		channelRepo,
 	)
@@ -830,7 +828,7 @@ func TestCreateOrder_ChargeResponse_BankTransfer_PopulatesAccountNumber(t *testi
 	methodID := uuid.New()
 	user := coDefaultUser()
 	acc := coDefaultAccount(user.ID)
-	method := &paymentdomain.PaymentMethod{ID: methodID, Name: "mandiri", Code: "mandiri", Provider: "midtrans", Type: paymentdomain.TypeBankTransfer, IsActive: true}
+	method := &payment.PaymentMethod{ID: methodID, Name: "mandiri", Code: "mandiri", Provider: "midtrans", Type: payment.TypeBankTransfer, IsActive: true}
 	pricing := coDefaultPricing(productID, shopID)
 
 	gateway := &coMockGateway{
@@ -853,8 +851,8 @@ func TestCreateOrder_ChargeResponse_BankTransfer_PopulatesAccountNumber(t *testi
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 		channelRepo,
 	)
@@ -891,7 +889,7 @@ func TestCreateOrder_ChargeResponse_EWallet_PopulatesQRString(t *testing.T) {
 	methodID := uuid.New()
 	user := coDefaultUser()
 	acc := coDefaultAccount(user.ID)
-	method := &paymentdomain.PaymentMethod{ID: methodID, Name: "gopay", Code: "gopay", Provider: "midtrans", Type: paymentdomain.TypeEWallet, IsActive: true}
+	method := &payment.PaymentMethod{ID: methodID, Name: "gopay", Code: "gopay", Provider: "midtrans", Type: payment.TypeEWallet, IsActive: true}
 	pricing := coDefaultPricing(productID, shopID)
 
 	gateway := &coMockGateway{
@@ -912,8 +910,8 @@ func TestCreateOrder_ChargeResponse_EWallet_PopulatesQRString(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -967,7 +965,7 @@ func TestCreateOrder_DatabaseFailure_TriggersCompensatingCancelTransaction(t *te
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
 		orderRepoFail,
 		nil,
 		&coMockChannelDataRepo{},
@@ -997,18 +995,18 @@ func TestCreateOrder_InvariantAdjustmentItemAddedWhenSumDiffers(t *testing.T) {
 	method := coDefaultMethod(methodID, "qris")
 
 	// GrandTotal=120000, but items+shipping=115000 Ã¢â€ â€™ 5000 adjustment
-	pricing := &orderrepo.PricingResult{
+	pricing := &order.PricingResult{
 		Subtotal:         100000,
 		TotalShippingFee: 15000,
 		GrandTotal:       120000,
-		Shops: []orderrepo.PricingShopResult{
+		Shops: []order.PricingShopResult{
 			{
 				ShopID:   shopID,
 				ShopName: "Kage",
-				Items: []orderrepo.PricingItemResult{
+				Items: []order.PricingItemResult{
 					{ProductID: productID, ProductName: "Product", Quantity: 2, UnitPrice: 50000, Subtotal: 100000},
 				},
-				SelectedCourier: orderrepo.SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
+				SelectedCourier: order.SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
 			},
 		},
 	}
@@ -1026,8 +1024,8 @@ func TestCreateOrder_InvariantAdjustmentItemAddedWhenSumDiffers(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -1077,8 +1075,8 @@ func TestCreateOrder_InvariantInventoryReservedPerItem(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		invRepo,
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -1107,7 +1105,7 @@ func TestCreateOrder_InvariantPaymentAmountEqualsOrderTotal(t *testing.T) {
 	method := coDefaultMethod(methodID, "qris")
 	pricing := coDefaultPricing(productID, shopID) // GrandTotal = 115000
 
-	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}}
+	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}}
 	gateway := &coMockGateway{chargeResp: coDefaultChargeResp(uuid.New().String())}
 
 	uc := buildUC(nil, gateway,
@@ -1118,7 +1116,7 @@ func TestCreateOrder_InvariantPaymentAmountEqualsOrderTotal(t *testing.T) {
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
 		paymentStore,
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -1151,10 +1149,10 @@ func TestCreateOrder_InvariantCartItemsRemovedAfterOrder(t *testing.T) {
 	method := coDefaultMethod(methodID, "qris")
 	pricing := coDefaultPricing(productID, shopID)
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{ID: uuid.New(), ProductID: productID, ShopID: shopID, Quantity: 2},
 		},
 	}
@@ -1168,8 +1166,8 @@ func TestCreateOrder_InvariantCartItemsRemovedAfterOrder(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		cartRepo,
 	)
 
@@ -1197,10 +1195,10 @@ func TestCreateOrder_CartItemShopMismatch_RemovedAfterOrder(t *testing.T) {
 	method := coDefaultMethod(methodID, "qris")
 	pricing := coDefaultPricing(productID, orderShopID)
 
-	cart := &cartdomain.Cart{
+	cart := &cart.Cart{
 		ID:         uuid.New(),
 		CustomerID: customerID,
-		Items: []cartdomain.CartItem{
+		Items: []cart.CartItem{
 			{ID: uuid.New(), ProductID: productID, ShopID: cartShopID, Quantity: 2},
 		},
 	}
@@ -1214,8 +1212,8 @@ func TestCreateOrder_CartItemShopMismatch_RemovedAfterOrder(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		cartRepo,
 	)
 
@@ -1247,7 +1245,7 @@ func TestCreateOrder_GatewayChargeFailure_NoDBWrites(t *testing.T) {
 	pricing := coDefaultPricing(productID, shopID)
 
 	gateway := &coMockGateway{chargeErr: errors.New("midtrans: gateway unavailable")}
-	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}}
+	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}}
 
 	uc := buildUC(nil, gateway,
 		&coMockPricingService{result: pricing},
@@ -1257,7 +1255,7 @@ func TestCreateOrder_GatewayChargeFailure_NoDBWrites(t *testing.T) {
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
 		paymentStore,
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -1303,8 +1301,8 @@ func TestCreateOrder_DBWriteFailAfterCharge_BestEffortCancel(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -1346,8 +1344,8 @@ func TestCreateOrder_DBWriteFailNoCharge_NoBestEffortCancel(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -1380,8 +1378,8 @@ func TestCreateOrder_PricingServiceFailure(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 
@@ -1410,8 +1408,8 @@ func TestCreateOrder_PaymentMethodNotFound(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	)
 

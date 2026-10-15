@@ -9,8 +9,8 @@ import (
 	"komecore/internal/infra/outbox"
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/payment/paymentdomain"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/payment"
 
 	"github.com/google/uuid"
 )
@@ -57,8 +57,8 @@ func TestCreateOrder_OutboxEnqueued(t *testing.T) {
 		},
 	}
 
-	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}}
-	orderStore := &coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}}
+	paymentStore := &coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}}
+	orderStore := &coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}}
 
 	recorder := &mockOutboxRecorder{}
 
@@ -135,8 +135,8 @@ func TestCreateOrder_OutboxFailureRollsBack(t *testing.T) {
 		&coMockUserRepo{user: user},
 		&coMockAccountRepo{account: acc},
 		&coMockInventoryRepo{},
-		&coMockPaymentRepo{payments: map[uuid.UUID]*paymentdomain.Payment{}},
-		&coMockOrderRepo{orders: map[uuid.UUID]*orderdomain.Order{}},
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*order.Order{}},
 		nil,
 	).WithOutboxRecorder(recorder)
 

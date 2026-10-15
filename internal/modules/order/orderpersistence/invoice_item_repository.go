@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
+	"komecore/internal/modules/order"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +20,7 @@ func (r *InvoiceItemRepository) ListByInvoiceID(
 	ctx context.Context,
 	exec transaction.Executor,
 	invoiceID uuid.UUID,
-) ([]orderdomain.InvoiceItem, error) {
+) ([]order.InvoiceItem, error) {
 	query := `
 		SELECT
 			id,
@@ -47,8 +47,8 @@ func (r *InvoiceItemRepository) ListByInvoiceID(
 	}
 	defer rows.Close()
 
-	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (orderdomain.InvoiceItem, error) {
-		var item orderdomain.InvoiceItem
+	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (order.InvoiceItem, error) {
+		var item order.InvoiceItem
 		err := row.Scan(
 			&item.ID,
 			&item.InvoiceID,
@@ -75,7 +75,7 @@ func (r *InvoiceItemRepository) ListByInvoiceID(
 func (r *InvoiceItemRepository) SaveBulk(
 	ctx context.Context,
 	exec transaction.Executor,
-	items []orderdomain.InvoiceItem,
+	items []order.InvoiceItem,
 ) error {
 	query := `
 		INSERT INTO invoice_items (

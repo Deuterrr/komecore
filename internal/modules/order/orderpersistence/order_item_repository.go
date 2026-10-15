@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
+	"komecore/internal/modules/order"
 
 	"github.com/google/uuid"
 )
@@ -21,7 +21,7 @@ func (r *OrderItemRepository) ListByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) ([]orderdomain.OrderItem, error) {
+) ([]order.OrderItem, error) {
 	query := `
 		SELECT
 			id,
@@ -50,8 +50,8 @@ func (r *OrderItemRepository) ListByOrderID(
 	}
 	defer rows.Close()
 
-	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (orderdomain.OrderItem, error) {
-		var item orderdomain.OrderItem
+	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (order.OrderItem, error) {
+		var item order.OrderItem
 		var rawOptions []byte
 		err := row.Scan(
 			&item.ID,
@@ -85,7 +85,7 @@ func (r *OrderItemRepository) ListByOrderID(
 func (r *OrderItemRepository) SaveBulk(
 	ctx context.Context,
 	exec transaction.Executor,
-	items []orderdomain.OrderItem,
+	items []order.OrderItem,
 ) error {
 	query := `
 		INSERT INTO order_items (
@@ -153,9 +153,9 @@ func (r *OrderItemRepository) ListByOrderIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderIDs []uuid.UUID,
-) ([]orderdomain.OrderItem, error) {
+) ([]order.OrderItem, error) {
 	if len(orderIDs) == 0 {
-		return []orderdomain.OrderItem{}, nil
+		return []order.OrderItem{}, nil
 	}
 
 	query := `
@@ -191,8 +191,8 @@ func (r *OrderItemRepository) ListByOrderIDs(
 	}
 	defer rows.Close()
 
-	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (orderdomain.OrderItem, error) {
-		var item orderdomain.OrderItem
+	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (order.OrderItem, error) {
+		var item order.OrderItem
 		var rawOptions []byte
 		err := row.Scan(
 			&item.ID,
@@ -227,7 +227,7 @@ func (r *OrderItemRepository) ListByShipmentID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shipmentID uuid.UUID,
-) ([]orderdomain.OrderItem, error) {
+) ([]order.OrderItem, error) {
 	query := `
 		SELECT
 			id,
@@ -256,8 +256,8 @@ func (r *OrderItemRepository) ListByShipmentID(
 	}
 	defer rows.Close()
 
-	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (orderdomain.OrderItem, error) {
-		var item orderdomain.OrderItem
+	items, err := transaction.CollectRows(rows, func(row transaction.CollectableRow) (order.OrderItem, error) {
+		var item order.OrderItem
 		var rawOptions []byte
 		err := row.Scan(
 			&item.ID,

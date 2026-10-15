@@ -1,14 +1,37 @@
-package orderrepo
+package order
 
 import (
 	"context"
 	"time"
 
-	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
-
 	"github.com/google/uuid"
+
+	transaction "komecore/internal/infra/transactor"
+	"komecore/internal/pagination"
 )
+
+var (
+	OrderSortLatest pagination.SortKey = "latest"
+	OrderSortNumber pagination.SortKey = "number"
+	OrderSortTotal  pagination.SortKey = "total"
+	OrderSortStatus pagination.SortKey = "status"
+	OrderSortModify pagination.SortKey = "modify"
+)
+
+type FindOrderParams struct {
+	ID         *uuid.UUID
+	Number     *string
+	CustomerID *uuid.UUID
+	ShopID     *uuid.UUID
+	ShopIDs    []uuid.UUID
+	Status     *string
+	Statuses   []string
+	FromDate   *time.Time
+	ToDate     *time.Time
+
+	Pagination pagination.Pagination
+	Sorts      pagination.Sorts
+}
 
 type PricingService interface {
 	Calculate(
@@ -18,31 +41,31 @@ type PricingService interface {
 	) (*PricingResult, error)
 }
 
-type OrderRepository interface {
+type Repository interface {
 	GetByID(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*orderdomain.Order, error)
+	) (*Order, error)
 
 	GetByNumber(
 		ctx context.Context,
 		exec transaction.Executor,
 		number string,
-	) (*orderdomain.Order, error)
+	) (*Order, error)
 
 	UpdateStatus(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-		status orderdomain.OrderStatus,
+		status OrderStatus,
 	) error
 
 	UpdateStatusWithSLA(
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-		status orderdomain.OrderStatus,
+		status OrderStatus,
 		confirmedAt *time.Time,
 		expiresAt *time.Time,
 	) error
@@ -50,14 +73,14 @@ type OrderRepository interface {
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		order orderdomain.Order,
+		order Order,
 	) error
 
 	FindOrders(
 		ctx context.Context,
 		exec transaction.Executor,
 		params FindOrderParams,
-	) ([]orderdomain.Order, int, error)
+	) ([]Order, int, error)
 
 	SetConfirmedAndExpiry(
 		ctx context.Context,
@@ -72,32 +95,32 @@ type OrderRepository interface {
 		exec transaction.Executor,
 		now time.Time,
 		limit int,
-	) ([]orderdomain.Order, error)
+	) ([]Order, error)
 }
 
-type OrderItemRepository interface {
+type ItemRepository interface {
 	ListByOrderID(
 		ctx context.Context,
 		exec transaction.Executor,
 		orderID uuid.UUID,
-	) ([]orderdomain.OrderItem, error)
+	) ([]OrderItem, error)
 
 	ListByOrderIDs(
 		ctx context.Context,
 		exec transaction.Executor,
 		orderIDs []uuid.UUID,
-	) ([]orderdomain.OrderItem, error)
+	) ([]OrderItem, error)
 
 	ListByShipmentID(
 		ctx context.Context,
 		exec transaction.Executor,
 		shipmentID uuid.UUID,
-	) ([]orderdomain.OrderItem, error)
+	) ([]OrderItem, error)
 
 	SaveBulk(
 		ctx context.Context,
 		exec transaction.Executor,
-		items []orderdomain.OrderItem,
+		items []OrderItem,
 	) error
 
 	AssignShipment(
@@ -113,18 +136,18 @@ type InvoiceRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		id uuid.UUID,
-	) (*orderdomain.Invoice, error)
+	) (*Invoice, error)
 
 	GetByOrderID(
 		ctx context.Context,
 		exec transaction.Executor,
 		orderID uuid.UUID,
-	) (*orderdomain.Invoice, error)
+	) (*Invoice, error)
 
 	Save(
 		ctx context.Context,
 		exec transaction.Executor,
-		invoice orderdomain.Invoice,
+		invoice Invoice,
 	) error
 }
 
@@ -133,11 +156,14 @@ type InvoiceItemRepository interface {
 		ctx context.Context,
 		exec transaction.Executor,
 		invoiceID uuid.UUID,
-	) ([]orderdomain.InvoiceItem, error)
+	) ([]InvoiceItem, error)
 
 	SaveBulk(
 		ctx context.Context,
 		exec transaction.Executor,
-		items []orderdomain.InvoiceItem,
+		items []InvoiceItem,
 	) error
 }
+
+type OrderRepository = Repository
+type OrderItemRepository = ItemRepository

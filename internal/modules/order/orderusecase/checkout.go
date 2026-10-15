@@ -5,20 +5,20 @@ import (
 
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/order/orderrepo"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/order"
 
 	"github.com/google/uuid"
 )
 
 type CheckoutUsecase struct {
 	executor       transaction.Executor
-	pricingService orderrepo.PricingService
+	pricingService order.PricingService
 }
 
 func NewCheckoutUsecase(
 	executor transaction.Executor,
-	pricingService orderrepo.PricingService,
+	pricingService order.PricingService,
 ) *CheckoutUsecase {
 	return &CheckoutUsecase{
 		executor:       executor,
@@ -29,7 +29,7 @@ func NewCheckoutUsecase(
 type CheckoutItemInput struct {
 	ProductID   uuid.UUID
 	CartItemID  *uuid.UUID
-	ItemOptions cartdomain.ItemOptions
+	ItemOptions cart.ItemOptions
 	Quantity    int
 }
 
@@ -51,14 +51,14 @@ type CheckoutInput struct {
 	ShopInput       []CheckoutShopInput
 }
 
-func (u *CheckoutUsecase) Execute(ctx context.Context, authCtx authctx.AuthContext, input CheckoutInput) (*orderrepo.PricingResult, error) {
-	pricingInput := orderrepo.PricingInput{
+func (u *CheckoutUsecase) Execute(ctx context.Context, authCtx authctx.AuthContext, input CheckoutInput) (*order.PricingResult, error) {
+	pricingInput := order.PricingInput{
 		CustomerID:      *authCtx.CustomerID,
 		AddressID:       input.AddressID,
 		PaymentMethodID: input.PaymentMethodID,
 		CouponCode:      input.CouponCode,
 		Shops: make(
-			[]orderrepo.PricingShopInput,
+			[]order.PricingShopInput,
 			0,
 			len(input.ShopInput),
 		),
@@ -71,12 +71,12 @@ func (u *CheckoutUsecase) Execute(ctx context.Context, authCtx authctx.AuthConte
 			courierService = &shop.Courier.Service
 		}
 
-		shopInput := orderrepo.PricingShopInput{
+		shopInput := order.PricingShopInput{
 			ShopID:         shop.ShopID,
 			CourierCode:    courierCode,
 			CourierService: courierService,
 			Items: make(
-				[]orderrepo.PricingItemInput,
+				[]order.PricingItemInput,
 				0,
 				len(shop.Items),
 			),
@@ -85,7 +85,7 @@ func (u *CheckoutUsecase) Execute(ctx context.Context, authCtx authctx.AuthConte
 		for _, item := range shop.Items {
 			shopInput.Items = append(
 				shopInput.Items,
-				orderrepo.PricingItemInput{
+				order.PricingItemInput{
 					ProductID:   item.ProductID,
 					CartItemID:  item.CartItemID,
 					ItemOptions: item.ItemOptions,

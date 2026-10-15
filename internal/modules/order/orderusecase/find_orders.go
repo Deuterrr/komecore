@@ -8,14 +8,10 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
-	"komecore/internal/modules/address/addressrepo"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
-	"komecore/internal/modules/shipment/shipmentdomain"
-	"komecore/internal/modules/shipment/shipmentrepo"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/shipment"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -23,22 +19,22 @@ import (
 
 type FindOrdersUsecase struct {
 	executor               transaction.Executor
-	orderRepo              orderrepo.OrderRepository
-	orderItemRepo          orderrepo.OrderItemRepository
-	paymentRepo            paymentrepo.PaymentRepository
-	paymentChannelDataRepo paymentrepo.PaymentChannelDataRepository
-	shipmentRepo           shipmentrepo.ShipmentRepository
-	addressRepo            addressrepo.CustomerAddressRepository
+	orderRepo              order.Repository
+	orderItemRepo          order.ItemRepository
+	paymentRepo            payment.Repository
+	paymentChannelDataRepo payment.ChannelDataRepository
+	shipmentRepo           shipment.Repository
+	addressRepo            address.CustomerAddressRepository
 }
 
 func NewFindOrdersUsecase(
 	executor transaction.Executor,
-	orderRepo orderrepo.OrderRepository,
-	orderItemRepo orderrepo.OrderItemRepository,
-	paymentRepo paymentrepo.PaymentRepository,
-	paymentChannelDataRepo paymentrepo.PaymentChannelDataRepository,
-	shipmentRepo shipmentrepo.ShipmentRepository,
-	addressRepo addressrepo.CustomerAddressRepository,
+	orderRepo order.Repository,
+	orderItemRepo order.ItemRepository,
+	paymentRepo payment.Repository,
+	paymentChannelDataRepo payment.ChannelDataRepository,
+	shipmentRepo shipment.Repository,
+	addressRepo address.CustomerAddressRepository,
 ) *FindOrdersUsecase {
 	return &FindOrdersUsecase{
 		executor:               executor,
@@ -67,13 +63,13 @@ type FindOrdersInput struct {
 }
 
 type OrderSearchResult struct {
-	Order       orderdomain.Order
-	Items       []orderdomain.OrderItem
-	Payment     *paymentdomain.Payment
-	ChannelData *paymentdomain.PaymentChannelData
-	Shipment    *shipmentdomain.Shipment
-	Shipments   []shipmentdomain.Shipment
-	Address     *addressdomain.CustomerAddress
+	Order       order.Order
+	Items       []order.OrderItem
+	Payment     *payment.Payment
+	ChannelData *payment.PaymentChannelData
+	Shipment    *shipment.Shipment
+	Shipments   []shipment.Shipment
+	Address     *address.CustomerAddress
 }
 
 func (u *FindOrdersUsecase) Execute(
@@ -81,12 +77,12 @@ func (u *FindOrdersUsecase) Execute(
 	input FindOrdersInput,
 ) ([]OrderSearchResult, int, error) {
 	var orderSortKeys = map[string]pagination.SortKey{
-		"latest":   orderrepo.OrderSortLatest,
-		"date":     orderrepo.OrderSortLatest,
-		"number":   orderrepo.OrderSortNumber,
-		"total":    orderrepo.OrderSortTotal,
-		"status":   orderrepo.OrderSortStatus,
-		"modified": orderrepo.OrderSortModify,
+		"latest":   order.OrderSortLatest,
+		"date":     order.OrderSortLatest,
+		"number":   order.OrderSortNumber,
+		"total":    order.OrderSortTotal,
+		"status":   order.OrderSortStatus,
+		"modified": order.OrderSortModify,
 	}
 
 	var sorts pagination.Sorts
@@ -122,7 +118,7 @@ func (u *FindOrdersUsecase) Execute(
 	if len(sorts) == 0 {
 		sorts = pagination.Sorts{
 			{
-				By:        orderrepo.OrderSortLatest,
+				By:        order.OrderSortLatest,
 				Direction: pagination.SortDesc,
 			},
 		}
@@ -146,7 +142,7 @@ func (u *FindOrdersUsecase) Execute(
 		statusParam = input.Status
 	}
 
-	params := orderrepo.FindOrderParams{
+	params := order.FindOrderParams{
 		ID:         input.ID,
 		Number:     input.Number,
 		CustomerID: input.CustomerID,
@@ -191,7 +187,7 @@ func (u *FindOrdersUsecase) Execute(
 		return nil, 0, fmt.Errorf("failed to list shipments: %w", err)
 	}
 
-	itemsMap := make(map[uuid.UUID][]orderdomain.OrderItem)
+	itemsMap := make(map[uuid.UUID][]order.OrderItem)
 	for _, item := range orderItems {
 		if input.ShopID != nil && item.ShopID != *input.ShopID {
 			continue
@@ -202,7 +198,7 @@ func (u *FindOrdersUsecase) Execute(
 		itemsMap[item.OrderID] = append(itemsMap[item.OrderID], item)
 	}
 
-	paymentsMap := make(map[uuid.UUID]*paymentdomain.Payment)
+	paymentsMap := make(map[uuid.UUID]*payment.Payment)
 	for i := range payments {
 		p := payments[i]
 		paymentsMap[p.OrderID] = &p
@@ -219,7 +215,7 @@ func (u *FindOrdersUsecase) Execute(
 		return nil, 0, fmt.Errorf("failed to list payment channel data: %w", err)
 	}
 
-	shipmentsMap := make(map[uuid.UUID][]shipmentdomain.Shipment)
+	shipmentsMap := make(map[uuid.UUID][]shipment.Shipment)
 	for i := range shipments {
 		s := shipments[i]
 		shipmentsMap[s.OrderID] = append(shipmentsMap[s.OrderID], s)
@@ -239,7 +235,7 @@ func (u *FindOrdersUsecase) Execute(
 		return nil, 0, fmt.Errorf("failed to list customer addresses: %w", err)
 	}
 
-	addressesMap := make(map[uuid.UUID]*addressdomain.CustomerAddress)
+	addressesMap := make(map[uuid.UUID]*address.CustomerAddress)
 	for i := range addresses {
 		addr := addresses[i]
 		addressesMap[addr.ID] = &addr
@@ -249,10 +245,10 @@ func (u *FindOrdersUsecase) Execute(
 	for i, o := range orders {
 		items := itemsMap[o.ID]
 		if items == nil {
-			items = []orderdomain.OrderItem{}
+			items = []order.OrderItem{}
 		}
 
-		var channelData *paymentdomain.PaymentChannelData
+		var channelData *payment.PaymentChannelData
 		payment := paymentsMap[o.ID]
 		if payment != nil {
 			channelData = channelDataMap[payment.ID]
@@ -260,10 +256,10 @@ func (u *FindOrdersUsecase) Execute(
 
 		orderShipments := shipmentsMap[o.ID]
 		if orderShipments == nil {
-			orderShipments = []shipmentdomain.Shipment{}
+			orderShipments = []shipment.Shipment{}
 		}
 
-		var filteredShipments []shipmentdomain.Shipment
+		var filteredShipments []shipment.Shipment
 		for j := range orderShipments {
 			var itemIDs []uuid.UUID
 			for _, itm := range items {
@@ -277,7 +273,7 @@ func (u *FindOrdersUsecase) Execute(
 			}
 		}
 
-		var firstShipment *shipmentdomain.Shipment
+		var firstShipment *shipment.Shipment
 		if len(filteredShipments) > 0 {
 			firstShipment = &filteredShipments[0]
 		}

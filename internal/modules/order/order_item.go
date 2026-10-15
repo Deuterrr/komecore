@@ -1,12 +1,15 @@
-package orderdomain
+package order
 
 import (
+	"komecore/internal/modules/cart"
+
 	"github.com/google/uuid"
 )
 
-type InvoiceItem struct {
-	ID        uuid.UUID
-	InvoiceID uuid.UUID
+type OrderItem struct {
+	ID         uuid.UUID
+	OrderID    uuid.UUID
+	ShipmentID *uuid.UUID
 
 	ShopID   uuid.UUID
 	ShopName string
@@ -17,6 +20,9 @@ type InvoiceItem struct {
 	Quantity  int
 	UnitPrice int64
 	Subtotal  int64
+
+	// ItemOptions captures generic variant specifications stored as JSONB
+	ItemOptions cart.ItemOptions
 
 	// CourierCode is the selected courier code
 	// for the shop that owns this item

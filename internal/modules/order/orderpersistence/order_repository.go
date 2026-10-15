@@ -8,8 +8,7 @@ import (
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
+	"komecore/internal/modules/order"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
@@ -26,7 +25,7 @@ func (r *OrderRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*orderdomain.Order, error) {
+) (*order.Order, error) {
 	query := `
 		SELECT
 			id,
@@ -48,7 +47,7 @@ func (r *OrderRepository) GetByID(
 		LIMIT 1
 	`
 
-	var order orderdomain.Order
+	var order order.Order
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&order.ID,
 		&order.Number,
@@ -77,7 +76,7 @@ func (r *OrderRepository) GetByNumber(
 	ctx context.Context,
 	exec transaction.Executor,
 	number string,
-) (*orderdomain.Order, error) {
+) (*order.Order, error) {
 	query := `
 		SELECT
 			id,
@@ -99,7 +98,7 @@ func (r *OrderRepository) GetByNumber(
 		LIMIT 1
 	`
 
-	var order orderdomain.Order
+	var order order.Order
 	err := exec.QueryRow(ctx, query, number).Scan(
 		&order.ID,
 		&order.Number,
@@ -128,7 +127,7 @@ func (r *OrderRepository) UpdateStatus(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-	status orderdomain.OrderStatus,
+	status order.OrderStatus,
 ) error {
 	query := `
 		UPDATE orders
@@ -153,7 +152,7 @@ func (r *OrderRepository) UpdateStatusWithSLA(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-	status orderdomain.OrderStatus,
+	status order.OrderStatus,
 	confirmedAt *time.Time,
 	expiresAt *time.Time,
 ) error {
@@ -184,7 +183,7 @@ func (r *OrderRepository) UpdateStatusWithSLA(
 func (r *OrderRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	order orderdomain.Order,
+	order order.Order,
 ) error {
 	query := `
 		INSERT INTO orders (
@@ -237,8 +236,8 @@ func (r *OrderRepository) Save(
 func (r *OrderRepository) FindOrders(
 	ctx context.Context,
 	exec transaction.Executor,
-	params orderrepo.FindOrderParams,
-) ([]orderdomain.Order, int, error) {
+	params order.FindOrderParams,
+) ([]order.Order, int, error) {
 	baseQuery := `
 		FROM orders o
 	`
@@ -342,11 +341,11 @@ func (r *OrderRepository) FindOrders(
 
 	// Build sorting expressions
 	var orderSortKeys = map[pagination.SortKey]string{
-		orderrepo.OrderSortLatest: "o.created_at",
-		orderrepo.OrderSortNumber: "o.number",
-		orderrepo.OrderSortTotal:  "o.total",
-		orderrepo.OrderSortStatus: "o.status",
-		orderrepo.OrderSortModify: "o.updated_at",
+		order.OrderSortLatest: "o.created_at",
+		order.OrderSortNumber: "o.number",
+		order.OrderSortTotal:  "o.total",
+		order.OrderSortStatus: "o.status",
+		order.OrderSortModify: "o.updated_at",
 	}
 
 	var sortClauses []string
@@ -407,9 +406,9 @@ func (r *OrderRepository) FindOrders(
 	}
 	defer rows.Close()
 
-	var results []orderdomain.Order
+	var results []order.Order
 	for rows.Next() {
-		var item orderdomain.Order
+		var item order.Order
 		err := rows.Scan(
 			&item.ID,
 			&item.Number,
@@ -466,7 +465,7 @@ func (r *OrderRepository) FindExpiredUnfulfilledOrders(
 	exec transaction.Executor,
 	now time.Time,
 	limit int,
-) ([]orderdomain.Order, error) {
+) ([]order.Order, error) {
 	if limit <= 0 {
 		limit = 100
 	}
@@ -502,9 +501,9 @@ func (r *OrderRepository) FindExpiredUnfulfilledOrders(
 	}
 	defer rows.Close()
 
-	var results []orderdomain.Order
+	var results []order.Order
 	for rows.Next() {
-		var item orderdomain.Order
+		var item order.Order
 		err := rows.Scan(
 			&item.ID,
 			&item.Number,

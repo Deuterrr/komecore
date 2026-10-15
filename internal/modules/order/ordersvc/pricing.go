@@ -8,20 +8,15 @@ import (
 	"komecore/internal/apperror"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
-	"komecore/internal/modules/address/addressrepo"
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/cart/cartrepo"
-	"komecore/internal/modules/courier/courierrepo"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/courier"
 	"komecore/internal/modules/discount/discountusecase"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/payment/paymentrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/shop/shopdomain"
-	"komecore/internal/modules/shop/shoprepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shop"
 
 	"github.com/google/uuid"
 )
@@ -31,28 +26,28 @@ type CouponValidator interface {
 }
 
 type pricingServiceImpl struct {
-	addressRepo       addressrepo.CustomerAddressRepository
-	cartRepo          cartrepo.CartRepository
-	courierRepo       courierrepo.CourierRepository
-	inventoryRepo     inventoryrepo.InventoryRepository
-	paymentMethodRepo paymentrepo.PaymentMethodRepository
-	productRepo       productrepo.ProductRepository
+	addressRepo       address.CustomerAddressRepository
+	cartRepo          cart.Repository
+	courierRepo       courier.Repository
+	inventoryRepo     inventory.Repository
+	paymentMethodRepo payment.MethodRepository
+	productRepo       product.Repository
 	shippingProvider  shipping.ShippingProvider
-	shopAddressRepo   addressrepo.ShopAddressRepository
-	shopRepo          shoprepo.ShopRepository
+	shopAddressRepo   address.ShopAddressRepository
+	shopRepo          shop.Repository
 	couponService     CouponValidator
 }
 
 func NewPricingService(
-	addressRepo addressrepo.CustomerAddressRepository,
-	cartRepo cartrepo.CartRepository,
-	courierRepo courierrepo.CourierRepository,
-	inventoryRepo inventoryrepo.InventoryRepository,
-	paymentMethodRepo paymentrepo.PaymentMethodRepository,
-	productRepo productrepo.ProductRepository,
+	addressRepo address.CustomerAddressRepository,
+	cartRepo cart.Repository,
+	courierRepo courier.Repository,
+	inventoryRepo inventory.Repository,
+	paymentMethodRepo payment.MethodRepository,
+	productRepo product.Repository,
 	shippingProvider shipping.ShippingProvider,
-	shopAddressRepo addressrepo.ShopAddressRepository,
-	shopRepo shoprepo.ShopRepository,
+	shopAddressRepo address.ShopAddressRepository,
+	shopRepo shop.Repository,
 ) *pricingServiceImpl {
 	return &pricingServiceImpl{
 		addressRepo:       addressRepo,
@@ -77,18 +72,18 @@ const defaultShippingWeightGrams = 1000
 func (s *pricingServiceImpl) Calculate(
 	ctx context.Context,
 	exec transaction.Executor,
-	input orderrepo.PricingInput,
-) (*orderrepo.PricingResult, error) {
+	input order.PricingInput,
+) (*order.PricingResult, error) {
 	// Checkout shipping destination defaults to the user's
 	// primary address unless a specific address is requested
-	var destAddress *addressdomain.CustomerAddress
+	var destAddress *address.CustomerAddress
 	if input.AddressID != nil {
 		addr, err := s.addressRepo.GetByID(ctx, exec, *input.AddressID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve destination address: %w", err)
 		}
 		if addr == nil {
-			return nil, apperror.NewNotFound(addressdomain.ErrAddressNotFound.Error())
+			return nil, apperror.NewNotFound(address.ErrAddressNotFound.Error())
 		}
 		destAddress = addr
 	} else {
@@ -97,17 +92,17 @@ func (s *pricingServiceImpl) Calculate(
 			return nil, fmt.Errorf("failed to retrieve default destination address: %w", err)
 		}
 		if addr == nil {
-			return nil, apperror.NewConflict(addressdomain.ErrNotFoundDefaultAddress.Error())
+			return nil, apperror.NewConflict(address.ErrNotFoundDefaultAddress.Error())
 		}
 		destAddress = addr
 	}
 
 	// Hydrate stored cart item metadata (product_id, item_options)
 	// from the user's cart in PostgreSQL when cart_item_id is provided.
-	var cartItemMap map[uuid.UUID]cartdomain.CartItem
+	var cartItemMap map[uuid.UUID]cart.CartItem
 	if input.CustomerID != uuid.Nil && s.cartRepo != nil {
 		if userCart, err := s.cartRepo.GetWithItemsByCustomerID(ctx, exec, input.CustomerID); err == nil && userCart != nil {
-			cartItemMap = make(map[uuid.UUID]cartdomain.CartItem, len(userCart.Items))
+			cartItemMap = make(map[uuid.UUID]cart.CartItem, len(userCart.Items))
 			for _, ci := range userCart.Items {
 				cartItemMap[ci.ID] = ci
 			}
@@ -138,7 +133,7 @@ func (s *pricingServiceImpl) Calculate(
 		shopIDs = append(shopIDs, shopGroup.ShopID)
 	}
 
-	var products []productdomain.Product
+	var products []product.Product
 	if len(productIDs) > 0 {
 		var err error
 		products, err = s.productRepo.FindByIDs(ctx, exec, productIDs)
@@ -147,12 +142,12 @@ func (s *pricingServiceImpl) Calculate(
 		}
 	}
 
-	productMap := make(map[uuid.UUID]productdomain.Product, len(products))
+	productMap := make(map[uuid.UUID]product.Product, len(products))
 	for _, p := range products {
 		productMap[p.ID] = p
 	}
 
-	var inventoryMap map[uuid.UUID][]inventorydomain.Inventory
+	var inventoryMap map[uuid.UUID][]inventory.Inventory
 	if len(productIDs) > 0 {
 		var err error
 		inventoryMap, err = s.inventoryRepo.ListByProductIDs(ctx, exec, productIDs)
@@ -166,7 +161,7 @@ func (s *pricingServiceImpl) Calculate(
 		return nil, fmt.Errorf("failed to load shops: %w", err)
 	}
 
-	shopMap := make(map[uuid.UUID]shopdomain.Shop, len(shops))
+	shopMap := make(map[uuid.UUID]shop.Shop, len(shops))
 	for _, sh := range shops {
 		shopMap[sh.ID] = sh
 	}
@@ -194,24 +189,24 @@ func (s *pricingServiceImpl) Calculate(
 	var (
 		totalSubtotal    int64
 		totalShippingFee int64
-		shopsResult      []orderrepo.PricingShopResult
+		shopsResult      []order.PricingShopResult
 	)
 
 	for _, shopGroup := range input.Shops {
 		var (
 			shopSubtotal    int64
 			shopItemsWeight int
-			pricingItems    []orderrepo.PricingItemResult
+			pricingItems    []order.PricingItemResult
 		)
 
 		for _, shopItem := range shopGroup.Items {
 			pid := shopItem.ProductID
-			product, ok := productMap[pid]
-			if !ok || product.Status == productdomain.ProductStatusArchived {
-				return nil, apperror.NewNotFound(productdomain.ErrProductNotFound.Error())
+			prod, ok := productMap[pid]
+			if !ok || prod.Status == product.ProductStatusArchived {
+				return nil, apperror.NewNotFound(product.ErrProductNotFound.Error())
 			}
-			if product.Status != productdomain.ProductStatusActive {
-				return nil, apperror.NewConflict(fmt.Sprintf("product '%s' is currently not available for purchase", product.Name))
+			if prod.Status != product.ProductStatusActive {
+				return nil, apperror.NewConflict(fmt.Sprintf("product '%s' is currently not available for purchase", prod.Name))
 			}
 
 			shopInventories := inventoryMap[pid]
@@ -223,13 +218,13 @@ func (s *pricingServiceImpl) Calculate(
 			}
 
 			if shopItem.Quantity > totalAvailableStock {
-				return nil, apperror.NewConflict(fmt.Sprintf("insufficient stock for product '%s'", product.Name))
+				return nil, apperror.NewConflict(fmt.Sprintf("insufficient stock for product '%s'", prod.Name))
 			}
 
-			itemSubtotal := product.Price * int64(shopItem.Quantity)
+			itemSubtotal := prod.Price * int64(shopItem.Quantity)
 			var unitWeight int
-			if product.Weight != nil && *product.Weight > 0 {
-				unitWeight = int(*product.Weight)
+			if prod.Weight != nil && *prod.Weight > 0 {
+				unitWeight = int(*prod.Weight)
 			} else {
 				unitWeight = defaultShippingWeightGrams
 			}
@@ -238,13 +233,13 @@ func (s *pricingServiceImpl) Calculate(
 			shopSubtotal += itemSubtotal
 			shopItemsWeight += itemWeight
 
-			pricingItems = append(pricingItems, orderrepo.PricingItemResult{
+			pricingItems = append(pricingItems, order.PricingItemResult{
 				ProductID:   pid,
 				CartItemID:  shopItem.CartItemID,
 				ItemOptions: shopItem.ItemOptions,
-				ProductName: product.Name,
+				ProductName: prod.Name,
 				Quantity:    shopItem.Quantity,
-				UnitPrice:   product.Price,
+				UnitPrice:   prod.Price,
 				Subtotal:    itemSubtotal,
 				WeightGrams: itemWeight,
 			})
@@ -285,11 +280,11 @@ func (s *pricingServiceImpl) Calculate(
 			leastFeeCode    string
 			leastFeeService string
 			hasSelected     bool
-			courierOptions  = make([]orderrepo.CourierOption, 0, len(costOptions))
+			courierOptions  = make([]order.CourierOption, 0, len(costOptions))
 		)
 
 		for i, option := range costOptions {
-			courierOptions = append(courierOptions, orderrepo.CourierOption{
+			courierOptions = append(courierOptions, order.CourierOption{
 				Code:    option.Code,
 				Service: option.Service,
 				Name:    option.Name,
@@ -333,12 +328,12 @@ func (s *pricingServiceImpl) Calculate(
 		totalShippingFee += shippingFee
 
 		shopDetails := shopMap[shopGroup.ShopID]
-		shopResult := orderrepo.PricingShopResult{
+		shopResult := order.PricingShopResult{
 			ShopID:   shopGroup.ShopID,
 			ShopName: shopDetails.Name,
 			ShopSlug: shopDetails.Slug,
 			Items:    pricingItems,
-			SelectedCourier: orderrepo.SelectedCourierResult{
+			SelectedCourier: order.SelectedCourierResult{
 				Code:    resolvedCourierCode,
 				Service: resolvedCourierService,
 				Fee:     shippingFee,
@@ -373,8 +368,8 @@ func (s *pricingServiceImpl) Calculate(
 	}
 
 	var (
-		paymentMethods        []orderrepo.PaymentMethodPricingResult
-		selectedPaymentMethod *orderrepo.PaymentMethodPricingResult
+		paymentMethods        []order.PaymentMethodPricingResult
+		selectedPaymentMethod *order.PaymentMethodPricingResult
 		totalAll              = totalAfterDiscount
 	)
 
@@ -388,7 +383,7 @@ func (s *pricingServiceImpl) Calculate(
 		}
 
 		fee := pm.CalculateFee(totalAll)
-		selectedPaymentMethod = &orderrepo.PaymentMethodPricingResult{
+		selectedPaymentMethod = &order.PaymentMethodPricingResult{
 			PaymentMethodID: pm.ID,
 			Name:            pm.Name,
 			Type:            string(pm.Type),
@@ -406,10 +401,10 @@ func (s *pricingServiceImpl) Calculate(
 			return nil, apperror.NewNotFound("payment method is not available")
 		}
 
-		paymentMethods = make([]orderrepo.PaymentMethodPricingResult, 0, len(pms))
+		paymentMethods = make([]order.PaymentMethodPricingResult, 0, len(pms))
 		for _, pm := range pms {
 			fee := pm.CalculateFee(totalAll)
-			paymentMethods = append(paymentMethods, orderrepo.PaymentMethodPricingResult{
+			paymentMethods = append(paymentMethods, order.PaymentMethodPricingResult{
 				PaymentMethodID: pm.ID,
 				Name:            pm.Name,
 				Type:            string(pm.Type),
@@ -432,8 +427,8 @@ func (s *pricingServiceImpl) Calculate(
 		}
 	}
 
-	result := &orderrepo.PricingResult{
-		Address: orderrepo.PricingAddressResult{
+	result := &order.PricingResult{
+		Address: order.PricingAddressResult{
 			ID:            destAddress.ID,
 			RecipientName: destAddress.ReceiverName,
 			Phone:         destAddress.Phone,

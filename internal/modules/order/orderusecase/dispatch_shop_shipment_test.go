@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	shipping "komecore/internal/infra/shipping"
-	"komecore/internal/modules/address/addressdomain"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/shipment"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +20,7 @@ func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
 	orderID := uuid.New()
 	customerAddrID := uuid.New()
 
-	itemA := orderdomain.OrderItem{
+	itemA := order.OrderItem{
 		ID:          uuid.New(),
 		OrderID:     orderID,
 		ShopID:      shopA,
@@ -29,7 +29,7 @@ func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
 		ShippingFee: 15000,
 	}
 
-	itemB := orderdomain.OrderItem{
+	itemB := order.OrderItem{
 		ID:          uuid.New(),
 		OrderID:     orderID,
 		ShopID:      shopB,
@@ -38,46 +38,46 @@ func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
 		ShippingFee: 20000,
 	}
 
-	customerAddr := &addressdomain.CustomerAddress{
+	customerAddr := &address.CustomerAddress{
 		ID: customerAddrID,
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "1001",
 			FullAddress: "Jl. Customer 1",
 		},
 		ReceiverName: "Customer John",
 	}
 
-	shopAddressA := &addressdomain.ShopAddress{
+	shopAddressA := &address.ShopAddress{
 		ID:     uuid.New(),
 		ShopID: shopA,
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "2001",
 			FullAddress: "Jl. Shop Address A",
 		},
 	}
 
-	shopAddressB := &addressdomain.ShopAddress{
+	shopAddressB := &address.ShopAddress{
 		ID:     uuid.New(),
 		ShopID: shopB,
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "2002",
 			FullAddress: "Jl. Shop Address B",
 		},
 	}
 
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:        orderID,
 		Number:    "ORD-TEST-001",
-		Status:    orderdomain.OrderStatusProcessing,
+		Status:    order.OrderStatusProcessing,
 		AddressID: customerAddrID,
 	}
 
-	orderRepoMock := &uosMockOrderRepo{order: order}
-	orderItemRepoMock := &uosMockOrderItemRepo{items: []orderdomain.OrderItem{itemA, itemB}}
+	orderRepoMock := &uosMockOrderRepo{order: ord}
+	orderItemRepoMock := &uosMockOrderItemRepo{items: []order.OrderItem{itemA, itemB}}
 	shipmentRepoMock := &uosMockShipmentRepo{}
 	addrRepoMock := &uosMockAddressRepo{addr: customerAddr}
 	shopAddrRepoMock := &uosMockShopAddressRepo{
-		addrs: map[uuid.UUID]*addressdomain.ShopAddress{
+		addrs: map[uuid.UUID]*address.ShopAddress{
 			shopA: shopAddressA,
 			shopB: shopAddressB,
 		},
@@ -124,7 +124,7 @@ func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
 		t.Errorf("expected AllItemsShipped to be false when Shop B has not dispatched, got true")
 	}
 
-	if resA.Order.Status != orderdomain.OrderStatusProcessing {
+	if resA.Order.Status != order.OrderStatusProcessing {
 		t.Errorf("expected order status to remain processing, got %s", resA.Order.Status)
 	}
 
@@ -134,7 +134,7 @@ func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
 
 	// Update itemA to simulate having a shipment assigned
 	itemA.ShipmentID = &resA.Shipment.ID
-	orderItemRepoMock.items = []orderdomain.OrderItem{itemA, itemB}
+	orderItemRepoMock.items = []order.OrderItem{itemA, itemB}
 
 	// Step 2: Shop B dispatches item B
 	trackNoB := "TRACK-B-888"
@@ -156,11 +156,11 @@ func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
 		t.Errorf("expected AllItemsShipped to be true after all items dispatched, got false")
 	}
 
-	if resB.Order.Status != orderdomain.OrderStatusShipped {
+	if resB.Order.Status != order.OrderStatusShipped {
 		t.Errorf("expected order status to auto-advance to shipped, got %s", resB.Order.Status)
 	}
 
-	if orderRepoMock.updatedState.status != orderdomain.OrderStatusShipped {
+	if orderRepoMock.updatedState.status != order.OrderStatusShipped {
 		t.Errorf("expected order status in repo to be updated to shipped, got %s", orderRepoMock.updatedState.status)
 	}
 
@@ -178,7 +178,7 @@ func TestDispatchShopShipmentUsecase_ValidationErrors(t *testing.T) {
 	customerAddrID := uuid.New()
 
 	alreadyShippedID := uuid.New()
-	itemA := orderdomain.OrderItem{
+	itemA := order.OrderItem{
 		ID:          uuid.New(),
 		OrderID:     orderID,
 		ShopID:      shopA,
@@ -187,7 +187,7 @@ func TestDispatchShopShipmentUsecase_ValidationErrors(t *testing.T) {
 		ShipmentID:  &alreadyShippedID,
 	}
 
-	itemB := orderdomain.OrderItem{
+	itemB := order.OrderItem{
 		ID:          uuid.New(),
 		OrderID:     orderID,
 		ShopID:      shopB,
@@ -195,30 +195,30 @@ func TestDispatchShopShipmentUsecase_ValidationErrors(t *testing.T) {
 		Quantity:    1,
 	}
 
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:        orderID,
 		Number:    "ORD-TEST-002",
-		Status:    orderdomain.OrderStatusProcessing,
+		Status:    order.OrderStatusProcessing,
 		AddressID: customerAddrID,
 	}
 
-	orderRepoMock := &uosMockOrderRepo{order: order}
-	orderItemRepoMock := &uosMockOrderItemRepo{items: []orderdomain.OrderItem{itemA, itemB}}
+	orderRepoMock := &uosMockOrderRepo{order: ord}
+	orderItemRepoMock := &uosMockOrderItemRepo{items: []order.OrderItem{itemA, itemB}}
 	shipmentRepoMock := &uosMockShipmentRepo{}
-	addrRepoMock := &uosMockAddressRepo{addr: &addressdomain.CustomerAddress{
+	addrRepoMock := &uosMockAddressRepo{addr: &address.CustomerAddress{
 		ID: customerAddrID,
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "1001",
 			FullAddress: "Jl. Customer",
 		},
 		ReceiverName: "Customer",
 	}}
 	shopAddrRepoMock := &uosMockShopAddressRepo{
-		addrs: map[uuid.UUID]*addressdomain.ShopAddress{
+		addrs: map[uuid.UUID]*address.ShopAddress{
 			shopA: {
 				ID:     uuid.New(),
 				ShopID: shopA,
-				Detail: addressdomain.AddressDetail{
+				Detail: address.AddressDetail{
 					District:    "2001",
 					FullAddress: "Jl. Shop",
 				},
@@ -254,7 +254,7 @@ func TestDispatchShopShipmentUsecase_ValidationErrors(t *testing.T) {
 	_, err = usecase.Execute(ctx, DispatchShopShipmentInput{
 		OrderID:           orderID,
 		ShopID:            shopA,
-		FulfillmentMethod: string(shipmentdomain.FulfillmentMethodCourier),
+		FulfillmentMethod: string(shipment.FulfillmentMethodCourier),
 		Courier:           "JNE",
 		Service:           "REG",
 		TrackingNumber:    &trackNo,
@@ -268,7 +268,7 @@ func TestDispatchShopShipmentUsecase_ValidationErrors(t *testing.T) {
 	_, err = usecase.Execute(ctx, DispatchShopShipmentInput{
 		OrderID:           orderID,
 		ShopID:            shopA,
-		FulfillmentMethod: string(shipmentdomain.FulfillmentMethodCourier),
+		FulfillmentMethod: string(shipment.FulfillmentMethodCourier),
 		Courier:           "JNE",
 		Service:           "REG",
 		TrackingNumber:    &trackNo,

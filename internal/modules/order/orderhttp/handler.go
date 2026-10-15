@@ -9,11 +9,11 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/order/orderdomain"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/order"
 	"komecore/internal/modules/order/orderusecase"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/shipment"
 	"komecore/internal/modules/shop/shopusecase"
 	"komecore/internal/pagination"
 
@@ -224,7 +224,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
-		var permittedItems []orderdomain.OrderItem
+		var permittedItems []order.OrderItem
 		for _, item := range result.Items {
 			if actor.HasPermission(item.ShopID, authctx.PermissionOrderRead) {
 				permittedItems = append(permittedItems, item)
@@ -235,7 +235,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 		}
 		result.Items = permittedItems
 
-		var permittedShipments []shipmentdomain.Shipment
+		var permittedShipments []shipment.Shipment
 		for _, s := range result.Shipments {
 			hasItem := false
 			for _, itm := range permittedItems {
@@ -441,9 +441,9 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 				return apperror.NewBadRequest("invalid product name")
 			}
 
-			var opt cartdomain.ItemOptions
+			var opt cart.ItemOptions
 			if itemReq.ItemOptions != nil {
-				opt = cartdomain.ItemOptions(itemReq.ItemOptions)
+				opt = cart.ItemOptions(itemReq.ItemOptions)
 			}
 
 			itemsInput = append(
@@ -584,7 +584,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 
 	result, err := h.updateOrderStatus.Execute(r.Context(), orderusecase.UpdateOrderStatusInput{
 		OrderID:           orderID,
-		Status:            orderdomain.OrderStatus(req.Status),
+		Status:            order.OrderStatus(req.Status),
 		TrackingNumber:    req.TrackingNumber,
 		FulfillmentMethod: req.FulfillmentMethod,
 		Shipments:         shipmentsInput,
@@ -595,7 +595,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 
 	resp := buildOrderResponse(orderusecase.OrderSearchResult{
 		Order:     result.Order,
-		Items:     []orderdomain.OrderItem{},
+		Items:     []order.OrderItem{},
 		Shipment:  result.Shipment,
 		Shipments: result.Shipments,
 	})
@@ -842,7 +842,7 @@ func buildOrderResponse(o orderusecase.OrderSearchResult) orderResponse {
 	return resp
 }
 
-func mapPaymentDetail(p *paymentdomain.Payment, cd *paymentdomain.PaymentChannelData) *paymentDetailResponse {
+func mapPaymentDetail(p *payment.Payment, cd *payment.PaymentChannelData) *paymentDetailResponse {
 	resp := &paymentDetailResponse{
 		ID:        p.ID.String(),
 		Status:    string(p.Status),
@@ -863,7 +863,7 @@ func mapPaymentDetail(p *paymentdomain.Payment, cd *paymentdomain.PaymentChannel
 	return resp
 }
 
-func mapShipmentDetail(s *shipmentdomain.Shipment) *shipmentDetailResponse {
+func mapShipmentDetail(s *shipment.Shipment) *shipmentDetailResponse {
 	return &shipmentDetailResponse{
 		ID:                s.ID.String(),
 		OrderID:           s.OrderID.String(),

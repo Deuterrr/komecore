@@ -5,7 +5,7 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/cart/cartdomain"
+	"komecore/internal/modules/cart"
 	"komecore/internal/modules/order/orderusecase"
 
 	"github.com/google/uuid"
@@ -299,9 +299,9 @@ func (h *orderHandler) parseCheckoutInput(
 				return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid quantity")
 			}
 
-			var opt cartdomain.ItemOptions
+			var opt cart.ItemOptions
 			if itemReq.ItemOptions != nil {
-				opt = cartdomain.ItemOptions(itemReq.ItemOptions)
+				opt = cart.ItemOptions(itemReq.ItemOptions)
 			}
 
 			var checkoutProductID uuid.UUID

@@ -6,16 +6,12 @@ import (
 	"komecore/internal/apperror"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressrepo"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/shipment/shipmentdomain"
-	"komecore/internal/modules/shipment/shipmentrepo"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shipment"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -33,14 +29,14 @@ const DEFAULT_SHIPMENT_ITEM_QTY = 1
 type UpdateOrderStatusUsecase struct {
 	executor        transaction.Executor
 	transactor      transaction.Transactor
-	orderRepo       orderrepo.OrderRepository
-	orderItemRepo   orderrepo.OrderItemRepository
-	inventoryRepo   inventoryrepo.InventoryRepository
-	paymentRepo     paymentrepo.PaymentRepository
-	productRepo     productrepo.ProductRepository
-	shipmentRepo    shipmentrepo.ShipmentRepository
-	addressRepo     addressrepo.CustomerAddressRepository
-	shopAddressRepo addressrepo.ShopAddressRepository
+	orderRepo       order.Repository
+	orderItemRepo   order.ItemRepository
+	inventoryRepo   inventory.Repository
+	paymentRepo     payment.Repository
+	productRepo     product.Repository
+	shipmentRepo    shipment.Repository
+	addressRepo     address.CustomerAddressRepository
+	shopAddressRepo address.ShopAddressRepository
 	logistics       shipping.LogisticsProvider
 	auditLogger     applogger.AuditLogger
 }
@@ -48,14 +44,14 @@ type UpdateOrderStatusUsecase struct {
 func NewUpdateOrderStatusUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	orderRepo orderrepo.OrderRepository,
-	orderItemRepo orderrepo.OrderItemRepository,
-	inventoryRepo inventoryrepo.InventoryRepository,
-	paymentRepo paymentrepo.PaymentRepository,
-	productRepo productrepo.ProductRepository,
-	shipmentRepo shipmentrepo.ShipmentRepository,
-	addressRepo addressrepo.CustomerAddressRepository,
-	shopAddressRepo addressrepo.ShopAddressRepository,
+	orderRepo order.Repository,
+	orderItemRepo order.ItemRepository,
+	inventoryRepo inventory.Repository,
+	paymentRepo payment.Repository,
+	productRepo product.Repository,
+	shipmentRepo shipment.Repository,
+	addressRepo address.CustomerAddressRepository,
+	shopAddressRepo address.ShopAddressRepository,
 	logistics shipping.LogisticsProvider,
 	auditLogger applogger.AuditLogger,
 ) *UpdateOrderStatusUsecase {
@@ -85,7 +81,7 @@ type ShipmentDispatchInput struct {
 
 type UpdateOrderStatusInput struct {
 	OrderID uuid.UUID
-	Status  orderdomain.OrderStatus
+	Status  order.OrderStatus
 
 	// TrackingNumber is an optional override used when the server is running
 	// in manual logistics mode. Automated providers (e.g. Komerce) ignore it.
@@ -101,14 +97,14 @@ type UpdateOrderStatusInput struct {
 }
 
 type preparedShipment struct {
-	shipment shipmentdomain.Shipment
+	shipment shipment.Shipment
 	itemIDs  []uuid.UUID
 }
 
 type UpdateOrderStatusResult struct {
-	Order     orderdomain.Order
-	Shipment  *shipmentdomain.Shipment
-	Shipments []shipmentdomain.Shipment
+	Order     order.Order
+	Shipment  *shipment.Shipment
+	Shipments []shipment.Shipment
 }
 
 func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrderStatusInput) (res *UpdateOrderStatusResult, err error) {
@@ -142,42 +138,42 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		}
 	}()
 
-	order, err := u.orderRepo.GetByID(ctx, u.executor, input.OrderID)
+	ord, err := u.orderRepo.GetByID(ctx, u.executor, input.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
-	if order == nil {
+	if ord == nil {
 		return nil, apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 	}
 
-	oldStatus = string(order.Status)
+	oldStatus = string(ord.Status)
 
 	// When confirming an unconfirmed order,
 	// invoke the domain Confirm method to stamp
 	//
 	// ConfirmedAt and calculate the 3-day handling SLA expiration
 	// (HandlingExpiresAt).
-	if input.Status == orderdomain.OrderStatusConfirmed && order.ConfirmedAt == nil {
-		if errStatus := order.Confirm(appclock.Now(), orderdomain.DefaultHandlingSLAWindow); errStatus != nil {
+	if input.Status == order.OrderStatusConfirmed && ord.ConfirmedAt == nil {
+		if errStatus := ord.Confirm(appclock.Now(), order.DefaultHandlingSLAWindow); errStatus != nil {
 			return nil, apperror.NewInvalidInput(errStatus.Error())
 		}
 	} else {
-		if errStatus := order.UpdateStatus(input.Status); errStatus != nil {
+		if errStatus := ord.UpdateStatus(input.Status); errStatus != nil {
 			return nil, apperror.NewInvalidInput(errStatus.Error())
 		}
 	}
 
 	switch input.Status {
-	case orderdomain.OrderStatusConfirmed:
-		payment, err := u.paymentRepo.GetByOrderID(ctx, u.executor, order.ID)
+	case order.OrderStatusConfirmed:
+		pmt, err := u.paymentRepo.GetByOrderID(ctx, u.executor, ord.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get payment: %w", err)
 		}
-		if payment == nil || payment.Status != paymentdomain.PaymentStatusPaid {
+		if pmt == nil || pmt.Status != payment.PaymentStatusPaid {
 			return nil, apperror.NewInvalidInput("cannot confirm order without confirmed payment")
 		}
 
-		items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, order.ID)
+		items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, ord.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list order items: %w", err)
 		}
@@ -188,7 +184,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 					return fmt.Errorf("failed to commit inventory for product %s: %w", item.ProductID, err)
 				}
 			}
-			if err := u.orderRepo.UpdateStatusWithSLA(ctx, exec, order.ID, input.Status, order.ConfirmedAt, order.HandlingExpiresAt); err != nil {
+			if err := u.orderRepo.UpdateStatusWithSLA(ctx, exec, ord.ID, input.Status, ord.ConfirmedAt, ord.HandlingExpiresAt); err != nil {
 				return fmt.Errorf("failed to update order status: %w", err)
 			}
 			return nil
@@ -197,21 +193,21 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 			return nil, err
 		}
 
-		result := UpdateOrderStatusResult{Order: *order}
+		result := UpdateOrderStatusResult{Order: *ord}
 		return &result, nil
 
-	case orderdomain.OrderStatusProcessing:
-		payment, err := u.paymentRepo.GetByOrderID(ctx, u.executor, order.ID)
+	case order.OrderStatusProcessing:
+		pmt, err := u.paymentRepo.GetByOrderID(ctx, u.executor, ord.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get payment: %w", err)
 		}
-		if payment == nil || payment.Status != paymentdomain.PaymentStatusPaid {
+		if pmt == nil || pmt.Status != payment.PaymentStatusPaid {
 			return nil, apperror.NewInvalidInput("cannot move order to processing without confirmed payment")
 		}
 
 		err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
 			return u.orderRepo.UpdateStatus(ctx, exec,
-				order.ID,
+				ord.ID,
 				input.Status,
 			)
 		})
@@ -219,11 +215,11 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 			return nil, fmt.Errorf("failed to update order status: %w", err)
 		}
 
-		result := UpdateOrderStatusResult{Order: *order}
+		result := UpdateOrderStatusResult{Order: *ord}
 		return &result, nil
 
-	case orderdomain.OrderStatusDelivered:
-		shipments, err := u.shipmentRepo.ListByOrderID(ctx, u.executor, order.ID)
+	case order.OrderStatusDelivered:
+		shipments, err := u.shipmentRepo.ListByOrderID(ctx, u.executor, ord.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list shipments: %w", err)
 		}
@@ -231,29 +227,29 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
 			for i := range shipments {
 				s := shipments[i]
-				if err := s.UpdateStatus(shipmentdomain.ShipmentStatusDelivered); err != nil {
+				if err := s.UpdateStatus(shipment.ShipmentStatusDelivered); err != nil {
 					return fmt.Errorf("failed to update shipment status: %w", err)
 				}
 				if err := u.shipmentRepo.Update(ctx, exec, s); err != nil {
 					return fmt.Errorf("failed to persist shipment: %w", err)
 				}
 			}
-			return u.orderRepo.UpdateStatus(ctx, exec, order.ID, input.Status)
+			return u.orderRepo.UpdateStatus(ctx, exec, ord.ID, input.Status)
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		var first *shipmentdomain.Shipment
+		var first *shipment.Shipment
 		if len(shipments) > 0 {
 			first = &shipments[0]
 		}
 
-		result := UpdateOrderStatusResult{Order: *order, Shipment: first, Shipments: shipments}
+		result := UpdateOrderStatusResult{Order: *ord, Shipment: first, Shipments: shipments}
 		return &result, nil
 
-	case orderdomain.OrderStatusCancelled:
-		items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, order.ID)
+	case order.OrderStatusCancelled:
+		items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, ord.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list order items: %w", err)
 		}
@@ -264,18 +260,18 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 					return fmt.Errorf("failed to release inventory for product %s: %w", item.ProductID, err)
 				}
 			}
-			return u.orderRepo.UpdateStatus(ctx, exec, order.ID, input.Status)
+			return u.orderRepo.UpdateStatus(ctx, exec, ord.ID, input.Status)
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		result := UpdateOrderStatusResult{Order: *order}
+		result := UpdateOrderStatusResult{Order: *ord}
 		return &result, nil
 	}
 
 	// processing â†’ shipped
-	items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, order.ID)
+	items, err := u.orderItemRepo.ListByOrderID(ctx, u.executor, ord.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list order items: %w", err)
 	}
@@ -283,13 +279,13 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		return nil, apperror.NewInvalidInput("order has no items")
 	}
 
-	itemMap := make(map[uuid.UUID]orderdomain.OrderItem, len(items))
+	itemMap := make(map[uuid.UUID]order.OrderItem, len(items))
 	for _, item := range items {
 		itemMap[item.ID] = item
 	}
 
 	// Resolve customer destination district ID from the order's address
-	customerAddr, err := u.addressRepo.GetByID(ctx, u.executor, order.AddressID)
+	customerAddr, err := u.addressRepo.GetByID(ctx, u.executor, ord.AddressID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get customer address: %w", err)
 	}
@@ -308,7 +304,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 	if err != nil {
 		return nil, fmt.Errorf("failed to load products: %w", err)
 	}
-	productMap := make(map[uuid.UUID]productdomain.Product, len(products))
+	productMap := make(map[uuid.UUID]product.Product, len(products))
 	for _, p := range products {
 		productMap[p.ID] = p
 	}
@@ -329,7 +325,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 				return nil, apperror.NewInvalidInput("each shipment must contain at least one order item")
 			}
 
-			var shipmentItems []orderdomain.OrderItem
+			var shipmentItems []order.OrderItem
 			for _, itemID := range sInput.ItemIDs {
 				item, ok := itemMap[itemID]
 				if !ok {
@@ -338,14 +334,14 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 				shipmentItems = append(shipmentItems, item)
 			}
 
-			method := shipmentdomain.FulfillmentMethodCourier
+			method := shipment.FulfillmentMethodCourier
 			if sInput.FulfillmentMethod != "" {
-				method = shipmentdomain.FulfillmentMethod(sInput.FulfillmentMethod)
+				method = shipment.FulfillmentMethod(sInput.FulfillmentMethod)
 			}
 
 			var courierCode, courierService string
 			first := shipmentItems[0]
-			if method == shipmentdomain.FulfillmentMethodCourier {
+			if method == shipment.FulfillmentMethodCourier {
 				courierCode = sInput.Courier
 				courierService = sInput.Service
 				if courierCode == "" && first.CourierCode != nil {
@@ -358,8 +354,8 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 					return nil, apperror.NewInvalidInput("shipment is missing courier information")
 				}
 			} else {
-				courierCode = string(shipmentdomain.FulfillmentMethodSelfDelivery)
-				courierService = string(shipmentdomain.FulfillmentMethodSelfDelivery)
+				courierCode = string(shipment.FulfillmentMethodSelfDelivery)
+				courierService = string(shipment.FulfillmentMethodSelfDelivery)
 			}
 
 			shopAddr, err := u.shopAddressRepo.GetDefaultByShopID(ctx, u.executor, first.ShopID)
@@ -393,15 +389,15 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 			}
 
 			trackingNumber := sInput.TrackingNumber
-			if method == shipmentdomain.FulfillmentMethodCourier && (trackingNumber == nil || *trackingNumber == "") {
+			if method == shipment.FulfillmentMethodCourier && (trackingNumber == nil || *trackingNumber == "") {
 				itemName := first.ProductName
 				if len(shipmentItems) > 1 {
 					itemName = fmt.Sprintf("%s (+%d more)", first.ProductName, len(shipmentItems)-1)
 				}
 
-				uniqueOrderID := order.Number
+				uniqueOrderID := ord.Number
 				if len(input.Shipments) > 1 {
-					uniqueOrderID = fmt.Sprintf("%s-%d", order.Number, idx+1)
+					uniqueOrderID = fmt.Sprintf("%s-%d", ord.Number, idx+1)
 				}
 
 				orderInput := shipping.CreateOrderInput{
@@ -438,13 +434,13 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 
 			shipmentCost := first.ShippingFee
 			if shipmentCost == 0 && len(input.Shipments) == 1 {
-				shipmentCost = order.ShippingFee
+				shipmentCost = ord.ShippingFee
 			}
 
-			shipment := shipmentdomain.Shipment{
+			shp := shipment.Shipment{
 				ID:                uuid.New(),
-				OrderID:           order.ID,
-				Status:            shipmentdomain.ShipmentStatusCreated,
+				OrderID:           ord.ID,
+				Status:            shipment.ShipmentStatusCreated,
 				FulfillmentMethod: method,
 				TrackingNumber:    trackingNumber,
 				Courier:           courierCode,
@@ -454,13 +450,13 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 				CreatedAt:         now,
 			}
 
-			if err := shipment.Validate(); err != nil {
+			if err := shp.Validate(); err != nil {
 				rollbackLogistics()
 				return nil, apperror.NewInvalidInput(err.Error())
 			}
 
 			preparedShipments = append(preparedShipments, preparedShipment{
-				shipment: shipment,
+				shipment: shp,
 				itemIDs:  sInput.ItemIDs,
 			})
 		}
@@ -468,7 +464,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		// Fallback / legacy: Group order items by ShopID for per-shop shipment processing
 		type shopGroup struct {
 			shopID uuid.UUID
-			items  []orderdomain.OrderItem
+			items  []order.OrderItem
 		}
 		var groups []shopGroup
 		groupMap := make(map[uuid.UUID]int)
@@ -478,23 +474,23 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 				groupMap[item.ShopID] = len(groups)
 				groups = append(groups, shopGroup{
 					shopID: item.ShopID,
-					items:  []orderdomain.OrderItem{item},
+					items:  []order.OrderItem{item},
 				})
 			} else {
 				groups[idx].items = append(groups[idx].items, item)
 			}
 		}
 
-		method := shipmentdomain.FulfillmentMethodCourier
+		method := shipment.FulfillmentMethodCourier
 		if input.FulfillmentMethod != nil && *input.FulfillmentMethod != "" {
-			method = shipmentdomain.FulfillmentMethod(*input.FulfillmentMethod)
+			method = shipment.FulfillmentMethod(*input.FulfillmentMethod)
 		}
 
 		for idx, group := range groups {
 			first := group.items[0]
 
 			var courierCode, courierService string
-			if method == shipmentdomain.FulfillmentMethodCourier {
+			if method == shipment.FulfillmentMethodCourier {
 				if first.CourierCode != nil {
 					courierCode = *first.CourierCode
 				}
@@ -505,8 +501,8 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 					return nil, apperror.NewInvalidInput("order items have no courier information")
 				}
 			} else {
-				courierCode = string(shipmentdomain.FulfillmentMethodSelfDelivery)
-				courierService = string(shipmentdomain.FulfillmentMethodSelfDelivery)
+				courierCode = string(shipment.FulfillmentMethodSelfDelivery)
+				courierService = string(shipment.FulfillmentMethodSelfDelivery)
 			}
 
 			shopAddr, err := u.shopAddressRepo.GetDefaultByShopID(ctx, u.executor, group.shopID)
@@ -541,15 +537,15 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 			}
 
 			var trackingNumber *string
-			if method == shipmentdomain.FulfillmentMethodCourier {
+			if method == shipment.FulfillmentMethodCourier {
 				itemName := first.ProductName
 				if len(group.items) > 1 {
 					itemName = fmt.Sprintf("%s (+%d more)", first.ProductName, len(group.items)-1)
 				}
 
-				uniqueOrderID := order.Number
+				uniqueOrderID := ord.Number
 				if len(groups) > 1 {
-					uniqueOrderID = fmt.Sprintf("%s-%d", order.Number, idx+1)
+					uniqueOrderID = fmt.Sprintf("%s-%d", ord.Number, idx+1)
 				}
 
 				orderInput := shipping.CreateOrderInput{
@@ -586,13 +582,13 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 
 			shipmentCost := first.ShippingFee
 			if shipmentCost == 0 && len(groups) == 1 {
-				shipmentCost = order.ShippingFee
+				shipmentCost = ord.ShippingFee
 			}
 
-			shipment := shipmentdomain.Shipment{
+			shp := shipment.Shipment{
 				ID:                uuid.New(),
-				OrderID:           order.ID,
-				Status:            shipmentdomain.ShipmentStatusCreated,
+				OrderID:           ord.ID,
+				Status:            shipment.ShipmentStatusCreated,
 				FulfillmentMethod: method,
 				TrackingNumber:    trackingNumber,
 				Courier:           courierCode,
@@ -602,19 +598,19 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 				CreatedAt:         now,
 			}
 
-			if err := shipment.Validate(); err != nil {
+			if err := shp.Validate(); err != nil {
 				rollbackLogistics()
 				return nil, apperror.NewInvalidInput(err.Error())
 			}
 
 			preparedShipments = append(preparedShipments, preparedShipment{
-				shipment: shipment,
+				shipment: shp,
 				itemIDs:  groupItemIDs,
 			})
 		}
 	}
 
-	var createdShipments []shipmentdomain.Shipment
+	var createdShipments []shipment.Shipment
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
 		for _, ps := range preparedShipments {
 			if err := u.shipmentRepo.Create(ctx, exec, ps.shipment); err != nil {
@@ -625,7 +621,7 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 			}
 			createdShipments = append(createdShipments, ps.shipment)
 		}
-		if err := u.orderRepo.UpdateStatus(ctx, exec, order.ID, input.Status); err != nil {
+		if err := u.orderRepo.UpdateStatus(ctx, exec, ord.ID, input.Status); err != nil {
 			return fmt.Errorf("failed to update order status: %w", err)
 		}
 		return nil
@@ -635,13 +631,13 @@ func (u *UpdateOrderStatusUsecase) Execute(ctx context.Context, input UpdateOrde
 		return nil, err
 	}
 
-	var firstCreated *shipmentdomain.Shipment
+	var firstCreated *shipment.Shipment
 	if len(createdShipments) > 0 {
 		firstCreated = &createdShipments[0]
 	}
 
 	return &UpdateOrderStatusResult{
-		Order:     *order,
+		Order:     *ord,
 		Shipment:  firstCreated,
 		Shipments: createdShipments,
 	}, nil

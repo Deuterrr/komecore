@@ -1,18 +1,15 @@
-package orderrepo
+package order
 
 import (
-	"time"
-
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/pagination"
-
 	"github.com/google/uuid"
+
+	"komecore/internal/modules/cart"
 )
 
 type PricingItemInput struct {
 	ProductID   uuid.UUID
 	CartItemID  *uuid.UUID
-	ItemOptions cartdomain.ItemOptions
+	ItemOptions cart.ItemOptions
 	Quantity    int
 }
 
@@ -34,7 +31,7 @@ type PricingInput struct {
 type PricingItemResult struct {
 	ProductID   uuid.UUID
 	CartItemID  *uuid.UUID
-	ItemOptions cartdomain.ItemOptions
+	ItemOptions cart.ItemOptions
 	ProductName string
 	Quantity    int
 	UnitPrice   int64
@@ -94,27 +91,4 @@ type PricingResult struct {
 	GrandTotal            int64
 	PaymentMethods        []PaymentMethodPricingResult
 	SelectedPaymentMethod *PaymentMethodPricingResult
-}
-
-var (
-	OrderSortLatest pagination.SortKey = "latest"
-	OrderSortNumber pagination.SortKey = "number"
-	OrderSortTotal  pagination.SortKey = "total"
-	OrderSortStatus pagination.SortKey = "status"
-	OrderSortModify pagination.SortKey = "modify"
-)
-
-type FindOrderParams struct {
-	ID         *uuid.UUID
-	Number     *string
-	CustomerID *uuid.UUID
-	ShopID     *uuid.UUID
-	ShopIDs    []uuid.UUID
-	Status     *string
-	Statuses   []string
-	FromDate   *time.Time
-	ToDate     *time.Time
-
-	Pagination pagination.Pagination
-	Sorts      pagination.Sorts
 }

@@ -12,17 +12,14 @@ import (
 	"komecore/internal/infra/outbox"
 	"komecore/internal/infra/paymentgateway"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/auth/authrepo"
-	"komecore/internal/modules/cart/cartdomain"
-	"komecore/internal/modules/cart/cartrepo"
-	"komecore/internal/modules/discount/discountdomain"
+	"komecore/internal/modules/auth"
+	"komecore/internal/modules/cart"
+	"komecore/internal/modules/discount"
 	"komecore/internal/modules/discount/discountusecase"
-	"komecore/internal/modules/inventory/inventoryrepo"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/payment/paymentrepo"
-	"komecore/internal/modules/user/userrepo"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/user"
 	"komecore/internal/strtpl"
 	appclock "komecore/pkg/clock"
 
@@ -37,7 +34,7 @@ const (
 
 type OrderItemInput struct {
 	ProductID   uuid.UUID
-	ItemOptions cartdomain.ItemOptions
+	ItemOptions cart.ItemOptions
 	ProductName string
 	Quantity    int
 }
@@ -73,13 +70,13 @@ type PaymentAccountResult struct {
 type CreateOrderResult struct {
 	OrderID        uuid.UUID
 	PaymentAccount *PaymentAccountResult
-	ChannelData    *paymentdomain.PaymentChannelData
+	ChannelData    *payment.PaymentChannelData
 	Instruction    *string
 	Total          int64
 }
 
 type CouponRedeemer interface {
-	RedeemCoupon(ctx context.Context, exec transaction.Executor, input discountusecase.RedeemCouponInput) (*discountdomain.CouponRedemption, error)
+	RedeemCoupon(ctx context.Context, exec transaction.Executor, input discountusecase.RedeemCouponInput) (*discount.CouponRedemption, error)
 }
 
 type OutboxRecorder interface {
@@ -89,21 +86,21 @@ type OutboxRecorder interface {
 type CreateOrderUsecase struct {
 	executor               transaction.Executor
 	transactor             transaction.Transactor
-	accountRepo            authrepo.AccountRepository
-	orderRepo              orderrepo.OrderRepository
-	orderItemRepo          orderrepo.OrderItemRepository
-	invoiceRepo            orderrepo.InvoiceRepository
-	invoiceItemRepo        orderrepo.InvoiceItemRepository
-	paymentRepo            paymentrepo.PaymentRepository
-	paymentMethodRepo      paymentrepo.PaymentMethodRepository
-	paymentEventRepo       paymentrepo.PaymentEventRepository
-	paymentInstructionRepo paymentrepo.PaymentInstructionRepository
-	paymentChannelDataRepo paymentrepo.PaymentChannelDataRepository
-	inventoryRepo          inventoryrepo.InventoryRepository
-	cartRepo               cartrepo.CartRepository
-	userRepo               userrepo.UserRepository
+	accountRepo            auth.AccountRepository
+	orderRepo              order.Repository
+	orderItemRepo          order.ItemRepository
+	invoiceRepo            order.InvoiceRepository
+	invoiceItemRepo        order.InvoiceItemRepository
+	paymentRepo            payment.Repository
+	paymentMethodRepo      payment.MethodRepository
+	paymentEventRepo       payment.EventRepository
+	paymentInstructionRepo payment.InstructionRepository
+	paymentChannelDataRepo payment.ChannelDataRepository
+	inventoryRepo          inventory.Repository
+	cartRepo               cart.Repository
+	userRepo               user.Repository
 	paymentGateway         paymentgateway.Provider
-	pricingService         orderrepo.PricingService
+	pricingService         order.PricingService
 	couponService          CouponRedeemer
 	outboxRecorder         OutboxRecorder
 }
@@ -111,21 +108,21 @@ type CreateOrderUsecase struct {
 func NewCreateOrderUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	accountRepo authrepo.AccountRepository,
-	orderRepo orderrepo.OrderRepository,
-	orderItemRepo orderrepo.OrderItemRepository,
-	invoiceRepo orderrepo.InvoiceRepository,
-	invoiceItemRepo orderrepo.InvoiceItemRepository,
-	paymentRepo paymentrepo.PaymentRepository,
-	paymentMethodRepo paymentrepo.PaymentMethodRepository,
-	paymentEventRepo paymentrepo.PaymentEventRepository,
-	paymentInstructionRepo paymentrepo.PaymentInstructionRepository,
-	paymentChannelDataRepo paymentrepo.PaymentChannelDataRepository,
-	inventoryRepo inventoryrepo.InventoryRepository,
-	cartRepo cartrepo.CartRepository,
-	userRepo userrepo.UserRepository,
+	accountRepo auth.AccountRepository,
+	orderRepo order.Repository,
+	orderItemRepo order.ItemRepository,
+	invoiceRepo order.InvoiceRepository,
+	invoiceItemRepo order.InvoiceItemRepository,
+	paymentRepo payment.Repository,
+	paymentMethodRepo payment.MethodRepository,
+	paymentEventRepo payment.EventRepository,
+	paymentInstructionRepo payment.InstructionRepository,
+	paymentChannelDataRepo payment.ChannelDataRepository,
+	inventoryRepo inventory.Repository,
+	cartRepo cart.Repository,
+	userRepo user.Repository,
 	paymentGateway paymentgateway.Provider,
-	pricingService orderrepo.PricingService,
+	pricingService order.PricingService,
 ) *CreateOrderUsecase {
 	return &CreateOrderUsecase{
 		executor:               executor,
@@ -172,8 +169,8 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 	now := appclock.Now()
 
 	var (
-		method        *paymentdomain.PaymentMethod
-		pricingResult *orderrepo.PricingResult
+		method        *payment.PaymentMethod
+		pricingResult *order.PricingResult
 		customerName  string
 		customerEmail string
 		customerPhone string
@@ -199,25 +196,25 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		return nil, err
 	}
 
-	order := orderdomain.Order{
+	ord := order.Order{
 		ID:          uuid.New(),
-		Number:      orderdomain.NewOrderNumber(),
+		Number:      order.NewOrderNumber(),
 		CustomerID:  input.CustomerID,
 		AddressID:   input.AddressID,
-		Status:      orderdomain.OrderStatusPending,
+		Status:      order.OrderStatusPending,
 		Subtotal:    pricingResult.Subtotal,
 		ShippingFee: pricingResult.TotalShippingFee,
 		Total:       pricingResult.GrandTotal,
 		CreatedAt:   now,
 	}
-	if err := order.Validate(); err != nil {
+	if err := ord.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid order domain state: %w", err)
 	}
-	invoice := order.NewInvoice()
+	invoice := ord.NewInvoice()
 
 	var (
-		orderItems   []orderdomain.OrderItem
-		invoiceItems []orderdomain.InvoiceItem
+		orderItems   []order.OrderItem
+		invoiceItems []order.InvoiceItem
 		chargeItems  []paymentgateway.ChargeItem
 
 		expiresAt = now.Add(PAYMENT_EXPIRATION)
@@ -233,9 +230,9 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		}
 
 		for _, itemRes := range shopRes.Items {
-			orderItem := orderdomain.OrderItem{
+			orderItem := order.OrderItem{
 				ID:             uuid.New(),
-				OrderID:        order.ID,
+				OrderID:        ord.ID,
 				ShopID:         shopRes.ShopID,
 				ShopName:       shopRes.ShopName,
 				ProductID:      itemRes.ProductID,
@@ -289,7 +286,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		itemSum += ci.Price * int64(ci.Quantity)
 	}
 
-	if diff := order.Total - itemSum; diff != 0 {
+	if diff := ord.Total - itemSum; diff != 0 {
 		chargeItems = append(chargeItems, paymentgateway.ChargeItem{
 			ID:       "adjustment",
 			Name:     "Fees & Adjustments",
@@ -298,21 +295,21 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		})
 	}
 
-	payment := paymentdomain.Payment{
+	pmt := payment.Payment{
 		ID:        uuid.New(),
-		OrderID:   order.ID,
+		OrderID:   ord.ID,
 		MethodID:  input.PaymentMethodID,
-		Amount:    order.Total,
-		Status:    paymentdomain.PaymentStatusPending,
+		Amount:    ord.Total,
+		Status:    payment.PaymentStatusPending,
 		CreatedAt: now,
 	}
 
 	chargeResp, err := u.paymentGateway.Charge(
 		ctx,
 		paymentgateway.ChargeRequest{
-			PaymentID:     payment.ID,
-			OrderID:       order.ID,
-			Amount:        order.Total,
+			PaymentID:     pmt.ID,
+			OrderID:       ord.ID,
+			Amount:        ord.Total,
 			PaymentType:   method.Code,
 			ExpiresAt:     expiresAt,
 			CustomerEmail: customerEmail,
@@ -327,17 +324,17 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 
 	// Process payments through the configured gateway for
 	// methods that require external payment handling.
-	payment.Provider = method.Provider
-	payment.ProviderPaymentID = &chargeResp.GatewayTransactionID
-	payment.ProviderOrderID = &chargeResp.GatewayOrderID
+	pmt.Provider = method.Provider
+	pmt.ProviderPaymentID = &chargeResp.GatewayTransactionID
+	pmt.ProviderOrderID = &chargeResp.GatewayOrderID
 	if !chargeResp.ExpiresAt.IsZero() {
-		payment.ExpiresAt = &chargeResp.ExpiresAt
+		pmt.ExpiresAt = &chargeResp.ExpiresAt
 	}
 
 	var (
 		instructionContent   *string
-		instruction          *paymentdomain.PaymentInstruction
-		channelData          *paymentdomain.PaymentChannelData
+		instruction          *payment.PaymentInstruction
+		channelData          *payment.PaymentChannelData
 		paymentAccountResult *PaymentAccountResult
 	)
 
@@ -363,16 +360,16 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		return nil, fmt.Errorf("failed to marshal pending payment event payload: %w", err)
 	}
 
-	paymentEvent := paymentdomain.PaymentEvent{
+	paymentEvent := payment.PaymentEvent{
 		ID:        uuid.New(),
-		PaymentID: payment.ID,
-		EventName: string(paymentdomain.PaymentEventStatusPending),
+		PaymentID: pmt.ID,
+		EventName: string(payment.PaymentEventStatusPending),
 		Payload:   pendingPayload,
 		CreatedAt: now,
 	}
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		if err := u.orderRepo.Save(ctx, exec, order); err != nil {
+		if err := u.orderRepo.Save(ctx, exec, ord); err != nil {
 			return fmt.Errorf("failed to save order: %w", err)
 		}
 		if err := u.invoiceRepo.Save(ctx, exec, invoice); err != nil {
@@ -384,7 +381,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		if err := u.invoiceItemRepo.SaveBulk(ctx, exec, invoiceItems); err != nil {
 			return fmt.Errorf("failed to save invoice items: %w", err)
 		}
-		if err := u.paymentRepo.Save(ctx, exec, payment); err != nil {
+		if err := u.paymentRepo.Save(ctx, exec, pmt); err != nil {
 			return fmt.Errorf("failed to save payment: %w", err)
 		}
 		if err := u.paymentEventRepo.Create(ctx, exec, paymentEvent); err != nil {
@@ -395,7 +392,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 			if _, err := u.couponService.RedeemCoupon(ctx, exec, discountusecase.RedeemCouponInput{
 				Code:        *input.CouponCode,
 				CustomerID:  input.CustomerID,
-				OrderID:     order.ID,
+				OrderID:     ord.ID,
 				Subtotal:    pricingResult.Subtotal,
 				ShippingFee: pricingResult.TotalShippingFee,
 			}); err != nil {
@@ -449,9 +446,9 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 				}
 			}
 
-			cd := paymentdomain.PaymentChannelData{
+			cd := payment.PaymentChannelData{
 				ID:            uuid.New(),
-				PaymentID:     payment.ID,
+				PaymentID:     pmt.ID,
 				ChannelType:   method.Type,
 				DisplayName:   inst.Label,
 				AccountNumber: accountNumber,
@@ -459,7 +456,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 				RedirectURL:   redirectURL,
 				ActionURL:     actionURL,
 				Metadata:      make(map[string]any),
-				ExpiresAt:     payment.ExpiresAt,
+				ExpiresAt:     pmt.ExpiresAt,
 				CreatedAt:     now,
 			}
 
@@ -521,11 +518,11 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 				})
 			}
 			outboxPayload := outbox.OrderCreatedPayload{
-				OrderID:       order.ID,
-				OrderNumber:   order.Number,
+				OrderID:       ord.ID,
+				OrderNumber:   ord.Number,
 				CustomerEmail: customerEmail,
 				CustomerName:  customerName,
-				Total:         order.Total,
+				Total:         ord.Total,
 				Items:         outboxItems,
 			}
 			if err := u.outboxRecorder.Enqueue(ctx, exec, outbox.EventOrderCreated, outboxPayload); err != nil {
@@ -536,7 +533,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		return nil
 	})
 	if err != nil {
-		if payment.ProviderOrderID != nil {
+		if pmt.ProviderOrderID != nil {
 			// Best-effort rollback:
 			// the payment transaction has already been created
 			// at the gateway, but persisting the order/payment
@@ -544,7 +541,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 			//
 			// Attempt to cancel the gateway transaction to avoid
 			// leaving an orphaned payable transaction.
-			_ = u.paymentGateway.CancelTransaction(ctx, *payment.ProviderOrderID)
+			_ = u.paymentGateway.CancelTransaction(ctx, *pmt.ProviderOrderID)
 		}
 
 		return nil, err
@@ -564,8 +561,8 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 		}
 
 		var effectiveExpiresAt time.Time
-		if payment.ExpiresAt != nil {
-			effectiveExpiresAt = *payment.ExpiresAt
+		if pmt.ExpiresAt != nil {
+			effectiveExpiresAt = *pmt.ExpiresAt
 		} else {
 			effectiveExpiresAt = expiresAt
 		}
@@ -574,7 +571,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 			instruction.Content,
 			map[string]string{
 				"invoice_number": invoice.Number,
-				"amount":         strconv.FormatInt(order.Total, 10),
+				"amount":         strconv.FormatInt(ord.Total, 10),
 				"expired_at":     effectiveExpiresAt.Format(time.RFC3339),
 				"va_number":      vaNumber,
 			},
@@ -587,11 +584,11 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 	}
 
 	result := CreateOrderResult{
-		OrderID:        order.ID,
+		OrderID:        ord.ID,
 		PaymentAccount: paymentAccountResult,
 		ChannelData:    channelData,
 		Instruction:    instructionContent,
-		Total:          order.Total,
+		Total:          ord.Total,
 	}
 
 	return &result, nil
@@ -600,7 +597,7 @@ func (u *CreateOrderUsecase) Execute(ctx context.Context, input CreateOrderInput
 func (u *CreateOrderUsecase) validateAndCalculatePricing(
 	ctx context.Context,
 	input CreateOrderInput,
-) (*paymentdomain.PaymentMethod, *orderrepo.PricingResult, error) {
+) (*payment.PaymentMethod, *order.PricingResult, error) {
 	// Ensure the selected payment method exists and can be used
 	// before creating any order-related records
 	method, err := u.paymentMethodRepo.GetByID(ctx, u.executor, input.PaymentMethodID)
@@ -614,12 +611,12 @@ func (u *CreateOrderUsecase) validateAndCalculatePricing(
 		return nil, nil, apperror.NewBadRequest(fmt.Sprintf("payment method %q is not supported by the payment gateway", method.Code))
 	}
 
-	pricingInput := orderrepo.PricingInput{
+	pricingInput := order.PricingInput{
 		CustomerID:      input.CustomerID,
 		AddressID:       &input.AddressID,
 		PaymentMethodID: &input.PaymentMethodID,
 		CouponCode:      input.CouponCode,
-		Shops:           make([]orderrepo.PricingShopInput, 0, len(input.Shops)),
+		Shops:           make([]order.PricingShopInput, 0, len(input.Shops)),
 	}
 
 	for _, shop := range input.Shops {
@@ -629,11 +626,11 @@ func (u *CreateOrderUsecase) validateAndCalculatePricing(
 			courierService = &shop.Courier.Service
 		}
 
-		shopInput := orderrepo.PricingShopInput{
+		shopInput := order.PricingShopInput{
 			ShopID:         shop.ShopID,
 			CourierCode:    courierCode,
 			CourierService: courierService,
-			Items:          make([]orderrepo.PricingItemInput, 0, len(shop.Items)),
+			Items:          make([]order.PricingItemInput, 0, len(shop.Items)),
 		}
 
 		for _, item := range shop.Items {
@@ -642,7 +639,7 @@ func (u *CreateOrderUsecase) validateAndCalculatePricing(
 			}
 			shopInput.Items = append(
 				shopInput.Items,
-				orderrepo.PricingItemInput{
+				order.PricingItemInput{
 					ProductID:   item.ProductID,
 					ItemOptions: item.ItemOptions,
 					Quantity:    item.Quantity,

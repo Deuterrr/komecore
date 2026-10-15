@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
+	"komecore/internal/modules/order"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -22,7 +22,7 @@ func (r *InvoiceRepository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
-) (*orderdomain.Invoice, error) {
+) (*order.Invoice, error) {
 	query := `
 		SELECT
 			id,
@@ -41,7 +41,7 @@ func (r *InvoiceRepository) GetByID(
 		LIMIT 1
 	`
 
-	var invoice orderdomain.Invoice
+	var invoice order.Invoice
 	err := exec.QueryRow(ctx, query, id).Scan(
 		&invoice.ID,
 		&invoice.Number,
@@ -67,7 +67,7 @@ func (r *InvoiceRepository) GetByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
-) (*orderdomain.Invoice, error) {
+) (*order.Invoice, error) {
 	query := `
 		SELECT
 			id,
@@ -86,7 +86,7 @@ func (r *InvoiceRepository) GetByOrderID(
 		LIMIT 1
 	`
 
-	var invoice orderdomain.Invoice
+	var invoice order.Invoice
 	err := exec.QueryRow(ctx, query, orderID).Scan(
 		&invoice.ID,
 		&invoice.Number,
@@ -111,7 +111,7 @@ func (r *InvoiceRepository) GetByOrderID(
 func (r *InvoiceRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
-	invoice orderdomain.Invoice,
+	invoice order.Invoice,
 ) error {
 	query := `
 		INSERT INTO invoices (

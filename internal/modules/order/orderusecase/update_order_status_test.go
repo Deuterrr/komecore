@@ -8,14 +8,12 @@ import (
 
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressdomain"
-	"komecore/internal/modules/inventory/inventorydomain"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/inventory"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shipment"
 	applogger "komecore/pkg/logger"
 
 	"github.com/google/uuid"
@@ -36,69 +34,69 @@ func (m *uosMockTransactor) WithinTransaction(ctx context.Context, fn func(trans
 }
 
 type uosMockOrderRepo struct {
-	order        *orderdomain.Order
+	order        *order.Order
 	err          error
 	updatedState struct {
 		id     uuid.UUID
-		status orderdomain.OrderStatus
+		status order.OrderStatus
 	}
 }
 
-func (m *uosMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*orderdomain.Order, error) {
+func (m *uosMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*order.Order, error) {
 	if m.order != nil && m.order.ID == id {
 		return m.order, nil
 	}
 	return nil, m.err
 }
 
-func (m *uosMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*orderdomain.Order, error) {
+func (m *uosMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*order.Order, error) {
 	return nil, nil
 }
 
-func (m *uosMockOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status orderdomain.OrderStatus) error {
+func (m *uosMockOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status order.OrderStatus) error {
 	m.updatedState.id = id
 	m.updatedState.status = status
 	return nil
 }
 
-func (m *uosMockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, id uuid.UUID, status orderdomain.OrderStatus, _ *time.Time, _ *time.Time) error {
+func (m *uosMockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, id uuid.UUID, status order.OrderStatus, _ *time.Time, _ *time.Time) error {
 	m.updatedState.id = id
 	m.updatedState.status = status
 	return nil
 }
 
-func (m *uosMockOrderRepo) Save(_ context.Context, _ transaction.Executor, _ orderdomain.Order) error {
+func (m *uosMockOrderRepo) Save(_ context.Context, _ transaction.Executor, _ order.Order) error {
 	return nil
 }
 
-func (m *uosMockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ orderrepo.FindOrderParams) ([]orderdomain.Order, int, error) {
+func (m *uosMockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ order.FindOrderParams) ([]order.Order, int, error) {
 	return nil, 0, nil
 }
 func (m *uosMockOrderRepo) SetConfirmedAndExpiry(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ time.Time, _ time.Time) error {
 	return nil
 }
-func (m *uosMockOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]orderdomain.Order, error) {
+func (m *uosMockOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]order.Order, error) {
 	return nil, nil
 }
 
 type uosMockOrderItemRepo struct {
-	items []orderdomain.OrderItem
+	items []order.OrderItem
 	err   error
 }
 
-func (m *uosMockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *uosMockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]order.OrderItem, error) {
 	return m.items, m.err
 }
 
-func (m *uosMockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *uosMockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]order.OrderItem, error) {
 	return nil, nil
 }
 
-func (m *uosMockOrderItemRepo) ListByShipmentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *uosMockOrderItemRepo) ListByShipmentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]order.OrderItem, error) {
 	return nil, nil
 }
 
-func (m *uosMockOrderItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []orderdomain.OrderItem) error {
+func (m *uosMockOrderItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []order.OrderItem) error {
 	return nil
 }
 
@@ -112,19 +110,19 @@ type uosMockInventoryRepo struct {
 	err       error
 }
 
-func (m *uosMockInventoryRepo) GetByProductIDAndShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID) (*inventorydomain.Inventory, error) {
+func (m *uosMockInventoryRepo) GetByProductIDAndShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID) (*inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *uosMockInventoryRepo) ListByProductID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventorydomain.Inventory, error) {
+func (m *uosMockInventoryRepo) ListByProductID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *uosMockInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]inventorydomain.Inventory, error) {
+func (m *uosMockInventoryRepo) ListByProductIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID][]inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *uosMockInventoryRepo) ListByShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventorydomain.Inventory, error) {
+func (m *uosMockInventoryRepo) ListByShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]inventory.Inventory, error) {
 	return nil, nil
 }
-func (m *uosMockInventoryRepo) Create(_ context.Context, _ transaction.Executor, _ *inventorydomain.Inventory) error {
+func (m *uosMockInventoryRepo) Create(_ context.Context, _ transaction.Executor, _ *inventory.Inventory) error {
 	return nil
 }
 func (m *uosMockInventoryRepo) Reserve(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID, _ int) error {
@@ -147,7 +145,7 @@ func (m *uosMockInventoryRepo) Commit(_ context.Context, _ transaction.Executor,
 func (m *uosMockInventoryRepo) Restock(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID, _ int) error {
 	return nil
 }
-func (m *uosMockInventoryRepo) Update(_ context.Context, _ transaction.Executor, _ *inventorydomain.Inventory) error {
+func (m *uosMockInventoryRepo) Update(_ context.Context, _ transaction.Executor, _ *inventory.Inventory) error {
 	return nil
 }
 func (m *uosMockInventoryRepo) Delete(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID) error {
@@ -155,100 +153,100 @@ func (m *uosMockInventoryRepo) Delete(_ context.Context, _ transaction.Executor,
 }
 
 type uosMockPaymentRepo struct {
-	payment *paymentdomain.Payment
+	payment *payment.Payment
 	err     error
 }
 
-func (m *uosMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *uosMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
-func (m *uosMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *uosMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	if m.payment != nil && m.payment.OrderID == orderID {
 		return m.payment, nil
 	}
 	return nil, m.err
 }
-func (m *uosMockPaymentRepo) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *uosMockPaymentRepo) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	return m.GetByOrderID(ctx, exec, orderID)
 }
-func (m *uosMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]paymentdomain.Payment, error) {
+func (m *uosMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *uosMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ paymentdomain.PaymentStatus) error {
+func (m *uosMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ payment.PaymentStatus) error {
 	return nil
 }
-func (m *uosMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.Payment) error {
+func (m *uosMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ payment.Payment) error {
 	return nil
 }
-func (m *uosMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]paymentdomain.Payment, error) {
+func (m *uosMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *uosMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]paymentdomain.Payment, error) {
+func (m *uosMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]payment.Payment, error) {
 	return nil, nil
 }
 
 type uosMockShipmentRepo struct {
-	shipment         *shipmentdomain.Shipment
-	shipments        []shipmentdomain.Shipment
-	createdShipment  *shipmentdomain.Shipment
-	createdShipments []shipmentdomain.Shipment
-	updatedShipment  *shipmentdomain.Shipment
+	shipment         *shipment.Shipment
+	shipments        []shipment.Shipment
+	createdShipment  *shipment.Shipment
+	createdShipments []shipment.Shipment
+	updatedShipment  *shipment.Shipment
 	err              error
 }
 
-func (m *uosMockShipmentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipmentdomain.Shipment, error) {
+func (m *uosMockShipmentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipment.Shipment, error) {
 	return nil, nil
 }
 
-func (m *uosMockShipmentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*shipmentdomain.Shipment, error) {
+func (m *uosMockShipmentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*shipment.Shipment, error) {
 	if m.shipment != nil && m.shipment.OrderID == orderID {
 		return m.shipment, nil
 	}
 	return nil, m.err
 }
 
-func (m *uosMockShipmentRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]shipmentdomain.Shipment, error) {
+func (m *uosMockShipmentRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]shipment.Shipment, error) {
 	if len(m.shipments) > 0 {
 		return m.shipments, nil
 	}
 	if m.shipment != nil && m.shipment.OrderID == orderID {
-		return []shipmentdomain.Shipment{*m.shipment}, nil
+		return []shipment.Shipment{*m.shipment}, nil
 	}
 	return nil, m.err
 }
 
-func (m *uosMockShipmentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shipmentdomain.Shipment, error) {
+func (m *uosMockShipmentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shipment.Shipment, error) {
 	return nil, nil
 }
 
-func (m *uosMockShipmentRepo) Create(_ context.Context, _ transaction.Executor, shipment shipmentdomain.Shipment) error {
+func (m *uosMockShipmentRepo) Create(_ context.Context, _ transaction.Executor, shipment shipment.Shipment) error {
 	m.createdShipment = &shipment
 	m.createdShipments = append(m.createdShipments, shipment)
 	return m.err
 }
 
-func (m *uosMockShipmentRepo) Update(_ context.Context, _ transaction.Executor, shipment shipmentdomain.Shipment) error {
+func (m *uosMockShipmentRepo) Update(_ context.Context, _ transaction.Executor, shipment shipment.Shipment) error {
 	m.updatedShipment = &shipment
 	return m.err
 }
 
 type uosMockAddressRepo struct {
-	addr *addressdomain.CustomerAddress
+	addr *address.CustomerAddress
 	err  error
 }
 
-func (m *uosMockAddressRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*addressdomain.CustomerAddress, error) {
+func (m *uosMockAddressRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*address.CustomerAddress, error) {
 	if m.addr != nil && m.addr.ID == id {
 		return m.addr, nil
 	}
 	return nil, m.err
 }
 
-func (m *uosMockAddressRepo) GetDefaultByCustomerID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*addressdomain.CustomerAddress, error) {
+func (m *uosMockAddressRepo) GetDefaultByCustomerID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*address.CustomerAddress, error) {
 	return nil, nil
 }
 
-func (m *uosMockAddressRepo) ListByCustomerID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]addressdomain.CustomerAddress, error) {
+func (m *uosMockAddressRepo) ListByCustomerID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]address.CustomerAddress, error) {
 	return nil, nil
 }
 
@@ -260,7 +258,7 @@ func (m *uosMockAddressRepo) UnsetDefaultByCustomerID(_ context.Context, _ trans
 	return nil
 }
 
-func (m *uosMockAddressRepo) Save(_ context.Context, _ transaction.Executor, _ addressdomain.CustomerAddress) error {
+func (m *uosMockAddressRepo) Save(_ context.Context, _ transaction.Executor, _ address.CustomerAddress) error {
 	return nil
 }
 
@@ -272,24 +270,24 @@ func (m *uosMockAddressRepo) DeleteByCustomerID(_ context.Context, _ transaction
 	return nil
 }
 
-func (m *uosMockAddressRepo) ListByIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]addressdomain.CustomerAddress, error) {
+func (m *uosMockAddressRepo) ListByIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]address.CustomerAddress, error) {
 	if m.addr != nil {
-		return []addressdomain.CustomerAddress{*m.addr}, m.err
+		return []address.CustomerAddress{*m.addr}, m.err
 	}
 	return nil, m.err
 }
 
 type uosMockShopAddressRepo struct {
-	addr  *addressdomain.ShopAddress
-	addrs map[uuid.UUID]*addressdomain.ShopAddress
+	addr  *address.ShopAddress
+	addrs map[uuid.UUID]*address.ShopAddress
 	err   error
 }
 
-func (m *uosMockShopAddressRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*addressdomain.ShopAddress, error) {
+func (m *uosMockShopAddressRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*address.ShopAddress, error) {
 	return nil, nil
 }
 
-func (m *uosMockShopAddressRepo) GetDefaultByShopID(_ context.Context, _ transaction.Executor, shopID uuid.UUID) (*addressdomain.ShopAddress, error) {
+func (m *uosMockShopAddressRepo) GetDefaultByShopID(_ context.Context, _ transaction.Executor, shopID uuid.UUID) (*address.ShopAddress, error) {
 	if m.addrs != nil {
 		if a, ok := m.addrs[shopID]; ok {
 			return a, nil
@@ -301,19 +299,19 @@ func (m *uosMockShopAddressRepo) GetDefaultByShopID(_ context.Context, _ transac
 	return nil, m.err
 }
 
-func (m *uosMockShopAddressRepo) GetDefaultsByShopIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]addressdomain.ShopAddress, error) {
+func (m *uosMockShopAddressRepo) GetDefaultsByShopIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]address.ShopAddress, error) {
 	return nil, nil
 }
 
-func (m *uosMockShopAddressRepo) FindByShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]addressdomain.ShopAddress, error) {
+func (m *uosMockShopAddressRepo) FindByShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]address.ShopAddress, error) {
 	return nil, nil
 }
 
-func (m *uosMockShopAddressRepo) Create(_ context.Context, _ transaction.Executor, _ addressdomain.ShopAddress) error {
+func (m *uosMockShopAddressRepo) Create(_ context.Context, _ transaction.Executor, _ address.ShopAddress) error {
 	return nil
 }
 
-func (m *uosMockShopAddressRepo) Update(_ context.Context, _ transaction.Executor, _ addressdomain.ShopAddress) error {
+func (m *uosMockShopAddressRepo) Update(_ context.Context, _ transaction.Executor, _ address.ShopAddress) error {
 	return nil
 }
 
@@ -326,34 +324,34 @@ func (m *uosMockShopAddressRepo) UnsetActiveByShopID(_ context.Context, _ transa
 }
 
 type uosMockProductRepo struct {
-	products map[uuid.UUID]productdomain.Product
+	products map[uuid.UUID]product.Product
 	err      error
 }
 
-func (m *uosMockProductRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*productdomain.Product, error) {
+func (m *uosMockProductRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*product.Product, error) {
 	if p, ok := m.products[id]; ok {
 		return &p, nil
 	}
 	return nil, m.err
 }
 
-func (m *uosMockProductRepo) GetBySlug(_ context.Context, _ transaction.Executor, _ string) (*productdomain.Product, error) {
+func (m *uosMockProductRepo) GetBySlug(_ context.Context, _ transaction.Executor, _ string) (*product.Product, error) {
 	return nil, nil
 }
 
-func (m *uosMockProductRepo) FindProducts(_ context.Context, _ transaction.Executor, _ productrepo.FindProductParams) ([]productdomain.Product, int, error) {
+func (m *uosMockProductRepo) FindProducts(_ context.Context, _ transaction.Executor, _ product.FindProductParams) ([]product.Product, int, error) {
 	return nil, 0, nil
 }
 
-func (m *uosMockProductRepo) FindProductsWithInventory(_ context.Context, _ transaction.Executor, _ productrepo.FindProductParams) ([]productdomain.ProductWithInventory, int, error) {
+func (m *uosMockProductRepo) FindProductsWithInventory(_ context.Context, _ transaction.Executor, _ product.FindProductParams) ([]product.ProductWithInventory, int, error) {
 	return nil, 0, nil
 }
 
-func (m *uosMockProductRepo) FindByIDs(_ context.Context, _ transaction.Executor, ids []uuid.UUID) ([]productdomain.Product, error) {
+func (m *uosMockProductRepo) FindByIDs(_ context.Context, _ transaction.Executor, ids []uuid.UUID) ([]product.Product, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	var res []productdomain.Product
+	var res []product.Product
 	for _, id := range ids {
 		if p, ok := m.products[id]; ok {
 			res = append(res, p)
@@ -362,7 +360,7 @@ func (m *uosMockProductRepo) FindByIDs(_ context.Context, _ transaction.Executor
 	return res, nil
 }
 
-func (m *uosMockProductRepo) Save(_ context.Context, _ transaction.Executor, _ *productdomain.Product) error {
+func (m *uosMockProductRepo) Save(_ context.Context, _ transaction.Executor, _ *product.Product) error {
 	return nil
 }
 
@@ -409,16 +407,16 @@ func (m *uosMockAuditLogger) Log(_ context.Context, event applogger.AuditEvent) 
 
 func TestUpdateOrderStatus_Confirmed_PaymentNotPaid(t *testing.T) {
 	orderID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusPending,
+		Status: order.OrderStatusPending,
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	paymentRepo := &uosMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			OrderID: orderID,
-			Status:  paymentdomain.PaymentStatusPending,
+			Status:  payment.PaymentStatusPending,
 		},
 	}
 
@@ -439,7 +437,7 @@ func TestUpdateOrderStatus_Confirmed_PaymentNotPaid(t *testing.T) {
 
 	_, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusConfirmed,
+		Status:  order.OrderStatusConfirmed,
 	})
 
 	if err == nil {
@@ -451,12 +449,12 @@ func TestUpdateOrderStatus_Confirmed_Success(t *testing.T) {
 	orderID := uuid.New()
 	productID := uuid.New()
 	shopID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusPending,
+		Status: order.OrderStatusPending,
 	}
 
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:        uuid.New(),
 			OrderID:   orderID,
@@ -466,13 +464,13 @@ func TestUpdateOrderStatus_Confirmed_Success(t *testing.T) {
 		},
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	orderItemRepo := &uosMockOrderItemRepo{items: items}
 	inventoryRepo := &uosMockInventoryRepo{}
 	paymentRepo := &uosMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			OrderID: orderID,
-			Status:  paymentdomain.PaymentStatusPaid,
+			Status:  payment.PaymentStatusPaid,
 		},
 	}
 
@@ -493,14 +491,14 @@ func TestUpdateOrderStatus_Confirmed_Success(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusConfirmed,
+		Status:  order.OrderStatusConfirmed,
 	})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusConfirmed {
+	if res.Order.Status != order.OrderStatusConfirmed {
 		t.Errorf("expected status Confirmed, got %s", res.Order.Status)
 	}
 
@@ -511,16 +509,16 @@ func TestUpdateOrderStatus_Confirmed_Success(t *testing.T) {
 
 func TestUpdateOrderStatus_Processing_PaymentNotPaid(t *testing.T) {
 	orderID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusConfirmed,
+		Status: order.OrderStatusConfirmed,
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	paymentRepo := &uosMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			OrderID: orderID,
-			Status:  paymentdomain.PaymentStatusPending,
+			Status:  payment.PaymentStatusPending,
 		},
 	}
 
@@ -541,7 +539,7 @@ func TestUpdateOrderStatus_Processing_PaymentNotPaid(t *testing.T) {
 
 	_, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusProcessing,
+		Status:  order.OrderStatusProcessing,
 	})
 
 	if err == nil {
@@ -551,16 +549,16 @@ func TestUpdateOrderStatus_Processing_PaymentNotPaid(t *testing.T) {
 
 func TestUpdateOrderStatus_Processing_Success(t *testing.T) {
 	orderID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusConfirmed,
+		Status: order.OrderStatusConfirmed,
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	paymentRepo := &uosMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			OrderID: orderID,
-			Status:  paymentdomain.PaymentStatusPaid,
+			Status:  payment.PaymentStatusPaid,
 		},
 	}
 
@@ -581,14 +579,14 @@ func TestUpdateOrderStatus_Processing_Success(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusProcessing,
+		Status:  order.OrderStatusProcessing,
 	})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusProcessing {
+	if res.Order.Status != order.OrderStatusProcessing {
 		t.Errorf("expected status Processing, got %s", res.Order.Status)
 	}
 }
@@ -597,12 +595,12 @@ func TestUpdateOrderStatus_Cancelled_ReleasesInventory(t *testing.T) {
 	orderID := uuid.New()
 	productID := uuid.New()
 	shopID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusPending,
+		Status: order.OrderStatusPending,
 	}
 
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:        uuid.New(),
 			OrderID:   orderID,
@@ -612,7 +610,7 @@ func TestUpdateOrderStatus_Cancelled_ReleasesInventory(t *testing.T) {
 		},
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	orderItemRepo := &uosMockOrderItemRepo{items: items}
 	inventoryRepo := &uosMockInventoryRepo{}
 
@@ -633,14 +631,14 @@ func TestUpdateOrderStatus_Cancelled_ReleasesInventory(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusCancelled,
+		Status:  order.OrderStatusCancelled,
 	})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusCancelled {
+	if res.Order.Status != order.OrderStatusCancelled {
 		t.Errorf("expected status Cancelled, got %s", res.Order.Status)
 	}
 
@@ -652,19 +650,19 @@ func TestUpdateOrderStatus_Cancelled_ReleasesInventory(t *testing.T) {
 func TestUpdateOrderStatus_Delivered_ClosesShipment(t *testing.T) {
 	orderID := uuid.New()
 	shipmentID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusShipped,
+		Status: order.OrderStatusShipped,
 	}
 
-	shipment := &shipmentdomain.Shipment{
+	shp := &shipment.Shipment{
 		ID:      shipmentID,
 		OrderID: orderID,
-		Status:  shipmentdomain.ShipmentStatusInTransit,
+		Status:  shipment.ShipmentStatusInTransit,
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
-	shipmentRepo := &uosMockShipmentRepo{shipment: shipment}
+	orderRepo := &uosMockOrderRepo{order: ord}
+	shipmentRepo := &uosMockShipmentRepo{shipment: shp}
 
 	usecase := NewUpdateOrderStatusUsecase(
 		&uosMockExecutor{},
@@ -683,18 +681,18 @@ func TestUpdateOrderStatus_Delivered_ClosesShipment(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusDelivered,
+		Status:  order.OrderStatusDelivered,
 	})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusDelivered {
+	if res.Order.Status != order.OrderStatusDelivered {
 		t.Errorf("expected status Delivered, got %s", res.Order.Status)
 	}
 
-	if shipmentRepo.updatedShipment == nil || shipmentRepo.updatedShipment.Status != shipmentdomain.ShipmentStatusDelivered {
+	if shipmentRepo.updatedShipment == nil || shipmentRepo.updatedShipment.Status != shipment.ShipmentStatusDelivered {
 		t.Errorf("expected shipment status Delivered, got %v", shipmentRepo.updatedShipment)
 	}
 }
@@ -703,17 +701,17 @@ func TestUpdateOrderStatus_ShippedCourierManual(t *testing.T) {
 	orderID := uuid.New()
 	addressID := uuid.New()
 	shopID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:          orderID,
 		Number:      "ORD-123",
-		Status:      orderdomain.OrderStatusProcessing,
+		Status:      order.OrderStatusProcessing,
 		AddressID:   addressID,
 		ShippingFee: 15000,
 	}
 
 	courierCode := "jne"
 	courierService := "reg"
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:             uuid.New(),
 			OrderID:        orderID,
@@ -724,25 +722,25 @@ func TestUpdateOrderStatus_ShippedCourierManual(t *testing.T) {
 		},
 	}
 
-	custAddr := &addressdomain.CustomerAddress{
+	custAddr := &address.CustomerAddress{
 		ID:           addressID,
 		ReceiverName: "Bob",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "456",
 			FullAddress: "Receiver Rd 12",
 		},
 	}
 
-	shopAddr := &addressdomain.ShopAddress{
+	shopAddr := &address.ShopAddress{
 		ShopID: shopID,
 		Label:  "Main Shop",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "123",
 			FullAddress: "Shipper Rd 99",
 		},
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	orderItemRepo := &uosMockOrderItemRepo{items: items}
 	shipmentRepo := &uosMockShipmentRepo{}
 	addressRepo := &uosMockAddressRepo{addr: custAddr}
@@ -773,7 +771,7 @@ func TestUpdateOrderStatus_ShippedCourierManual(t *testing.T) {
 	fulfillmentMethod := "courier"
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID:           orderID,
-		Status:            orderdomain.OrderStatusShipped,
+		Status:            order.OrderStatusShipped,
 		TrackingNumber:    &manualTracking,
 		FulfillmentMethod: &fulfillmentMethod,
 	})
@@ -782,7 +780,7 @@ func TestUpdateOrderStatus_ShippedCourierManual(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusShipped {
+	if res.Order.Status != order.OrderStatusShipped {
 		t.Errorf("expected status Shipped, got %s", res.Order.Status)
 	}
 
@@ -790,7 +788,7 @@ func TestUpdateOrderStatus_ShippedCourierManual(t *testing.T) {
 		t.Fatal("expected shipment to be created")
 	}
 
-	if res.Shipment.FulfillmentMethod != shipmentdomain.FulfillmentMethodCourier {
+	if res.Shipment.FulfillmentMethod != shipment.FulfillmentMethodCourier {
 		t.Errorf("expected courier fulfillment, got %s", res.Shipment.FulfillmentMethod)
 	}
 
@@ -815,15 +813,15 @@ func TestUpdateOrderStatus_ShippedSelfDelivery(t *testing.T) {
 	orderID := uuid.New()
 	addressID := uuid.New()
 	shopID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:          orderID,
 		Number:      "ORD-456",
-		Status:      orderdomain.OrderStatusProcessing,
+		Status:      order.OrderStatusProcessing,
 		AddressID:   addressID,
 		ShippingFee: 0,
 	}
 
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:          uuid.New(),
 			OrderID:     orderID,
@@ -832,25 +830,25 @@ func TestUpdateOrderStatus_ShippedSelfDelivery(t *testing.T) {
 		},
 	}
 
-	custAddr := &addressdomain.CustomerAddress{
+	custAddr := &address.CustomerAddress{
 		ID:           addressID,
 		ReceiverName: "Alice",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "456",
 			FullAddress: "Receiver Rd 12",
 		},
 	}
 
-	shopAddr := &addressdomain.ShopAddress{
+	shopAddr := &address.ShopAddress{
 		ShopID: shopID,
 		Label:  "Main Shop",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "123",
 			FullAddress: "Shipper Rd 99",
 		},
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	orderItemRepo := &uosMockOrderItemRepo{items: items}
 	shipmentRepo := &uosMockShipmentRepo{}
 	addressRepo := &uosMockAddressRepo{addr: custAddr}
@@ -876,7 +874,7 @@ func TestUpdateOrderStatus_ShippedSelfDelivery(t *testing.T) {
 	fulfillmentMethod := "self_delivery"
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID:           orderID,
-		Status:            orderdomain.OrderStatusShipped,
+		Status:            order.OrderStatusShipped,
 		FulfillmentMethod: &fulfillmentMethod,
 	})
 
@@ -884,7 +882,7 @@ func TestUpdateOrderStatus_ShippedSelfDelivery(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusShipped {
+	if res.Order.Status != order.OrderStatusShipped {
 		t.Errorf("expected status Shipped, got %s", res.Order.Status)
 	}
 
@@ -892,7 +890,7 @@ func TestUpdateOrderStatus_ShippedSelfDelivery(t *testing.T) {
 		t.Fatal("expected shipment to be created")
 	}
 
-	if res.Shipment.FulfillmentMethod != shipmentdomain.FulfillmentMethodSelfDelivery {
+	if res.Shipment.FulfillmentMethod != shipment.FulfillmentMethodSelfDelivery {
 		t.Errorf("expected self_delivery fulfillment, got %s", res.Shipment.FulfillmentMethod)
 	}
 
@@ -911,12 +909,12 @@ func TestUpdateOrderStatus_ShippedSelfDelivery(t *testing.T) {
 
 func TestUpdateOrderStatus_InvalidTransition(t *testing.T) {
 	orderID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusPending,
+		Status: order.OrderStatusPending,
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	usecase := NewUpdateOrderStatusUsecase(
 		&uosMockExecutor{},
 		&uosMockTransactor{},
@@ -934,7 +932,7 @@ func TestUpdateOrderStatus_InvalidTransition(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusShipped,
+		Status:  order.OrderStatusShipped,
 	})
 
 	if err == nil {
@@ -950,17 +948,17 @@ func TestUpdateOrderStatus_DefaultFulfillment(t *testing.T) {
 	orderID := uuid.New()
 	addressID := uuid.New()
 	shopID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:          orderID,
 		Number:      "ORD-789",
-		Status:      orderdomain.OrderStatusProcessing,
+		Status:      order.OrderStatusProcessing,
 		AddressID:   addressID,
 		ShippingFee: 12000,
 	}
 
 	courierCode := "pos"
 	courierService := "khusus"
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:             uuid.New(),
 			OrderID:        orderID,
@@ -971,25 +969,25 @@ func TestUpdateOrderStatus_DefaultFulfillment(t *testing.T) {
 		},
 	}
 
-	custAddr := &addressdomain.CustomerAddress{
+	custAddr := &address.CustomerAddress{
 		ID:           addressID,
 		ReceiverName: "Charlie",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "456",
 			FullAddress: "Receiver Rd 12",
 		},
 	}
 
-	shopAddr := &addressdomain.ShopAddress{
+	shopAddr := &address.ShopAddress{
 		ShopID: shopID,
 		Label:  "Main Shop",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "123",
 			FullAddress: "Shipper Rd 99",
 		},
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	orderItemRepo := &uosMockOrderItemRepo{items: items}
 	shipmentRepo := &uosMockShipmentRepo{}
 	addressRepo := &uosMockAddressRepo{addr: custAddr}
@@ -1018,14 +1016,14 @@ func TestUpdateOrderStatus_DefaultFulfillment(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusShipped,
+		Status:  order.OrderStatusShipped,
 	})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Shipment.FulfillmentMethod != shipmentdomain.FulfillmentMethodCourier {
+	if res.Shipment.FulfillmentMethod != shipment.FulfillmentMethodCourier {
 		t.Errorf("expected default fulfillment 'courier', got %s", res.Shipment.FulfillmentMethod)
 	}
 
@@ -1036,16 +1034,16 @@ func TestUpdateOrderStatus_DefaultFulfillment(t *testing.T) {
 
 func TestUpdateOrderStatus_AuditLogging_Success(t *testing.T) {
 	orderID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusConfirmed,
+		Status: order.OrderStatusConfirmed,
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	paymentRepo := &uosMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			OrderID: orderID,
-			Status:  paymentdomain.PaymentStatusPaid,
+			Status:  payment.PaymentStatusPaid,
 		},
 	}
 	auditLogger := &uosMockAuditLogger{}
@@ -1066,7 +1064,7 @@ func TestUpdateOrderStatus_AuditLogging_Success(t *testing.T) {
 
 	_, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusProcessing,
+		Status:  order.OrderStatusProcessing,
 	})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -1104,12 +1102,12 @@ func TestUpdateOrderStatus_AuditLogging_Success(t *testing.T) {
 
 func TestUpdateOrderStatus_AuditLogging_Failure(t *testing.T) {
 	orderID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:     orderID,
-		Status: orderdomain.OrderStatusPending,
+		Status: order.OrderStatusPending,
 	}
 
-	orderRepo := &uosMockOrderRepo{order: order}
+	orderRepo := &uosMockOrderRepo{order: ord}
 	auditLogger := &uosMockAuditLogger{}
 	usecase := NewUpdateOrderStatusUsecase(
 		&uosMockExecutor{},
@@ -1128,7 +1126,7 @@ func TestUpdateOrderStatus_AuditLogging_Failure(t *testing.T) {
 
 	_, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusDelivered,
+		Status:  order.OrderStatusDelivered,
 	})
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -1153,17 +1151,17 @@ func TestUpdateOrderStatus_Shipped_ProductWeightCalculation(t *testing.T) {
 	shopID := uuid.New()
 	productID := uuid.New()
 
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:          orderID,
 		Number:      "ORD-WEIGHT-1",
-		Status:      orderdomain.OrderStatusProcessing,
+		Status:      order.OrderStatusProcessing,
 		AddressID:   addressID,
 		ShippingFee: 15000,
 	}
 
 	courierCode := "jne"
 	courierService := "reg"
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:             uuid.New(),
 			OrderID:        orderID,
@@ -1177,7 +1175,7 @@ func TestUpdateOrderStatus_Shipped_ProductWeightCalculation(t *testing.T) {
 	}
 
 	weightVal := 2500.0 // 2500g per unit, 2 units = 5000g
-	products := map[uuid.UUID]productdomain.Product{
+	products := map[uuid.UUID]product.Product{
 		productID: {
 			ID:     productID,
 			Name:   "Heavy Tool Box",
@@ -1185,19 +1183,19 @@ func TestUpdateOrderStatus_Shipped_ProductWeightCalculation(t *testing.T) {
 		},
 	}
 
-	custAddr := &addressdomain.CustomerAddress{
+	custAddr := &address.CustomerAddress{
 		ID:           addressID,
 		ReceiverName: "David",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "456",
 			FullAddress: "Receiver Rd 12",
 		},
 	}
 
-	shopAddr := &addressdomain.ShopAddress{
+	shopAddr := &address.ShopAddress{
 		ShopID: shopID,
 		Label:  "Main Shop",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "123",
 			FullAddress: "Shipper Rd 99",
 		},
@@ -1212,7 +1210,7 @@ func TestUpdateOrderStatus_Shipped_ProductWeightCalculation(t *testing.T) {
 	usecase := NewUpdateOrderStatusUsecase(
 		&uosMockExecutor{},
 		&uosMockTransactor{},
-		&uosMockOrderRepo{order: order},
+		&uosMockOrderRepo{order: ord},
 		&uosMockOrderItemRepo{items: items},
 		&uosMockInventoryRepo{},
 		&uosMockPaymentRepo{},
@@ -1226,7 +1224,7 @@ func TestUpdateOrderStatus_Shipped_ProductWeightCalculation(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusShipped,
+		Status:  order.OrderStatusShipped,
 	})
 
 	if err != nil {
@@ -1250,10 +1248,10 @@ func TestUpdateOrderStatus_Shipped_MultiShopShipment(t *testing.T) {
 	productID1 := uuid.New()
 	productID2 := uuid.New()
 
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:          orderID,
 		Number:      "ORD-MULTI-1",
-		Status:      orderdomain.OrderStatusProcessing,
+		Status:      order.OrderStatusProcessing,
 		AddressID:   addressID,
 		ShippingFee: 30000,
 	}
@@ -1263,7 +1261,7 @@ func TestUpdateOrderStatus_Shipped_MultiShopShipment(t *testing.T) {
 	courier2 := "sicepat"
 	service2 := "gokil"
 
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:             uuid.New(),
 			OrderID:        orderID,
@@ -1288,28 +1286,28 @@ func TestUpdateOrderStatus_Shipped_MultiShopShipment(t *testing.T) {
 		},
 	}
 
-	custAddr := &addressdomain.CustomerAddress{
+	custAddr := &address.CustomerAddress{
 		ID:           addressID,
 		ReceiverName: "Eva",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "456",
 			FullAddress: "Receiver Rd 12",
 		},
 	}
 
-	shopAddr1 := &addressdomain.ShopAddress{
+	shopAddr1 := &address.ShopAddress{
 		ShopID: shopID1,
 		Label:  "Shop One",
-		Detail: addressdomain.AddressDetail{District: "101", FullAddress: "Shop 1 Rd"},
+		Detail: address.AddressDetail{District: "101", FullAddress: "Shop 1 Rd"},
 	}
-	shopAddr2 := &addressdomain.ShopAddress{
+	shopAddr2 := &address.ShopAddress{
 		ShopID: shopID2,
 		Label:  "Shop Two",
-		Detail: addressdomain.AddressDetail{District: "102", FullAddress: "Shop 2 Rd"},
+		Detail: address.AddressDetail{District: "102", FullAddress: "Shop 2 Rd"},
 	}
 
 	shopAddressRepo := &uosMockShopAddressRepo{
-		addrs: map[uuid.UUID]*addressdomain.ShopAddress{
+		addrs: map[uuid.UUID]*address.ShopAddress{
 			shopID1: shopAddr1,
 			shopID2: shopAddr2,
 		},
@@ -1326,7 +1324,7 @@ func TestUpdateOrderStatus_Shipped_MultiShopShipment(t *testing.T) {
 	usecase := NewUpdateOrderStatusUsecase(
 		&uosMockExecutor{},
 		&uosMockTransactor{},
-		&uosMockOrderRepo{order: order},
+		&uosMockOrderRepo{order: ord},
 		&uosMockOrderItemRepo{items: items},
 		&uosMockInventoryRepo{},
 		&uosMockPaymentRepo{},
@@ -1340,14 +1338,14 @@ func TestUpdateOrderStatus_Shipped_MultiShopShipment(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusShipped,
+		Status:  order.OrderStatusShipped,
 	})
 
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusShipped {
+	if res.Order.Status != order.OrderStatusShipped {
 		t.Errorf("expected status Shipped, got %s", res.Order.Status)
 	}
 
@@ -1364,10 +1362,10 @@ func TestUpdateOrderStatus_ShippedExplicitMultiShipment(t *testing.T) {
 	orderID := uuid.New()
 	addressID := uuid.New()
 	shopID := uuid.New()
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:          orderID,
 		Number:      "ORD-SPLIT-1",
-		Status:      orderdomain.OrderStatusProcessing,
+		Status:      order.OrderStatusProcessing,
 		AddressID:   addressID,
 		ShippingFee: 20000,
 	}
@@ -1376,7 +1374,7 @@ func TestUpdateOrderStatus_ShippedExplicitMultiShipment(t *testing.T) {
 	itemID2 := uuid.New()
 	itemID3 := uuid.New()
 
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:          itemID1,
 			OrderID:     orderID,
@@ -1400,19 +1398,19 @@ func TestUpdateOrderStatus_ShippedExplicitMultiShipment(t *testing.T) {
 		},
 	}
 
-	custAddr := &addressdomain.CustomerAddress{
+	custAddr := &address.CustomerAddress{
 		ID:           addressID,
 		ReceiverName: "Alice",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "456",
 			FullAddress: "Cust Address",
 		},
 	}
 
-	shopAddr := &addressdomain.ShopAddress{
+	shopAddr := &address.ShopAddress{
 		ShopID: shopID,
 		Label:  "Main Shop",
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District:    "123",
 			FullAddress: "Shop Address",
 		},
@@ -1425,7 +1423,7 @@ func TestUpdateOrderStatus_ShippedExplicitMultiShipment(t *testing.T) {
 	usecase := NewUpdateOrderStatusUsecase(
 		&uosMockExecutor{},
 		&uosMockTransactor{},
-		&uosMockOrderRepo{order: order},
+		&uosMockOrderRepo{order: ord},
 		&uosMockOrderItemRepo{items: items},
 		&uosMockInventoryRepo{},
 		&uosMockPaymentRepo{},
@@ -1439,7 +1437,7 @@ func TestUpdateOrderStatus_ShippedExplicitMultiShipment(t *testing.T) {
 
 	res, err := usecase.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusShipped,
+		Status:  order.OrderStatusShipped,
 		Shipments: []ShipmentDispatchInput{
 			{
 				FulfillmentMethod: "courier",
@@ -1462,7 +1460,7 @@ func TestUpdateOrderStatus_ShippedExplicitMultiShipment(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if res.Order.Status != orderdomain.OrderStatusShipped {
+	if res.Order.Status != order.OrderStatusShipped {
 		t.Errorf("expected status Shipped, got %s", res.Order.Status)
 	}
 
@@ -1485,17 +1483,17 @@ func TestUpdateOrderStatus_Shipped_LogisticsRollbackOnDBFailure(t *testing.T) {
 	addressID := uuid.New()
 	shopID := uuid.New()
 
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID:          orderID,
 		CustomerID:  customerID,
 		AddressID:   addressID,
-		Status:      orderdomain.OrderStatusProcessing,
+		Status:      order.OrderStatusProcessing,
 		ShippingFee: 10000,
 	}
 
 	courierCode := "jne"
 	courierService := "reg"
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{
 			ID:             uuid.New(),
 			OrderID:        orderID,
@@ -1507,26 +1505,26 @@ func TestUpdateOrderStatus_Shipped_LogisticsRollbackOnDBFailure(t *testing.T) {
 		},
 	}
 
-	orderRepoMock := &uosMockOrderRepo{order: order}
+	orderRepoMock := &uosMockOrderRepo{order: ord}
 	orderItemRepoMock := &uosMockOrderItemRepo{items: items}
 	inventoryRepoMock := &uosMockInventoryRepo{}
 	paymentRepoMock := &uosMockPaymentRepo{
-		payment: &paymentdomain.Payment{
+		payment: &payment.Payment{
 			OrderID: orderID,
-			Status:  paymentdomain.PaymentStatusPaid,
+			Status:  payment.PaymentStatusPaid,
 		},
 	}
 	productRepoMock := &uosMockProductRepo{}
 	shipmentRepoMock := &uosMockShipmentRepo{err: errors.New("db failure")}
-	customerAddrMock := &uosMockAddressRepo{addr: &addressdomain.CustomerAddress{
+	customerAddrMock := &uosMockAddressRepo{addr: &address.CustomerAddress{
 		ID: addressID,
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District: "456",
 		},
 	}}
-	shopAddrMock := &uosMockShopAddressRepo{addr: &addressdomain.ShopAddress{
+	shopAddrMock := &uosMockShopAddressRepo{addr: &address.ShopAddress{
 		ShopID: shopID,
-		Detail: addressdomain.AddressDetail{
+		Detail: address.AddressDetail{
 			District: "123",
 		},
 	}}
@@ -1554,7 +1552,7 @@ func TestUpdateOrderStatus_Shipped_LogisticsRollbackOnDBFailure(t *testing.T) {
 
 	_, err := uc.Execute(context.Background(), UpdateOrderStatusInput{
 		OrderID: orderID,
-		Status:  orderdomain.OrderStatusShipped,
+		Status:  order.OrderStatusShipped,
 	})
 
 	if err == nil {

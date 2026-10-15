@@ -12,11 +12,10 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
+	"komecore/internal/modules/order"
 	"komecore/internal/modules/order/orderusecase"
-	"komecore/internal/modules/payment/paymentdomain"
-	"komecore/internal/modules/shipment/shipmentdomain"
+	"komecore/internal/modules/payment"
+	"komecore/internal/modules/shipment"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -28,51 +27,51 @@ type hMockExecutor struct {
 }
 
 type hMockOrderRepo struct {
-	order *orderdomain.Order
+	order *order.Order
 }
 
-func (m *hMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*orderdomain.Order, error) {
+func (m *hMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*order.Order, error) {
 	if m.order != nil && m.order.ID == id {
 		return m.order, nil
 	}
 	return nil, nil
 }
-func (m *hMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*orderdomain.Order, error) {
+func (m *hMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*order.Order, error) {
 	return nil, nil
 }
-func (m *hMockOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ orderdomain.OrderStatus) error {
+func (m *hMockOrderRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ order.OrderStatus) error {
 	return nil
 }
-func (m *hMockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ orderdomain.OrderStatus, _ *time.Time, _ *time.Time) error {
+func (m *hMockOrderRepo) UpdateStatusWithSLA(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ order.OrderStatus, _ *time.Time, _ *time.Time) error {
 	return nil
 }
-func (m *hMockOrderRepo) Save(_ context.Context, _ transaction.Executor, _ orderdomain.Order) error {
+func (m *hMockOrderRepo) Save(_ context.Context, _ transaction.Executor, _ order.Order) error {
 	return nil
 }
-func (m *hMockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ orderrepo.FindOrderParams) ([]orderdomain.Order, int, error) {
+func (m *hMockOrderRepo) FindOrders(_ context.Context, _ transaction.Executor, _ order.FindOrderParams) ([]order.Order, int, error) {
 	return nil, 0, nil
 }
 func (m *hMockOrderRepo) SetConfirmedAndExpiry(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ time.Time, _ time.Time) error {
 	return nil
 }
-func (m *hMockOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]orderdomain.Order, error) {
+func (m *hMockOrderRepo) FindExpiredUnfulfilledOrders(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]order.Order, error) {
 	return nil, nil
 }
 
 type hMockOrderItemRepo struct {
-	items []orderdomain.OrderItem
+	items []order.OrderItem
 }
 
-func (m *hMockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *hMockOrderItemRepo) ListByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) ([]order.OrderItem, error) {
 	return m.items, nil
 }
-func (m *hMockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *hMockOrderItemRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]order.OrderItem, error) {
 	return m.items, nil
 }
-func (m *hMockOrderItemRepo) ListByShipmentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]orderdomain.OrderItem, error) {
+func (m *hMockOrderItemRepo) ListByShipmentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]order.OrderItem, error) {
 	return nil, nil
 }
-func (m *hMockOrderItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []orderdomain.OrderItem) error {
+func (m *hMockOrderItemRepo) SaveBulk(_ context.Context, _ transaction.Executor, _ []order.OrderItem) error {
 	return nil
 }
 func (m *hMockOrderItemRepo) AssignShipment(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ []uuid.UUID) error {
@@ -81,64 +80,64 @@ func (m *hMockOrderItemRepo) AssignShipment(_ context.Context, _ transaction.Exe
 
 type hMockPaymentRepo struct{}
 
-func (m *hMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *hMockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
-func (m *hMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *hMockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
-func (m *hMockPaymentRepo) GetByOrderIDForUpdate(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.Payment, error) {
+func (m *hMockPaymentRepo) GetByOrderIDForUpdate(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.Payment, error) {
 	return nil, nil
 }
-func (m *hMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]paymentdomain.Payment, error) {
+func (m *hMockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *hMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]paymentdomain.Payment, error) {
+func (m *hMockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, _ time.Time) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *hMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]paymentdomain.Payment, error) {
+func (m *hMockPaymentRepo) ListPastDuePending(_ context.Context, _ transaction.Executor, _ time.Time, _ int) ([]payment.Payment, error) {
 	return nil, nil
 }
-func (m *hMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.Payment) error {
+func (m *hMockPaymentRepo) Save(_ context.Context, _ transaction.Executor, _ payment.Payment) error {
 	return nil
 }
-func (m *hMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ paymentdomain.PaymentStatus) error {
+func (m *hMockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ payment.PaymentStatus) error {
 	return nil
 }
 
 type hMockPaymentChannelDataRepo struct{}
 
-func (m *hMockPaymentChannelDataRepo) GetByPaymentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*paymentdomain.PaymentChannelData, error) {
+func (m *hMockPaymentChannelDataRepo) GetByPaymentID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*payment.PaymentChannelData, error) {
 	return nil, nil
 }
-func (m *hMockPaymentChannelDataRepo) ListByPaymentIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]*paymentdomain.PaymentChannelData, error) {
+func (m *hMockPaymentChannelDataRepo) ListByPaymentIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) (map[uuid.UUID]*payment.PaymentChannelData, error) {
 	return nil, nil
 }
-func (m *hMockPaymentChannelDataRepo) Save(_ context.Context, _ transaction.Executor, _ paymentdomain.PaymentChannelData) error {
+func (m *hMockPaymentChannelDataRepo) Save(_ context.Context, _ transaction.Executor, _ payment.PaymentChannelData) error {
 	return nil
 }
 
 type hMockShipmentRepo struct{}
 
-func (m *hMockShipmentRepo) Create(_ context.Context, _ transaction.Executor, _ shipmentdomain.Shipment) error {
+func (m *hMockShipmentRepo) Create(_ context.Context, _ transaction.Executor, _ shipment.Shipment) error {
 	return nil
 }
-func (m *hMockShipmentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipmentdomain.Shipment, error) {
+func (m *hMockShipmentRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipment.Shipment, error) {
 	return nil, nil
 }
-func (m *hMockShipmentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipmentdomain.Shipment, error) {
+func (m *hMockShipmentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*shipment.Shipment, error) {
 	return nil, nil
 }
-func (m *hMockShipmentRepo) ListByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]shipmentdomain.Shipment, error) {
+func (m *hMockShipmentRepo) ListByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) ([]shipment.Shipment, error) {
 	return nil, nil
 }
-func (m *hMockShipmentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shipmentdomain.Shipment, error) {
+func (m *hMockShipmentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]shipment.Shipment, error) {
 	return nil, nil
 }
-func (m *hMockShipmentRepo) Save(_ context.Context, _ transaction.Executor, _ shipmentdomain.Shipment) error {
+func (m *hMockShipmentRepo) Save(_ context.Context, _ transaction.Executor, _ shipment.Shipment) error {
 	return nil
 }
-func (m *hMockShipmentRepo) Update(_ context.Context, _ transaction.Executor, _ shipmentdomain.Shipment) error {
+func (m *hMockShipmentRepo) Update(_ context.Context, _ transaction.Executor, _ shipment.Shipment) error {
 	return nil
 }
 
@@ -168,14 +167,14 @@ func TestGetOrderTrackingForStaff_CustomerActor_ReturnsForbidden(t *testing.T) {
 	customerID := uuid.New()
 	orderID := uuid.New()
 
-	order := &orderdomain.Order{
+	ord := &order.Order{
 		ID: orderID,
 	}
-	items := []orderdomain.OrderItem{
+	items := []order.OrderItem{
 		{ID: uuid.New(), OrderID: orderID},
 	}
 
-	orderRepoMock := &hMockOrderRepo{order: order}
+	orderRepoMock := &hMockOrderRepo{order: ord}
 	orderItemRepoMock := &hMockOrderItemRepo{items: items}
 
 	getOrderUC := orderusecase.NewGetOrderUsecase(

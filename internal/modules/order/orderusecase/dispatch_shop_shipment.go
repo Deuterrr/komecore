@@ -8,13 +8,10 @@ import (
 	"komecore/internal/infra/outbox"
 	shipping "komecore/internal/infra/shipping"
 	transaction "komecore/internal/infra/transactor"
-	"komecore/internal/modules/address/addressrepo"
-	"komecore/internal/modules/order/orderdomain"
-	"komecore/internal/modules/order/orderrepo"
-	"komecore/internal/modules/product/productdomain"
-	"komecore/internal/modules/product/productrepo"
-	"komecore/internal/modules/shipment/shipmentdomain"
-	"komecore/internal/modules/shipment/shipmentrepo"
+	"komecore/internal/modules/address"
+	"komecore/internal/modules/order"
+	"komecore/internal/modules/product"
+	"komecore/internal/modules/shipment"
 	appclock "komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
 
@@ -24,12 +21,12 @@ import (
 type DispatchShopShipmentUsecase struct {
 	executor        transaction.Executor
 	transactor      transaction.Transactor
-	orderRepo       orderrepo.OrderRepository
-	orderItemRepo   orderrepo.OrderItemRepository
-	productRepo     productrepo.ProductRepository
-	shipmentRepo    shipmentrepo.ShipmentRepository
-	addressRepo     addressrepo.CustomerAddressRepository
-	shopAddressRepo addressrepo.ShopAddressRepository
+	orderRepo       order.Repository
+	orderItemRepo   order.ItemRepository
+	productRepo     product.Repository
+	shipmentRepo    shipment.Repository
+	addressRepo     address.CustomerAddressRepository
+	shopAddressRepo address.ShopAddressRepository
 	logistics       shipping.LogisticsProvider
 	auditLogger     applogger.AuditLogger
 	outboxRecorder  OutboxRecorder
@@ -38,12 +35,12 @@ type DispatchShopShipmentUsecase struct {
 func NewDispatchShopShipmentUsecase(
 	executor transaction.Executor,
 	transactor transaction.Transactor,
-	orderRepo orderrepo.OrderRepository,
-	orderItemRepo orderrepo.OrderItemRepository,
-	productRepo productrepo.ProductRepository,
-	shipmentRepo shipmentrepo.ShipmentRepository,
-	addressRepo addressrepo.CustomerAddressRepository,
-	shopAddressRepo addressrepo.ShopAddressRepository,
+	orderRepo order.Repository,
+	orderItemRepo order.ItemRepository,
+	productRepo product.Repository,
+	shipmentRepo shipment.Repository,
+	addressRepo address.CustomerAddressRepository,
+	shopAddressRepo address.ShopAddressRepository,
 	logistics shipping.LogisticsProvider,
 	auditLogger applogger.AuditLogger,
 ) *DispatchShopShipmentUsecase {
@@ -77,8 +74,8 @@ type DispatchShopShipmentInput struct {
 }
 
 type DispatchShopShipmentResult struct {
-	Order           orderdomain.Order
-	Shipment        shipmentdomain.Shipment
+	Order           order.Order
+	Shipment        shipment.Shipment
 	AllItemsShipped bool
 }
 
@@ -102,16 +99,16 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		}
 	}()
 
-	order, err := u.orderRepo.GetByID(ctx, u.executor, input.OrderID)
+	ord, err := u.orderRepo.GetByID(ctx, u.executor, input.OrderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
-	if order == nil {
+	if ord == nil {
 		return nil, apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 	}
-	if order.Status != orderdomain.OrderStatusProcessing {
+	if ord.Status != order.OrderStatusProcessing {
 		return nil, apperror.NewConflict(
-			fmt.Sprintf("cannot dispatch shipment for order in '%s' status", order.Status),
+			fmt.Sprintf("cannot dispatch shipment for order in '%s' status", ord.Status),
 		)
 	}
 
@@ -124,12 +121,12 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		return nil, apperror.NewInvalidInput("item_ids cannot be empty")
 	}
 
-	itemMap := make(map[uuid.UUID]orderdomain.OrderItem)
+	itemMap := make(map[uuid.UUID]order.OrderItem)
 	for _, item := range allItems {
 		itemMap[item.ID] = item
 	}
 
-	var shipmentItems []orderdomain.OrderItem
+	var shipmentItems []order.OrderItem
 	for _, itemID := range input.ItemIDs {
 		item, exists := itemMap[itemID]
 		if !exists {
@@ -151,9 +148,9 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	}
 
 	first := shipmentItems[0]
-	method := shipmentdomain.FulfillmentMethodCourier
+	method := shipment.FulfillmentMethodCourier
 	if input.FulfillmentMethod != "" {
-		method = shipmentdomain.FulfillmentMethod(input.FulfillmentMethod)
+		method = shipment.FulfillmentMethod(input.FulfillmentMethod)
 	}
 
 	courierCode := input.Courier
@@ -165,7 +162,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		courierService = *first.CourierService
 	}
 
-	customerAddr, err := u.addressRepo.GetByID(ctx, u.executor, order.AddressID)
+	customerAddr, err := u.addressRepo.GetByID(ctx, u.executor, ord.AddressID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get customer address: %w", err)
 	}
@@ -189,7 +186,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	if err != nil {
 		return nil, fmt.Errorf("failed to load products: %w", err)
 	}
-	productMap := make(map[uuid.UUID]productdomain.Product, len(products))
+	productMap := make(map[uuid.UUID]product.Product, len(products))
 	for _, p := range products {
 		productMap[p.ID] = p
 	}
@@ -219,13 +216,13 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	}
 
 	trackingNumber := input.TrackingNumber
-	if method == shipmentdomain.FulfillmentMethodCourier && (trackingNumber == nil || *trackingNumber == "") {
+	if method == shipment.FulfillmentMethodCourier && (trackingNumber == nil || *trackingNumber == "") {
 		itemName := first.ProductName
 		if len(shipmentItems) > 1 {
 			itemName = fmt.Sprintf("%s (+%d more)", first.ProductName, len(shipmentItems)-1)
 		}
 
-		uniqueOrderID := fmt.Sprintf("%s-SH-%s", order.Number, input.ShopID.String()[:8])
+		uniqueOrderID := fmt.Sprintf("%s-SH-%s", ord.Number, input.ShopID.String()[:8])
 
 		orderInput := shipping.CreateOrderInput{
 			OriginAreaID:         0,
@@ -263,10 +260,10 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	shipmentCost := first.ShippingFee
 
 	now := appclock.Now()
-	shipment := shipmentdomain.Shipment{
+	shp := shipment.Shipment{
 		ID:                uuid.New(),
-		OrderID:           order.ID,
-		Status:            shipmentdomain.ShipmentStatusCreated,
+		OrderID:           ord.ID,
+		Status:            shipment.ShipmentStatusCreated,
 		FulfillmentMethod: method,
 		TrackingNumber:    trackingNumber,
 		Courier:           courierCode,
@@ -276,7 +273,7 @@ func (u *DispatchShopShipmentUsecase) Execute(
 		CreatedAt:         now,
 	}
 
-	if err := shipment.Validate(); err != nil {
+	if err := shp.Validate(); err != nil {
 		rollbackLogistics()
 		return nil, apperror.NewInvalidInput(err.Error())
 	}
@@ -290,32 +287,32 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	allItemsShipped := unshippedCount <= len(input.ItemIDs)
 
 	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		if err := u.shipmentRepo.Create(ctx, exec, shipment); err != nil {
+		if err := u.shipmentRepo.Create(ctx, exec, shp); err != nil {
 			return fmt.Errorf("failed to persist shipment: %w", err)
 		}
-		if err := u.orderItemRepo.AssignShipment(ctx, exec, shipment.ID, input.ItemIDs); err != nil {
+		if err := u.orderItemRepo.AssignShipment(ctx, exec, shp.ID, input.ItemIDs); err != nil {
 			return fmt.Errorf("failed to link items to shipment: %w", err)
 		}
 		if allItemsShipped {
-			if err := u.orderRepo.UpdateStatus(ctx, exec, order.ID, orderdomain.OrderStatusShipped); err != nil {
+			if err := u.orderRepo.UpdateStatus(ctx, exec, ord.ID, order.OrderStatusShipped); err != nil {
 				return fmt.Errorf("failed to update order status to shipped: %w", err)
 			}
-			order.Status = orderdomain.OrderStatusShipped
+			ord.Status = order.OrderStatusShipped
 		}
 
 		if u.outboxRecorder != nil {
 			trackingNo := ""
-			if shipment.TrackingNumber != nil {
-				trackingNo = *shipment.TrackingNumber
+			if shp.TrackingNumber != nil {
+				trackingNo = *shp.TrackingNumber
 			}
 			outboxPayload := outbox.ShipmentDispatchedPayload{
-				OrderID:        order.ID,
-				OrderNumber:    order.Number,
+				OrderID:        ord.ID,
+				OrderNumber:    ord.Number,
 				CustomerEmail:  "",
 				CustomerName:   customerAddr.ReceiverName,
 				TrackingNumber: trackingNo,
-				Courier:        shipment.Courier,
-				Service:        shipment.Service,
+				Courier:        shp.Courier,
+				Service:        shp.Service,
 			}
 			if err := u.outboxRecorder.Enqueue(ctx, exec, outbox.EventShipmentDispatched, outboxPayload); err != nil {
 				return fmt.Errorf("failed to enqueue outbox shipment.dispatched event: %w", err)
@@ -330,8 +327,8 @@ func (u *DispatchShopShipmentUsecase) Execute(
 	}
 
 	return &DispatchShopShipmentResult{
-		Order:           *order,
-		Shipment:        shipment,
+		Order:           *ord,
+		Shipment:        shp,
 		AllItemsShipped: allItemsShipped,
 	}, nil
 }

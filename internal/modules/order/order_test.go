@@ -1,4 +1,4 @@
-package orderdomain
+package order
 
 import (
 	"testing"
