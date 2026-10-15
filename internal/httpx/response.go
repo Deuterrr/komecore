@@ -3,12 +3,40 @@ package httpx
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"komecore/internal/apperror"
+	"komecore/internal/pagination"
 	applogger "komecore/pkg/logger"
 
 	"github.com/google/uuid"
 )
+
+// PaginatedResponse defines the canonical JSON envelope for all paginated collection endpoints.
+type PaginatedResponse[T any] struct {
+	Items      []T                       `json:"items"`
+	Pagination pagination.PaginationMeta `json:"pagination"`
+}
+
+// NewPaginatedResponse initializes a PaginatedResponse ensuring items is never serialized as null.
+func NewPaginatedResponse[T any](items []T, meta pagination.PaginationMeta) PaginatedResponse[T] {
+	if items == nil {
+		items = make([]T, 0)
+	}
+	return PaginatedResponse[T]{
+		Items:      items,
+		Pagination: meta,
+	}
+}
+
+// ToUTCPtr converts a time pointer to UTC while preserving nil.
+func ToUTCPtr(t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	utc := t.UTC()
+	return &utc
+}
 
 // ErrResponse represents the standardized JSON error envelope for 4xx and 5xx responses.
 type ErrResponse struct {

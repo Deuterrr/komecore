@@ -86,6 +86,15 @@ func ToUTC(t time.Time) time.Time {
 	return t.UTC()
 }
 
+// ToUTCPtr converts a time pointer to UTC while preserving nil.
+func ToUTCPtr(t *time.Time) *time.Time {
+	if t == nil {
+		return nil
+	}
+	utc := t.UTC()
+	return &utc
+}
+
 func BeginningOfDay(t time.Time) time.Time {
 	t = InAppLocation(t)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, Location())
