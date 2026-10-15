@@ -750,15 +750,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  page: { type: integer }
-                  limit: { type: integer }
-                  total: { type: integer }
-                  staff:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/StaffResponse'
+                $ref: '#/components/schemas/PaginatedStaffResponse'
     post:
       summary: Create Staff Member Profile (Staff Admin)
       tags:
@@ -1025,15 +1017,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  page: { type: integer }
-                  limit: { type: integer }
-                  total: { type: integer }
-                  products:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ProductCatalogResponse'
+                $ref: '#/components/schemas/PaginatedProductsResponse'
     post:
       summary: Create or Save Product (Staff)
       tags:
@@ -1085,15 +1069,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  page: { type: integer }
-                  limit: { type: integer }
-                  total: { type: integer }
-                  products:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/ProductStatsResponse'
+                $ref: '#/components/schemas/PaginatedProductStatsResponse'
 
   /api/v1/products/{slug}:
     get:
@@ -2024,15 +2000,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  page: { type: integer }
-                  limit: { type: integer }
-                  total: { type: integer }
-                  orders:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/OrderResponse'
+                $ref: '#/components/schemas/PaginatedOrdersResponse'
 
   /api/v1/orders/{orderID}:
     get:
@@ -2166,15 +2134,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  page: { type: integer }
-                  limit: { type: integer }
-                  total: { type: integer }
-                  orders:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/OrderResponse'
+                $ref: '#/components/schemas/PaginatedOrdersResponse'
 
   /api/v1/users/me/orders/{orderID}:
     get:
@@ -2649,6 +2609,32 @@ components:
             type: string
           example: []
 
+    PaginationMeta:
+      type: object
+      required:
+        - page
+        - limit
+        - total_items
+        - total_pages
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total_items:
+          type: integer
+          format: int64
+          example: 142
+        total_pages:
+          type: integer
+          example: 8
+        next_cursor:
+          type: string
+          nullable: true
+          example: null
+
     # Auth Schemas
     SignUpRequest:
       type: object
@@ -2854,6 +2840,17 @@ components:
         avatar_url: { type: string, nullable: true }
         created_at: { type: string, format: date-time }
 
+    PaginatedStaffResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
     CreateStaffRequest:
       type: object
       required: [name, username]
@@ -2953,6 +2950,17 @@ components:
           items:
             $ref: '#/components/schemas/ProductAvailabilityResponse'
 
+    PaginatedProductsResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductCatalogResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
     ProductDetailResponse:
       type: object
       required: [id, sku, name, slug, status, is_available, price, stock, banner]
@@ -3021,6 +3029,17 @@ components:
         review_count: { type: integer, nullable: true }
         thumbnail: { type: string, nullable: true }
 
+    PaginatedProductStatsResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductStatsResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
     # Shop Schemas
     SaveShopRequest:
       type: object
@@ -3047,15 +3066,14 @@ components:
 
     ListShopsResponse:
       type: object
-      required: [page, limit, total, shops]
+      required: [items, pagination]
       properties:
-        page: { type: integer }
-        limit: { type: integer }
-        total: { type: integer }
-        shops:
+        items:
           type: array
           items:
             $ref: '#/components/schemas/GetShopResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
 
     ShopAddressResponse:
       type: object
@@ -3644,6 +3662,17 @@ components:
         address:
           $ref: '#/components/schemas/OrderAddressResponse'
 
+    PaginatedOrdersResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+
     TrackingTimelineEventResponse:
       type: object
       required: [status, description, location, timestamp]
@@ -3743,7 +3772,7 @@ components:
 
     ReviewResponse:
       type: object
-      required: [id, product_id, customer_id, rating, created_at]
+      required: [id, product_id, customer_id, rating, helpful_count, media, created_at]
       properties:
         id: { type: string, format: uuid }
         product_id: { type: string, format: uuid }
@@ -3752,45 +3781,54 @@ components:
         rating: { type: integer, example: 5 }
         title: { type: string, nullable: true, example: "Excellent quality" }
         comment: { type: string, nullable: true, example: "The rice is fragrant and fresh. Highly recommended!" }
+        helpful_count: { type: integer, example: 0 }
+        media:
+          type: array
+          items: { type: string }
+          example: []
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time, nullable: true }
 
     ReviewWithCustomerResponse:
       type: object
-      required: [id, product_id, customer_id, customer_name, rating, created_at]
+      required: [id, product_id, customer_id, customer_name, rating, helpful_count, media, created_at]
       properties:
         id: { type: string, format: uuid }
         product_id: { type: string, format: uuid }
         customer_id: { type: string, format: uuid }
         customer_name: { type: string, example: "John Doe" }
+        avatar_url: { type: string, nullable: true }
         order_id: { type: string, format: uuid }
         rating: { type: integer, example: 5 }
         title: { type: string, nullable: true, example: "Excellent quality" }
         comment: { type: string, nullable: true, example: "The rice is fragrant and fresh. Highly recommended!" }
+        helpful_count: { type: integer, example: 0 }
+        media:
+          type: array
+          items: { type: string }
+          example: []
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time, nullable: true }
 
+    RatingSummary:
+      type: object
+      required: [average_rating, reviews_count]
+      properties:
+        average_rating: { type: number, format: float, example: 5.0 }
+        reviews_count: { type: integer, example: 1 }
+
     ListReviewsResponse:
       type: object
-      required: [reviews, total, page, limit, average_rating, review_count, rating_breakdown]
+      required: [items, pagination, rating_summary]
       properties:
-        reviews:
+        items:
           type: array
           items:
             $ref: '#/components/schemas/ReviewWithCustomerResponse'
-        total: { type: integer, example: 1 }
-        page: { type: integer, example: 1 }
-        limit: { type: integer, example: 10 }
-        average_rating: { type: number, format: float, example: 5.0 }
-        review_count: { type: integer, example: 1 }
-        rating_breakdown:
-          type: object
-          properties:
-            "1": { type: integer, example: 0 }
-            "2": { type: integer, example: 0 }
-            "3": { type: integer, example: 0 }
-            "4": { type: integer, example: 0 }
-            "5": { type: integer, example: 1 }
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
+        rating_summary:
+          $ref: '#/components/schemas/RatingSummary'
 
     # Wishlist Schemas
     WishlistItemResponse:
@@ -3881,13 +3919,14 @@ components:
 
     ListCouponsResponse:
       type: object
-      required: [items, total]
+      required: [items, pagination]
       properties:
         items:
           type: array
           items:
             $ref: '#/components/schemas/CouponResponse'
-        total: { type: integer, example: 1 }
+        pagination:
+          $ref: '#/components/schemas/PaginationMeta'
 
     RevenueBucketResponse:
       type: object

@@ -127,6 +127,15 @@ func TestAPIContract_OpenAPISpecValidation(t *testing.T) {
 		"CartResponse",
 		"WishlistResponse",
 		"ErrorResponse",
+		"PaginationMeta",
+		"PaginatedProductsResponse",
+		"PaginatedProductStatsResponse",
+		"PaginatedStaffResponse",
+		"PaginatedOrdersResponse",
+		"ListShopsResponse",
+		"ListCouponsResponse",
+		"ListReviewsResponse",
+		"RatingSummary",
 	}
 
 	for _, s := range expectedSchemas {
@@ -142,6 +151,40 @@ func TestAPIContract_OpenAPISpecValidation(t *testing.T) {
 	for _, f := range []string{"type", "status_code", "message", "code", "request_id", "details"} {
 		assert.Contains(t, errProps, f, "ErrorResponse schema must contain property %s", f)
 	}
+
+	// Verify PaginationMeta schema has standardized envelope fields
+	paginationSchema, ok := schemas["PaginationMeta"].(map[string]any)
+	require.True(t, ok, "PaginationMeta must be a map schema")
+	paginationProps, ok := paginationSchema["properties"].(map[string]any)
+	require.True(t, ok, "PaginationMeta must have properties")
+	for _, f := range []string{"page", "limit", "total_items", "total_pages", "next_cursor"} {
+		assert.Contains(t, paginationProps, f, "PaginationMeta schema must contain property %s", f)
+	}
+
+	// Verify ReviewResponse pre-reserved additive fields (helpful_count, media)
+	reviewSchema, ok := schemas["ReviewResponse"].(map[string]any)
+	require.True(t, ok, "ReviewResponse must be a map schema")
+	reviewProps, ok := reviewSchema["properties"].(map[string]any)
+	require.True(t, ok, "ReviewResponse must have properties")
+	assert.Contains(t, reviewProps, "helpful_count", "ReviewResponse must contain helpful_count")
+	assert.Contains(t, reviewProps, "media", "ReviewResponse must contain media")
+
+	// Verify RatingSummary sibling metadata schema
+	ratingSummarySchema, ok := schemas["RatingSummary"].(map[string]any)
+	require.True(t, ok, "RatingSummary must be a map schema")
+	ratingSummaryProps, ok := ratingSummarySchema["properties"].(map[string]any)
+	require.True(t, ok, "RatingSummary must have properties")
+	assert.Contains(t, ratingSummaryProps, "average_rating", "RatingSummary must contain average_rating")
+	assert.Contains(t, ratingSummaryProps, "reviews_count", "RatingSummary must contain reviews_count")
+
+	// Verify ListReviewsResponse envelope with sibling rating_summary
+	listReviewsSchema, ok := schemas["ListReviewsResponse"].(map[string]any)
+	require.True(t, ok, "ListReviewsResponse must be a map schema")
+	listReviewsProps, ok := listReviewsSchema["properties"].(map[string]any)
+	require.True(t, ok, "ListReviewsResponse must have properties")
+	assert.Contains(t, listReviewsProps, "items", "ListReviewsResponse must contain items")
+	assert.Contains(t, listReviewsProps, "pagination", "ListReviewsResponse must contain pagination")
+	assert.Contains(t, listReviewsProps, "rating_summary", "ListReviewsResponse must contain rating_summary")
 }
 
 func TestAPIContract_DTOKeySampleValidation(t *testing.T) {
