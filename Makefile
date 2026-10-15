@@ -2,7 +2,7 @@
 # komecore — Developer Makefile
 # ==============================================================================
 
-.PHONY: all build run dev test test-integration check migrate migrate-rollback migrate-sqlserver migrate-sqlserver-rollback docker-up docker-down docker-logs clean
+.PHONY: all build run dev test test-integration test-contract lint-api check migrate migrate-rollback migrate-sqlserver migrate-sqlserver-rollback docker-up docker-down docker-logs clean
 
 
 all: build
@@ -27,14 +27,26 @@ test:
 test-integration:
 	go test -v -count=1 -tags=integration ./test/integration/...
 
-## check: Run full pre-commit verification (format, vet, tests with race detector)
+## test-contract: Run OpenAPI contract and golden snapshot test suite
+test-contract:
+	go test -v -count=1 ./test/contract/...
+
+## lint-api: Run Spectral OpenAPI quality & style linter
+lint-api:
+	npx --yes @stoplight/spectral-cli lint api/openapi.yaml --ruleset .spectral.yaml
+
+## check: Run full pre-commit verification (format, vet, tests with race detector, api lint, contract tests)
 check:
 	@echo "Checking formatting..."
 	@test -z "$$(gofmt -l internal cmd pkg test)" || (echo "Unformatted files found:" && gofmt -l internal cmd pkg test && exit 1)
 	@echo "Running go vet..."
 	go vet ./...
+	@echo "Linting OpenAPI specification..."
+	npx --yes @stoplight/spectral-cli lint api/openapi.yaml --ruleset .spectral.yaml
 	@echo "Running tests with race detector..."
 	go test -race -count=1 ./...
+	@echo "Running contract tests..."
+	go test -v -count=1 ./test/contract/...
 	@echo "All quality checks passed!"
 
 ## migrate: Apply database migrations (default: PostgreSQL)

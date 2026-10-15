@@ -14,12 +14,19 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26'
           cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Verify Module Dependencies
         run: |
@@ -35,6 +42,22 @@ jobs:
             exit 1
           fi
           go vet ./...
+
+      - name: Lint OpenAPI Specification (Spectral)
+        run: |
+          npx --yes @stoplight/spectral-cli lint api/openapi.yaml --ruleset .spectral.yaml --fail-severity=warn
+
+      - name: Run OpenAPI Contract & Golden Snapshot Tests
+        run: |
+          go test -v -count=1 ./test/contract/...
+
+      - name: Verify OpenAPI Backward Compatibility (oasdiff)
+        if: github.event_name == 'pull_request'
+        run: |
+          go install github.com/tufin/oasdiff@latest
+          if git show "origin/${{ github.base_ref }}:api/openapi.yaml" > /tmp/base_openapi.yaml 2>/dev/null; then
+            oasdiff breaking /tmp/base_openapi.yaml api/openapi.yaml
+          fi
 
       - name: Run Unit Tests with Race Detector
         run: |
