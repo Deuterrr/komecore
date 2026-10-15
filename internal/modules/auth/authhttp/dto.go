@@ -52,12 +52,12 @@ type meResponse struct {
 	AccountID       uuid.UUID            `json:"account_id"`
 	AccountType     string               `json:"account_type"`
 	IsAuthenticated bool                 `json:"is_authenticated"`
-	AvatarURL       *string              `json:"avatar_url,omitempty"`
-	StaffID         *uuid.UUID           `json:"staff_id,omitempty"`
-	Roles           []roleResponse       `json:"roles,omitempty"`
-	Permissions     []permissionResponse `json:"permissions,omitempty"`
-	OAuthProvider   *string              `json:"oauth_provider,omitempty"`
-	LastLoginAt     *time.Time           `json:"last_login_at,omitempty"`
+	AvatarURL       *string              `json:"avatar_url"`
+	StaffID         *uuid.UUID           `json:"staff_id"`
+	Roles           []roleResponse       `json:"roles"`
+	Permissions     []permissionResponse `json:"permissions"`
+	OAuthProvider   *string              `json:"oauth_provider"`
+	LastLoginAt     *time.Time           `json:"last_login_at"`
 }
 
 type forgotPasswordCustomerRequest struct {
@@ -66,7 +66,7 @@ type forgotPasswordCustomerRequest struct {
 
 type forgotPasswordResponse struct {
 	Message     string     `json:"message"`
-	ChallengeID *uuid.UUID `json:"challenge_id,omitempty"`
+	ChallengeID *uuid.UUID `json:"challenge_id"`
 }
 
 type verifyPasswordResetRequest struct {

@@ -27,8 +27,8 @@ type paymentMethodResponse struct {
 	FeeType       string                      `json:"fee_type"`
 	FeeFixed      int64                       `json:"fee_fixed"`
 	FeePercentage float64                     `json:"fee_percentage"`
-	FeeMax        *int64                      `json:"fee_max,omitempty"`
-	Instruction   *paymentInstructionResponse `json:"instruction,omitempty"`
+	FeeMax        *int64                      `json:"fee_max"`
+	Instruction   *paymentInstructionResponse `json:"instruction"`
 }
 
 type savePaymentInstructionRequest struct {
@@ -38,23 +38,23 @@ type savePaymentInstructionRequest struct {
 type paymentChannelDataResponse struct {
 	ChannelType string     `json:"channel_type"`
 	DisplayName string     `json:"display_name"`
-	ActionURL   *string    `json:"action_url,omitempty"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	ActionURL   *string    `json:"action_url"`
+	ExpiresAt   *time.Time `json:"expires_at"`
 }
 
 type getPaymentDetailResponse struct {
 	PaymentID     string                      `json:"payment_id"`
 	Status        string                      `json:"status"`
 	Amount        int64                       `json:"amount"`
-	ExpiresAt     *time.Time                  `json:"expires_at,omitempty"`
-	ChannelType   *string                     `json:"channel_type,omitempty"`
-	DisplayName   *string                     `json:"display_name,omitempty"`
-	ActionURL     *string                     `json:"action_url,omitempty"`
-	ChannelData   *paymentChannelDataResponse `json:"channel_data,omitempty"`
-	AccountName   *string                     `json:"account_name,omitempty"`
-	AccountNumber *string                     `json:"account_number,omitempty"`
-	QRString      *string                     `json:"qr_string,omitempty"`
-	Instruction   *string                     `json:"instruction,omitempty"`
+	ExpiresAt     *time.Time                  `json:"expires_at"`
+	ChannelType   *string                     `json:"channel_type"`
+	DisplayName   *string                     `json:"display_name"`
+	ActionURL     *string                     `json:"action_url"`
+	ChannelData   *paymentChannelDataResponse `json:"channel_data"`
+	AccountName   *string                     `json:"account_name"`
+	AccountNumber *string                     `json:"account_number"`
+	QRString      *string                     `json:"qr_string"`
+	Instruction   *string                     `json:"instruction"`
 }
 
 type checkPaymentStatusResponse struct {

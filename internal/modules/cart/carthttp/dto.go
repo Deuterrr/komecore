@@ -28,21 +28,21 @@ type cartResponse struct {
 }
 
 type productImageResponse struct {
-	Thumbnail *string `json:"thumbnail,omitempty"`
-	Preview   *string `json:"preview,omitempty"`
-	Detail    *string `json:"detail,omitempty"`
+	Thumbnail *string `json:"thumbnail"`
+	Preview   *string `json:"preview"`
+	Detail    *string `json:"detail"`
 }
 
 type cartItemView struct {
 	CartItemID  uuid.UUID            `json:"cart_item_id"`
 	ProductID   uuid.UUID            `json:"product_id"`
 	ShopID      uuid.UUID            `json:"shop_id"`
-	ShopName    string               `json:"shop_name,omitempty"`
-	ShopSlug    string               `json:"shop_slug,omitempty"`
+	ShopName    string               `json:"shop_name"`
+	ShopSlug    string               `json:"shop_slug"`
 	Name        string               `json:"name"`
 	Price       int64                `json:"price"`
 	Subtotal    int64                `json:"subtotal"`
 	Quantity    int                  `json:"quantity"`
 	Image       productImageResponse `json:"images"`
-	ItemOptions map[string]string    `json:"item_options,omitempty"`
+	ItemOptions map[string]string    `json:"item_options"`
 }

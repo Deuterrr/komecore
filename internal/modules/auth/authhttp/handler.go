@@ -145,7 +145,7 @@ func (h *authHandler) Me(w http.ResponseWriter, r *http.Request) error {
 		Roles:           roles,
 		Permissions:     permissions,
 		OAuthProvider:   oauthProvider,
-		LastLoginAt:     me.Account.LastLoginAt,
+		LastLoginAt:     httpx.ToUTCPtr(me.Account.LastLoginAt),
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, response)

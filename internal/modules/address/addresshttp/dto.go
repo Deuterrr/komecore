@@ -87,21 +87,21 @@ type customerAddressResponse struct {
 	AddressID    uuid.UUID  `json:"address_id"`
 	CustomerID   uuid.UUID  `json:"customer_id"`
 	ReceiverName string     `json:"receiver_name"`
-	Phone        *string    `json:"phone,omitempty"`
+	Phone        *string    `json:"phone"`
 	IsDefault    bool       `json:"is_default"`
 	Province     string     `json:"province"`
-	ProvinceID   string     `json:"province_id,omitempty"`
+	ProvinceID   string     `json:"province_id"`
 	City         string     `json:"city"`
-	CityID       string     `json:"city_id,omitempty"`
+	CityID       string     `json:"city_id"`
 	District     string     `json:"district"`
-	DistrictID   string     `json:"district_id,omitempty"`
-	VillageID    string     `json:"village_id,omitempty"`
+	DistrictID   string     `json:"district_id"`
+	VillageID    string     `json:"village_id"`
 	FullAddress  string     `json:"full_address"`
 	PostalCode   string     `json:"postal_code"`
-	Latitude     *float64   `json:"latitude,omitempty"`
-	Longitude    *float64   `json:"longitude,omitempty"`
+	Latitude     *float64   `json:"latitude"`
+	Longitude    *float64   `json:"longitude"`
 	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
+	UpdatedAt    *time.Time `json:"updated_at"`
 }
 
 type shopAddressResponse struct {
@@ -110,16 +110,16 @@ type shopAddressResponse struct {
 	Phone       *string    `json:"phone"`
 	IsActive    bool       `json:"is_active"`
 	Province    string     `json:"province"`
-	ProvinceID  string     `json:"province_id,omitempty"`
+	ProvinceID  string     `json:"province_id"`
 	City        string     `json:"city"`
-	CityID      string     `json:"city_id,omitempty"`
+	CityID      string     `json:"city_id"`
 	District    string     `json:"district"`
-	DistrictID  string     `json:"district_id,omitempty"`
-	VillageID   string     `json:"village_id,omitempty"`
+	DistrictID  string     `json:"district_id"`
+	VillageID   string     `json:"village_id"`
 	FullAddress string     `json:"full_address"`
 	PostalCode  string     `json:"postal_code"`
-	Latitude    *float64   `json:"latitude,omitempty"`
-	Longitude   *float64   `json:"longitude,omitempty"`
+	Latitude    *float64   `json:"latitude"`
+	Longitude   *float64   `json:"longitude"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
 }

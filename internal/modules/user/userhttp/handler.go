@@ -43,7 +43,6 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error 
 		AvatarURL:   result.AvatarURL,
 		LastLoginAt: result.LastLoginAt,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -72,7 +71,6 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) err
 			LastLoginAt: result.LastLoginAt,
 		},
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -90,7 +88,6 @@ func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
-
 	if result == nil {
 		return nil
 	}
@@ -105,13 +102,12 @@ func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) 
 				Username:    result.Customer.Username,
 				Phone:       result.Customer.Phone,
 				AvatarURL:   result.Customer.AvatarURL,
-				LastLoginAt: result.Customer.LastLoginAt,
-				CreatedAt:   result.Customer.CreatedAt,
-				UpdatedAt:   result.Customer.UpdatedAt,
+				LastLoginAt: httpx.ToUTCPtr(result.Customer.LastLoginAt),
+				CreatedAt:   result.Customer.CreatedAt.UTC(),
+				UpdatedAt:   httpx.ToUTCPtr(result.Customer.UpdatedAt),
 			},
 		}
 	}
-
 	if result.Staff != nil {
 		response = map[string]profileResponse{
 			"profile": {
@@ -121,13 +117,12 @@ func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) 
 				Username:    result.Staff.Username,
 				Phone:       result.Staff.Phone,
 				AvatarURL:   result.Staff.AvatarURL,
-				LastLoginAt: result.Staff.LastLoginAt,
-				CreatedAt:   result.Staff.CreatedAt,
-				UpdatedAt:   result.Staff.UpdatedAt,
+				LastLoginAt: httpx.ToUTCPtr(result.Staff.LastLoginAt),
+				CreatedAt:   result.Staff.CreatedAt.UTC(),
+				UpdatedAt:   httpx.ToUTCPtr(result.Staff.UpdatedAt),
 			},
 		}
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -155,7 +150,6 @@ func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return err
 	}
-
 	if result == nil {
 		return nil
 	}
@@ -175,7 +169,6 @@ func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Reques
 			},
 		}
 	}
-
 	if result.Staff != nil {
 		response = map[string]profileResponse{
 			"profile": {
@@ -190,7 +183,6 @@ func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Reques
 			},
 		}
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

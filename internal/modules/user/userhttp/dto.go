@@ -16,8 +16,8 @@ type userResponse struct {
 }
 
 type profileResponse struct {
-	CustomerID  *uuid.UUID `json:"customer_id,omitempty"`
-	StaffID     *uuid.UUID `json:"staff_id,omitempty"`
+	CustomerID  *uuid.UUID `json:"customer_id"`
+	StaffID     *uuid.UUID `json:"staff_id"`
 	UserID      uuid.UUID  `json:"user_id"`
 	Name        string     `json:"Name"`
 	Username    string     `json:"Username"`

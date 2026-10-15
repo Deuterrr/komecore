@@ -39,7 +39,6 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
 
 	var total int64
 	items := make([]cartItemView, 0, len(result.Cart.Items))
-
 	for _, item := range result.Cart.Items {
 		var shopName, shopSlug string
 		if result.Shops != nil {
@@ -58,10 +57,14 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
 			continue
 		}
 
-		normOpts := item.ItemOptions.Normalized()
 		price := productData.Product.Price
 		quantity := item.Quantity
 		subtotal := price * int64(quantity)
+
+		normOpts := item.ItemOptions.Normalized()
+		if normOpts == nil {
+			normOpts = make(map[string]string)
+		}
 
 		image := productImageResponse{}
 		if productData.Images.Thumbnail != "" {
@@ -97,7 +100,6 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
 
 func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 	var req addItemRequest
-
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
@@ -149,7 +151,6 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 
 func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 	var req updateItemRequest
-
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
@@ -201,7 +202,6 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 
 func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) error {
 	var req updateItemByIDRequest
-
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
@@ -232,7 +232,6 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 		Quantity:    req.Quantity,
 		ItemOptions: opt,
 	}
-
 	if err := h.service.UpdateItemByID(r.Context(), input); err != nil {
 		return err
 	}
@@ -240,7 +239,6 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 	response := map[string]string{
 		"message": "item updated",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -266,7 +264,6 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 		ProductID:  productID,
 		ShopID:     shopID,
 	}
-
 	if err := h.service.RemoveItem(r.Context(), input); err != nil {
 		return err
 	}
@@ -274,7 +271,6 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 	response := map[string]string{
 		"message": "item removed",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -294,7 +290,6 @@ func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) err
 		CustomerID: customerID,
 		CartItemID: cartItemID,
 	}
-
 	if err := h.service.RemoveItemByID(r.Context(), input); err != nil {
 		return err
 	}
@@ -302,7 +297,6 @@ func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) err
 	response := map[string]string{
 		"message": "item removed",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

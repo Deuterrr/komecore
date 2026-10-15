@@ -17,9 +17,9 @@ type estimateShippingOptionsResponse struct {
 	Description            string   `json:"description"`
 	Cost                   int64    `json:"cost"`
 	Etd                    string   `json:"etd"`
-	EstimatedDurationHours *float64 `json:"estimated_duration_hours,omitempty"`
-	SLAConfidenceScore     *float64 `json:"sla_confidence_score,omitempty"`
-	DeliveryStatus         *string  `json:"delivery_status,omitempty"`
+	EstimatedDurationHours *float64 `json:"estimated_duration_hours"`
+	SLAConfidenceScore     *float64 `json:"sla_confidence_score"`
+	DeliveryStatus         *string  `json:"delivery_status"`
 }
 
 type updateShipmentStatusRequest struct {
@@ -43,7 +43,7 @@ type shipmentResponse struct {
 	OrderID           string    `json:"order_id"`
 	Status            string    `json:"status"`
 	FulfillmentMethod string    `json:"fulfillment_method"`
-	TrackingNumber    *string   `json:"tracking_number,omitempty"`
+	TrackingNumber    *string   `json:"tracking_number"`
 	Courier           string    `json:"courier"`
 	Service           string    `json:"service"`
 	Cost              int64     `json:"cost"`

@@ -52,7 +52,8 @@ func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Reques
 			PostalCode:   r.Detail.PostalCode,
 			Latitude:     r.Detail.Latitude,
 			Longitude:    r.Detail.Longitude,
-			UpdatedAt:    r.UpdatedAt,
+			CreatedAt:    r.CreatedAt.UTC(),
+			UpdatedAt:    httpx.ToUTCPtr(r.UpdatedAt),
 		}
 		result = append(result, address)
 	}
