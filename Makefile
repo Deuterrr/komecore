@@ -2,14 +2,22 @@
 # komecore — Developer Makefile
 # ==============================================================================
 
-.PHONY: all build run dev test test-integration test-contract lint-api check migrate migrate-rollback migrate-sqlserver migrate-sqlserver-rollback docker-up docker-down docker-logs clean
+.PHONY: all build version run dev test test-integration test-contract lint-api check migrate migrate-rollback migrate-sqlserver migrate-sqlserver-rollback docker-up docker-down docker-logs clean
 
+VERSION ?= v1.0.0
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
+LDFLAGS := -w -s -X 'komecore/pkg/version.Version=$(VERSION)' -X 'komecore/pkg/version.GitCommit=$(COMMIT)' -X 'komecore/pkg/version.BuildDate=$(BUILD_DATE)'
 
 all: build
 
 ## build: Build production server binary
 build:
-	go build -ldflags="-w -s" -o bin/komecore ./cmd/komecore
+	go build -ldflags="$(LDFLAGS)" -o bin/komecore ./cmd/komecore
+
+## version: Print binary version
+version:
+	go run ./cmd/komecore --version
 
 ## run: Run server locally
 run:
