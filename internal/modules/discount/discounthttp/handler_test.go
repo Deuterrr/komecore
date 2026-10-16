@@ -12,7 +12,6 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/discount"
 	"komecore/internal/modules/discount/discounthttp"
-	"komecore/internal/modules/discount/discountusecase"
 	"komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -66,7 +65,7 @@ func (m *mockRepo) GetRedemptionByOrder(_ context.Context, _ transaction.Executo
 }
 
 func setupHandler(repo *mockRepo, now time.Time) *discounthttp.DiscountHandler {
-	svc := discountusecase.NewDiscountService(repo, nil, clock.NewMockClock(now))
+	svc := discount.NewService(repo, nil, clock.NewMockClock(now))
 	return discounthttp.NewDiscountHandler(svc)
 }
 

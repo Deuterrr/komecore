@@ -6,28 +6,22 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/staff/staffusecase"
+	"komecore/internal/modules/staff"
 	"komecore/internal/pagination"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
-type StaffHandler = staffHandler
-
-type staffHandler struct {
-	service *staffusecase.StaffService
+type StaffHandler struct {
+	service *staff.Service
 }
 
-func NewStaffHandler(
-	service *staffusecase.StaffService,
-) *staffHandler {
-	return &staffHandler{
-		service: service,
-	}
+func NewStaffHandler(service *staff.Service) *StaffHandler {
+	return &StaffHandler{service: service}
 }
 
-func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -53,7 +47,7 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 		return apperror.NewBadRequest("password is required")
 	}
 
-	input := staffusecase.AddStaffAccountParams{
+	input := staff.AddStaffAccountParams{
 		ActorAccountID: actor.AccountID,
 		ActorStaffID:   *actor.StaffID,
 		StaffID:        staffID,
@@ -72,7 +66,7 @@ func (h *staffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 	return nil
 }
 
-func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error {
 	var req createStaffRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -84,7 +78,7 @@ func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 		return apperror.NewBadRequest("username is required")
 	}
 
-	input := staffusecase.CreateStaffInput{
+	input := staff.CreateStaffInput{
 		Name:        req.Name,
 		Username:    req.Username,
 		Description: req.Description,
@@ -103,7 +97,7 @@ func (h *staffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
@@ -116,7 +110,7 @@ func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 	idStr := httpx.Query(r, "id")
 	sort := httpx.Query(r, "sort")
 
-	input := staffusecase.FindStaffInput{
+	input := staff.FindStaffInput{
 		Page:  page,
 		Limit: limit,
 		Sort:  sort,
@@ -152,7 +146,7 @@ func (h *staffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -167,7 +161,7 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
-	input := staffusecase.ListStaffAccountsParams{
+	input := staff.ListStaffAccountsParams{
 		ActorAccountID: actor.AccountID,
 		ActorStaffID:   *actor.StaffID,
 		StaffID:        staffID,
@@ -206,7 +200,7 @@ func (h *staffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
-func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -229,7 +223,7 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 		return apperror.NewBadRequest("name is required")
 	}
 
-	input := staffusecase.UpdateStaffInput{
+	input := staff.UpdateStaffInput{
 		ActorAccountID: actor.AccountID,
 		ActorStaffID:   *actor.StaffID,
 		StaffID:        staffID,
@@ -250,7 +244,7 @@ func (h *staffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -265,7 +259,7 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
-	input := staffusecase.DeleteStaffInput{
+	input := staff.DeleteStaffInput{
 		ActorAccountID: actor.AccountID,
 		ActorStaffID:   *actor.StaffID,
 		StaffID:        staffID,
@@ -282,7 +276,7 @@ func (h *staffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -303,7 +297,7 @@ func (h *staffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request
 		return apperror.NewForbidden(authctx.ErrInsufficientRole.Error())
 	}
 
-	input := staffusecase.RemoveStaffAccountInput{
+	input := staff.RemoveStaffAccountInput{
 		ActorAccountID: actor.AccountID,
 		ActorStaffID:   *actor.StaffID,
 		StaffID:        staffID,

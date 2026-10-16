@@ -42,8 +42,10 @@ func (i *Initializer) Run(ctx context.Context) error {
 	}
 
 	// Synchronize payment methods
-	if err := i.c.SyncPaymentMethods.Execute(ctx); err != nil {
-		return fmt.Errorf("failed to sync payment methods on startup: %w", err)
+	if i.c.Payment != nil {
+		if err := i.c.Payment.SyncPaymentMethods(ctx); err != nil {
+			return fmt.Errorf("failed to sync payment methods on startup: %w", err)
+		}
 	}
 
 	return nil

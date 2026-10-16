@@ -14,7 +14,6 @@ import (
 	"komecore/internal/httpx"
 	appcookie "komecore/internal/httpx/cookie"
 	"komecore/internal/modules/auth"
-	"komecore/internal/modules/auth/authusecase"
 	appclock "komecore/pkg/clock"
 
 	"github.com/google/uuid"
@@ -22,66 +21,28 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-type AuthHandler = authHandler
-
-type authHandler struct {
-	me                   *authusecase.MeUsecase
-	logout               *authusecase.LogoutUsecase
-	loginCustomer        *authusecase.LoginCustomerUsecase
-	loginStaff           *authusecase.LoginStaffUsecase
-	registerCustomer     *authusecase.RegisterCustomerUsecase
-	verifyAccount        *authusecase.VerifyAccountUsecase
-	getAccount           *authusecase.GetAccountUsecase
-	authenticateOAuth    *authusecase.AuthenticateOAuthUsecase
-	requestPasswordReset *authusecase.RequestPasswordResetUsecase
-	verifyPasswordReset  *authusecase.VerifyPasswordResetUsecase
-	resetPassword        *authusecase.ResetPasswordUsecase
-	refreshToken         *authusecase.RefreshTokenUsecase
-	deleteAccount        *authusecase.DeleteAccountUsecase
-	googleCfg            appconfig.GoogleOAuthConfig
+type AuthHandler struct {
+	service   *auth.Service
+	googleCfg appconfig.GoogleOAuthConfig
 }
 
 func NewAuthHandler(
-	me *authusecase.MeUsecase,
-	logout *authusecase.LogoutUsecase,
-	loginCustomer *authusecase.LoginCustomerUsecase,
-	loginStaff *authusecase.LoginStaffUsecase,
-	registerCustomer *authusecase.RegisterCustomerUsecase,
-	verifyAccount *authusecase.VerifyAccountUsecase,
-	getAccount *authusecase.GetAccountUsecase,
-	authenticateOAuth *authusecase.AuthenticateOAuthUsecase,
-	requestPasswordReset *authusecase.RequestPasswordResetUsecase,
-	verifyPasswordReset *authusecase.VerifyPasswordResetUsecase,
-	resetPassword *authusecase.ResetPasswordUsecase,
-	refreshToken *authusecase.RefreshTokenUsecase,
-	deleteAccount *authusecase.DeleteAccountUsecase,
+	service *auth.Service,
 	googleCfg appconfig.GoogleOAuthConfig,
-) *authHandler {
-	return &authHandler{
-		me:                   me,
-		logout:               logout,
-		loginCustomer:        loginCustomer,
-		loginStaff:           loginStaff,
-		registerCustomer:     registerCustomer,
-		verifyAccount:        verifyAccount,
-		getAccount:           getAccount,
-		authenticateOAuth:    authenticateOAuth,
-		requestPasswordReset: requestPasswordReset,
-		verifyPasswordReset:  verifyPasswordReset,
-		resetPassword:        resetPassword,
-		refreshToken:         refreshToken,
-		deleteAccount:        deleteAccount,
-		googleCfg:            googleCfg,
+) *AuthHandler {
+	return &AuthHandler{
+		service:   service,
+		googleCfg: googleCfg,
 	}
 }
 
-func (h *authHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
 
-	acc, err := h.getAccount.Execute(r.Context(), authCtx.UserID)
+	acc, err := h.service.GetAccount(r.Context(), authCtx.UserID)
 	if err != nil {
 		return err
 	}
@@ -94,18 +55,17 @@ func (h *authHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 		"email":         acc.Email,
 		"last_login_at": acc.LastLoginAt,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) Me(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
 
-	me, err := h.me.Execute(r.Context(), *authCtx)
+	me, err := h.service.Me(r.Context(), *authCtx)
 	if err != nil {
 		return err
 	}
@@ -147,17 +107,15 @@ func (h *authHandler) Me(w http.ResponseWriter, r *http.Request) error {
 		OAuthProvider:   oauthProvider,
 		LastLoginAt:     httpx.ToUTCPtr(me.Account.LastLoginAt),
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error {
 	var req signInEmailRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
 	}
-
 	if req.Email == "" {
 		return apperror.NewBadRequest("invalid email")
 	}
@@ -165,14 +123,13 @@ func (h *authHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error 
 		return apperror.NewBadRequest("invalid password")
 	}
 
-	input := authusecase.LoginCustomerParams{
+	input := auth.LoginCustomerInput{
 		UserAgent: req.UserAgent,
 		IPAddress: req.IPAddress,
 		Email:     req.Email,
 		Password:  req.Password,
 	}
-
-	tokens, err := h.loginCustomer.Execute(r.Context(), input)
+	tokens, err := h.service.LoginCustomer(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -192,7 +149,6 @@ func (h *authHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error 
 		tokens.AccessToken.Token,
 		accessExpiry,
 	)
-
 	// Refresh token is bound to the response cookie
 	// so it can be used to obtain a new access token
 	appcookie.Bind(
@@ -205,17 +161,15 @@ func (h *authHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error 
 	response := map[string]string{
 		"message": "login success",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) SignUpAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) SignUpAccount(w http.ResponseWriter, r *http.Request) error {
 	var req signUpRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
 	}
-
 	if req.Email == "" {
 		return apperror.NewBadRequest("invalid email")
 	}
@@ -226,34 +180,31 @@ func (h *authHandler) SignUpAccount(w http.ResponseWriter, r *http.Request) erro
 		return apperror.NewBadRequest("invalid user name")
 	}
 
-	input := authusecase.RegisterCustomerParams{
+	input := auth.RegisterCustomerInput{
 		Email:    req.Email,
 		Password: req.Password,
 		Name:     req.Name,
 		Username: req.Username,
 		Phone:    req.Phone,
 	}
-
-	challengeID, err := h.registerCustomer.Execute(r.Context(), input)
+	out, err := h.service.RegisterCustomer(r.Context(), input)
 	if err != nil {
 		return err
 	}
 
 	response := signUpResponse{
 		Message:     "verification code sent",
-		ChallengeID: *challengeID,
+		ChallengeID: out.ChallengeID,
 	}
-
 	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
 
-func (h *authHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) error {
 	var req verifyAccountRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
 	}
-
 	if req.ChallengeID == "" {
 		return apperror.NewBadRequest("invalid challenge id")
 	}
@@ -265,14 +216,13 @@ func (h *authHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) erro
 		return apperror.NewBadRequest("invalid otp")
 	}
 
-	input := authusecase.VerifyAccountParams{
+	input := auth.VerifyAccountInput{
 		UserAgent:   req.UserAgent,
 		IPAddress:   req.IPAddress,
 		ChallengeID: challengeID,
 		OTP:         req.OTP,
 	}
-
-	tokens, err := h.verifyAccount.Execute(r.Context(), input)
+	tokens, err := h.service.VerifyAccount(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -285,7 +235,6 @@ func (h *authHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) erro
 		tokens.AccessToken.Token,
 		tokens.AccessToken.ExpiresAt,
 	)
-
 	// Refresh token is bound to the response cookie
 	// so it can be used to obtain a new access token
 	appcookie.Bind(
@@ -298,17 +247,15 @@ func (h *authHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) erro
 	response := map[string]string{
 		"message": "verify success",
 	}
-
 	httpx.WriteJSON(w, http.StatusCreated, response)
 	return nil
 }
 
-func (h *authHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) error {
 	var req signInEmailRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
 	}
-
 	if req.Email == "" {
 		return apperror.NewBadRequest("invalid email")
 	}
@@ -316,23 +263,19 @@ func (h *authHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) e
 		return apperror.NewBadRequest("invalid password")
 	}
 
-	input := authusecase.LoginStaffParams{
+	input := auth.LoginStaffInput{
 		UserAgent: req.UserAgent,
 		IPAddress: req.IPAddress,
 		Email:     req.Email,
 		Password:  req.Password,
 	}
-
-	tokens, err := h.loginStaff.Execute(r.Context(), input)
+	tokens, err := h.service.LoginStaff(r.Context(), input)
 	if err != nil {
 		return err
 	}
 
-	var (
-		accessExpiry  time.Time
-		refreshExpiry time.Time
-	)
-
+	var accessExpiry time.Time
+	var refreshExpiry time.Time
 	if req.RememberMe {
 		accessExpiry = tokens.AccessToken.ExpiresAt
 		refreshExpiry = tokens.RefreshToken.ExpiresAt
@@ -346,7 +289,6 @@ func (h *authHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) e
 		tokens.AccessToken.Token,
 		accessExpiry,
 	)
-
 	// Refresh token is bound to the response cookie
 	// so it can be used to obtain a new access token
 	appcookie.Bind(
@@ -359,18 +301,20 @@ func (h *authHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) e
 	response := map[string]string{
 		"message": "login success",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) Logout(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
 
-	err = h.logout.Execute(r.Context(), *authCtx)
+	err = h.service.Logout(r.Context(), auth.LogoutInput{
+		UserID:    authCtx.UserID,
+		SessionID: authCtx.SessionID,
+	})
 	if err != nil {
 		return err
 	}
@@ -381,18 +325,20 @@ func (h *authHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 	response := map[string]string{
 		"message": "logout success",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
 
-	err = h.logout.Execute(r.Context(), *authCtx)
+	err = h.service.Logout(r.Context(), auth.LogoutInput{
+		UserID:    authCtx.UserID,
+		SessionID: authCtx.SessionID,
+	})
 	if err != nil {
 		return err
 	}
@@ -403,12 +349,11 @@ func (h *authHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error 
 	response := map[string]string{
 		"message": "logout success",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) error {
 	oauth2Config := &oauth2.Config{
 		ClientID:     h.googleCfg.ClientID,
 		ClientSecret: h.googleCfg.ClientSecret,
@@ -438,7 +383,7 @@ func (h *authHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) error {
 	cookie, err := appcookie.Extract(r, appcookie.CookieOAuthState)
 	if err != nil {
 		return apperror.NewBadRequest("missing oauth state cookie")
@@ -478,7 +423,6 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 		return apperror.NewInternal(err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		return apperror.NewInternal(fmt.Errorf("google userinfo returned status code %d", resp.StatusCode))
 	}
@@ -505,7 +449,7 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 	userAgent := r.UserAgent()
 	ipAddress := r.RemoteAddr
 
-	params := authusecase.AuthenticateOAuthParams{
+	input := auth.AuthenticateOAuthInput{
 		UserAgent: &userAgent,
 		IPAddress: &ipAddress,
 		Provider:  auth.OAuthProviderGoogle,
@@ -514,8 +458,7 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 		Name:      googleUser.Name,
 		AvatarURL: googleUser.Picture,
 	}
-
-	result, err := h.authenticateOAuth.Execute(r.Context(), params)
+	result, err := h.service.AuthenticateOAuth(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -528,7 +471,6 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 		result.AccessToken.Token,
 		result.AccessToken.ExpiresAt,
 	)
-
 	// Refresh token is bound to the response cookie
 	// so it can be used to obtain a new access token
 	appcookie.Bind(
@@ -546,7 +488,7 @@ func (h *authHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
-func (h *authHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Request) error {
 	var req forgotPasswordCustomerRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -555,25 +497,29 @@ func (h *authHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Requ
 		return apperror.NewBadRequest("email is required")
 	}
 
-	input := authusecase.RequestPasswordResetParams{
+	input := auth.RequestPasswordResetInput{
 		Email:       req.Email,
 		AccountType: auth.AccountTypeCustomer,
 	}
-	challengeID, err := h.requestPasswordReset.Execute(r.Context(), input)
+	out, err := h.service.RequestPasswordReset(r.Context(), input)
 	if err != nil {
 		return err
+	}
+
+	var challengeID *uuid.UUID
+	if out != nil {
+		challengeID = out.ChallengeID
 	}
 
 	response := forgotPasswordResponse{
 		Message:     "if the email is registered you will receive a reset code shortly",
 		ChallengeID: challengeID,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request) error {
 	var req forgotPasswordCustomerRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -582,13 +528,18 @@ func (h *authHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request
 		return apperror.NewBadRequest("email is required")
 	}
 
-	input := authusecase.RequestPasswordResetParams{
+	input := auth.RequestPasswordResetInput{
 		Email:       req.Email,
 		AccountType: auth.AccountTypeStaff,
 	}
-	challengeID, err := h.requestPasswordReset.Execute(r.Context(), input)
+	out, err := h.service.RequestPasswordReset(r.Context(), input)
 	if err != nil {
 		return err
+	}
+
+	var challengeID *uuid.UUID
+	if out != nil {
+		challengeID = out.ChallengeID
 	}
 
 	response := forgotPasswordResponse{
@@ -599,7 +550,7 @@ func (h *authHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request
 	return nil
 }
 
-func (h *authHandler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request) error {
 	var req verifyPasswordResetRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -615,24 +566,24 @@ func (h *authHandler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request
 		return apperror.NewBadRequest("invalid otp")
 	}
 
-	input := authusecase.VerifyPasswordResetParams{
+	input := auth.VerifyPasswordResetInput{
 		ChallengeID: challengeID,
 		OTP:         req.OTP,
 	}
-	verifiedID, err := h.verifyPasswordReset.Execute(r.Context(), input)
+	out, err := h.service.VerifyPasswordReset(r.Context(), input)
 	if err != nil {
 		return err
 	}
 
 	response := verifyPasswordResetResponse{
 		Message:     "otp verified",
-		ChallengeID: *verifiedID,
+		ChallengeID: out.ChallengeID,
 	}
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
 
-func (h *authHandler) ResetPassword(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) error {
 	var req resetPasswordRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -648,11 +599,11 @@ func (h *authHandler) ResetPassword(w http.ResponseWriter, r *http.Request) erro
 		return apperror.NewBadRequest("new_password is required")
 	}
 
-	input := authusecase.ResetPasswordParams{
+	input := auth.ResetPasswordInput{
 		ChallengeID: challengeID,
 		NewPassword: req.NewPassword,
 	}
-	if err := h.resetPassword.Execute(r.Context(), input); err != nil {
+	if err := h.service.ResetPassword(r.Context(), input); err != nil {
 		return err
 	}
 
@@ -663,7 +614,7 @@ func (h *authHandler) ResetPassword(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) error {
 	var req refreshTokenRequest
 	_ = httpx.DecodeJSON(r, &req)
 
@@ -677,7 +628,7 @@ func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) er
 		return apperror.NewUnauthorized("refresh token is required")
 	}
 
-	res, err := h.refreshToken.Execute(r.Context(), authusecase.RefreshTokenParams{
+	res, err := h.service.RefreshToken(r.Context(), auth.RefreshTokenInput{
 		RefreshToken: refreshToken,
 		AccountType:  auth.AccountTypeCustomer,
 	})
@@ -694,7 +645,7 @@ func (h *authHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error {
 	var req refreshTokenRequest
 	_ = httpx.DecodeJSON(r, &req)
 
@@ -708,7 +659,7 @@ func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error
 		return apperror.NewUnauthorized("refresh token is required")
 	}
 
-	res, err := h.refreshToken.Execute(r.Context(), authusecase.RefreshTokenParams{
+	res, err := h.service.RefreshToken(r.Context(), auth.RefreshTokenInput{
 		RefreshToken: refreshToken,
 		AccountType:  auth.AccountTypeStaff,
 	})
@@ -725,13 +676,13 @@ func (h *authHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *authHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
 	}
 
-	err = h.deleteAccount.Execute(r.Context(), *authCtx)
+	err = h.service.DeleteAccount(r.Context(), *authCtx)
 	if err != nil {
 		return err
 	}

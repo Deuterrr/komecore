@@ -6,13 +6,13 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
 	"komecore/internal/modules/cart"
-	"komecore/internal/modules/order/orderusecase"
+	"komecore/internal/modules/order"
 
 	"github.com/google/uuid"
 )
 
-func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
-	authCtx, _, err := httpx.RequireCustomer(r)
+func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -30,8 +30,9 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	input.CustomerID = customerID
 
-	result, err := h.checkout.Execute(r.Context(), *authCtx, input)
+	result, err := h.createOrder.Checkout(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -115,8 +116,8 @@ func (h *orderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) error {
-	authCtx, _, err := httpx.RequireCustomer(r)
+func (h *OrderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) error {
+	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
 	}
@@ -143,8 +144,9 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
+	input.CustomerID = customerID
 
-	result, err := h.checkout.Execute(r.Context(), *authCtx, input)
+	result, err := h.createOrder.Checkout(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -236,14 +238,14 @@ func (h *orderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 	return nil
 }
 
-func (h *orderHandler) parseCheckoutInput(
+func (h *OrderHandler) parseCheckoutInput(
 	req checkoutCalculateRequest,
-) (orderusecase.CheckoutInput, error) {
+) (order.CheckoutInput, error) {
 	var paymentMethodID *uuid.UUID
 	if req.PaymentMethodID != nil {
 		parsed, err := uuid.Parse(*req.PaymentMethodID)
 		if err != nil {
-			return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid address id")
+			return order.CheckoutInput{}, apperror.NewBadRequest("invalid address id")
 		}
 		paymentMethodID = &parsed
 	}
@@ -252,19 +254,19 @@ func (h *orderHandler) parseCheckoutInput(
 	if req.AddressID != nil {
 		parsed, err := uuid.Parse(*req.AddressID)
 		if err != nil {
-			return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid address id")
+			return order.CheckoutInput{}, apperror.NewBadRequest("invalid address id")
 		}
 		addressID = &parsed
 	}
 
-	var shopInput []orderusecase.CheckoutShopInput
+	var shopInput []order.CheckoutShopInput
 	for _, shopReq := range req.Shops {
 		shopID, err := uuid.Parse(shopReq.ShopID)
 		if err != nil {
-			return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid shop id")
+			return order.CheckoutInput{}, apperror.NewBadRequest("invalid shop id")
 		}
 
-		var items []orderusecase.CheckoutItemInput
+		var items []order.CheckoutItemInput
 		for _, itemReq := range shopReq.Items {
 			var productID *uuid.UUID
 			var cartItemID *uuid.UUID
@@ -277,7 +279,7 @@ func (h *orderHandler) parseCheckoutInput(
 				if parsed, err := uuid.Parse(*itemReq.ProductID); err == nil {
 					productID = &parsed
 				} else {
-					return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid product id")
+					return order.CheckoutInput{}, apperror.NewBadRequest("invalid product id")
 				}
 			}
 
@@ -292,11 +294,11 @@ func (h *orderHandler) parseCheckoutInput(
 			}
 
 			if productID == nil && cartItemID == nil {
-				return orderusecase.CheckoutInput{}, apperror.NewBadRequest("product id or cart item id is required")
+				return order.CheckoutInput{}, apperror.NewBadRequest("product id or cart item id is required")
 			}
 
 			if itemReq.Quantity <= 0 {
-				return orderusecase.CheckoutInput{}, apperror.NewBadRequest("invalid quantity")
+				return order.CheckoutInput{}, apperror.NewBadRequest("invalid quantity")
 			}
 
 			var opt cart.ItemOptions
@@ -308,7 +310,7 @@ func (h *orderHandler) parseCheckoutInput(
 			if productID != nil {
 				checkoutProductID = *productID
 			}
-			items = append(items, orderusecase.CheckoutItemInput{
+			items = append(items, order.CheckoutItemInput{
 				ProductID:   checkoutProductID,
 				CartItemID:  cartItemID,
 				ItemOptions: opt.Normalized(),
@@ -316,22 +318,22 @@ func (h *orderHandler) parseCheckoutInput(
 			})
 		}
 
-		var courier *orderusecase.SelectedCourierInput
+		var courier *order.SelectedCourierInput
 		if shopReq.Courier != nil {
-			courier = &orderusecase.SelectedCourierInput{
+			courier = &order.SelectedCourierInput{
 				Code:    shopReq.Courier.Code,
 				Service: shopReq.Courier.Service,
 			}
 		}
 
-		shopInput = append(shopInput, orderusecase.CheckoutShopInput{
+		shopInput = append(shopInput, order.CheckoutShopInput{
 			ShopID:  shopID,
 			Items:   items,
 			Courier: courier,
 		})
 	}
 
-	return orderusecase.CheckoutInput{
+	return order.CheckoutInput{
 		PaymentMethodID: paymentMethodID,
 		AddressID:       addressID,
 		CouponCode:      req.CouponCode,

@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"komecore/internal/modules/auth/authsvc"
 	"net/http"
 
 	"komecore/internal/authctx"
@@ -130,7 +129,7 @@ func NewRouteChains(c *Container) *RouteChains {
 	}
 }
 
-func (rc *RouteChains) StaffWithPerm(authorizer authsvc.Authorizer, permission string, h httpx.AppHandler) http.HandlerFunc {
+func (rc *RouteChains) StaffWithPerm(authorizer authhttp.Authorizer, permission string, h httpx.AppHandler) http.HandlerFunc {
 	return rc.StaffOnly(authorizer.RequirePermission(permission)(h))
 }
 
@@ -177,83 +176,21 @@ type handlers struct {
 
 func initHandlers(c *Container) *handlers {
 	return &handlers{
-		product: producthttp.NewProductHandler(
-			&c.FindProducts,
-			&c.GetProduct,
-			&c.SaveProduct,
-			&c.DeleteProduct,
-			&c.AddProductImages,
-			&c.GetProductStats,
-		),
-		inventory: inventoryhttp.NewInventoryHandler(
-			&c.Inventory,
-		),
-		auth: authhttp.NewAuthHandler(
-			&c.Me,
-			&c.Logout,
-			&c.LoginCustomer,
-			&c.LoginStaff,
-			&c.RegisterCustomer,
-			&c.VerifyAccount,
-			&c.GetAccount,
-			&c.AuthenticateOAuth,
-			&c.RequestPasswordReset,
-			&c.VerifyPasswordReset,
-			&c.ResetPassword,
-			&c.RefreshToken,
-			&c.DeleteAccount,
-			c.GoogleOAuth,
-		),
-		staff: staffhttp.NewStaffHandler(
-			&c.Staff,
-		),
-		cart: carthttp.NewCartHandler(
-			&c.Cart,
-		),
-		user: userhttp.NewUserHandler(
-			&c.User,
-		),
-		address: addresshttp.NewAddressHandler(
-			&c.Address,
-		),
-		payment: paymenthttp.NewPaymentHandler(
-			&c.SavePaymentMethod,
-			&c.ListPaymentMethod,
-			&c.ProcessPaymentWebhook,
-			&c.SavePaymentInstruction,
-			&c.GetPaymentDetail,
-			&c.CheckPaymentStatus,
-		),
-		shop: shophttp.NewShopHandler(
-			&c.Shop,
-		),
-		courier: courierhttp.NewCourierHandler(
-			&c.Courier,
-		),
-		shipment: shipmenthttp.NewShipmentHandler(
-			&c.EstimateShippingOptions,
-			&c.UpdateShipmentStatus,
-			&c.UpdateShipment,
-		),
-		order: orderhttp.NewOrderHandler(
-			&c.FindOrders,
-			&c.GetOrder,
-			&c.CreateOrder,
-			&c.UpdateOrderStatus,
-			&c.DispatchShopShipment,
-			&c.GetOrderTracking,
-			&c.Shop,
-			&c.Checkout,
-		),
-		wishlist: wishlisthttp.NewWishlistHandler(
-			&c.Wishlist,
-		),
-		review: reviewhttp.NewReviewHandler(
-			&c.Review,
-		),
-		discount: discounthttp.NewDiscountHandler(
-			&c.Discount,
-		),
+		product:   producthttp.NewProductHandler(c.Catalog),
+		inventory: inventoryhttp.NewInventoryHandler(c.Inventory),
+		auth:      authhttp.NewAuthHandler(c.Auth, c.GoogleOAuth),
+		staff:     staffhttp.NewStaffHandler(c.Staff),
+		cart:      carthttp.NewCartHandler(c.Cart),
+		user:      userhttp.NewUserHandler(c.User),
+		address:   addresshttp.NewAddressHandler(c.Address),
+		payment:   paymenthttp.NewPaymentHandler(c.Payment, c.PaymentWebhook),
+		shop:      shophttp.NewShopHandler(c.Shop),
+		courier:   courierhttp.NewCourierHandler(c.Courier),
+		shipment:  shipmenthttp.NewShipmentHandler(c.Shipment),
+		order:     orderhttp.NewOrderHandler(c.Order, c.CreateOrder, c.Shop),
+		wishlist:  wishlisthttp.NewWishlistHandler(c.Wishlist),
+		review:    reviewhttp.NewReviewHandler(c.Review),
+		discount:  discounthttp.NewDiscountHandler(c.Discount),
 	}
 }
 

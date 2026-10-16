@@ -33,27 +33,31 @@ func NewScheduler(cfg Config, container *Container, logger applogger.Logger) *Sc
 	}
 
 	syncInterval := time.Duration(cfg.PaymentSync.IntervalMinutes) * time.Minute
-	paymentSyncJob := paymentjob.NewPaymentSyncJob(
-		&container.SyncPendingPayments,
-		syncInterval,
-		logger,
-	)
-	s.Register(paymentSyncJob)
+	if container.Payment != nil {
+		paymentSyncJob := paymentjob.NewPaymentSyncJob(
+			container.Payment,
+			syncInterval,
+			logger,
+		)
+		s.Register(paymentSyncJob)
 
-	expiryInterval := time.Duration(cfg.PaymentExpiry.IntervalMinutes) * time.Minute
-	paymentExpiryJob := paymentjob.NewPaymentExpiryJob(
-		&container.ExpirePastDuePayments,
-		expiryInterval,
-		logger,
-	)
-	s.Register(paymentExpiryJob)
+		expiryInterval := time.Duration(cfg.PaymentExpiry.IntervalMinutes) * time.Minute
+		paymentExpiryJob := paymentjob.NewPaymentExpiryJob(
+			container.Payment,
+			expiryInterval,
+			logger,
+		)
+		s.Register(paymentExpiryJob)
+	}
 
-	orderStaffExpiryJob := orderjob.NewOrderStaffExpiryJob(
-		&container.ExpireUnfulfilledOrders,
-		defaultOrderStaffExpiryInterval,
-		logger,
-	)
-	s.Register(orderStaffExpiryJob)
+	if container.Order != nil {
+		orderStaffExpiryJob := orderjob.NewOrderStaffExpiryJob(
+			container.Order,
+			defaultOrderStaffExpiryInterval,
+			logger,
+		)
+		s.Register(orderStaffExpiryJob)
+	}
 
 	if container.OutboxWorker != nil {
 		s.Register(container.OutboxWorker)

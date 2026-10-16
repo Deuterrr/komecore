@@ -6,35 +6,26 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
 	"komecore/internal/modules/shipment"
-	"komecore/internal/modules/shipment/shipmentusecase"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 type ShipmentHandler struct {
-	estimateShippOpts    *shipmentusecase.EstimateShippingOptionsUsecase
-	updateShipmentStatus *shipmentusecase.UpdateShipmentStatusUsecase
-	updateShipment       *shipmentusecase.UpdateShipmentUsecase
+	service *shipment.Service
 }
 
-func NewShipmentHandler(
-	estimateShippOpts *shipmentusecase.EstimateShippingOptionsUsecase,
-	updateShipmentStatus *shipmentusecase.UpdateShipmentStatusUsecase,
-	updateShipment *shipmentusecase.UpdateShipmentUsecase,
-) *ShipmentHandler {
-	return &ShipmentHandler{
-		estimateShippOpts:    estimateShippOpts,
-		updateShipmentStatus: updateShipmentStatus,
-		updateShipment:       updateShipment,
-	}
+func NewShipmentHandler(service *shipment.Service) *ShipmentHandler {
+	return &ShipmentHandler{service: service}
 }
 
 func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http.Request) error {
 	var req estimateShippingOptionsRequest
-
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
+	}
+	if req.Weight <= 0 {
+		return apperror.NewBadRequest("invalid weight")
 	}
 
 	var shopID uuid.UUID
@@ -45,19 +36,14 @@ func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http
 		}
 	}
 
-	if req.Weight <= 0 {
-		return apperror.NewBadRequest("invalid weight")
-	}
-
-	input := shipmentusecase.EstimateShippingOptionsInput{
+	input := shipment.EstimateShippingOptionsInput{
 		ShopID:      shopID,
 		Origin:      req.Origin,
 		Destination: req.Destination,
 		Weight:      req.Weight,
 		PriceFilter: req.PriceFilter,
 	}
-
-	results, err := h.estimateShippOpts.Execute(r.Context(), input)
+	results, err := h.service.EstimateShippingOptions(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -82,7 +68,6 @@ func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http
 	response := map[string]any{
 		"couriers": couriers,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -98,25 +83,22 @@ func (h *ShipmentHandler) UpdateShipmentStatus(w http.ResponseWriter, r *http.Re
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
-
 	if req.Status == "" {
 		return apperror.NewBadRequest("status is required")
 	}
 
-	input := shipmentusecase.UpdateShipmentStatusInput{
+	input := shipment.UpdateShipmentStatusInput{
 		ShipmentID:  shipmentID,
 		Status:      shipment.ShipmentStatus(req.Status),
 		Description: req.Description,
 		Location:    req.Location,
 	}
-
-	res, err := h.updateShipmentStatus.Execute(r.Context(), input)
+	res, err := h.service.UpdateShipmentStatus(r.Context(), input)
 	if err != nil {
 		return err
 	}
 
 	resp := buildShipmentResponse(res.Shipment)
-
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }
@@ -133,21 +115,19 @@ func (h *ShipmentHandler) UpdateShipment(w http.ResponseWriter, r *http.Request)
 		return apperror.NewBadRequest("invalid request body")
 	}
 
-	input := shipmentusecase.UpdateShipmentInput{
+	input := shipment.UpdateShipmentInput{
 		ShipmentID:     shipmentID,
 		TrackingNumber: req.TrackingNumber,
 		Courier:        req.Courier,
 		Service:        req.Service,
 	}
-
-	res, err := h.updateShipment.Execute(r.Context(), input)
+	res, err := h.service.UpdateShipment(r.Context(), input)
 	if err != nil {
 		return err
 	}
 
 	resp := buildShipmentResponse(res.Shipment)
 	httpx.WriteJSON(w, http.StatusOK, resp)
-
 	return nil
 }
 
@@ -166,12 +146,12 @@ func (h *ShipmentHandler) DispatchShipment(w http.ResponseWriter, r *http.Reques
 		return apperror.NewBadRequest("tracking_number is required")
 	}
 
-	shipment, err := h.updateShipment.Dispatch(r.Context(), shipmentID, req.TrackingNumber)
+	ship, err := h.service.Dispatch(r.Context(), shipmentID, req.TrackingNumber)
 	if err != nil {
 		return err
 	}
 
-	resp := buildShipmentResponse(shipment)
+	resp := buildShipmentResponse(ship)
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
 }

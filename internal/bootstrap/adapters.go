@@ -13,18 +13,15 @@ import (
 	"komecore/internal/modules/auth"
 	"komecore/internal/modules/inventory"
 	"komecore/internal/modules/order"
-	"komecore/internal/modules/payment/paymentusecase"
+	"komecore/internal/modules/payment"
 	"komecore/internal/modules/product"
 	"komecore/internal/modules/shop"
-	"komecore/internal/modules/shop/shopusecase"
 	"komecore/internal/modules/staff"
-	"komecore/internal/modules/staff/staffusecase"
 	"komecore/internal/modules/user"
-	"komecore/internal/modules/user/userusecase"
 	appclock "komecore/pkg/clock"
 )
 
-// orderPaymentAdapter implements paymentusecase.OrderPaymentManager.
+// orderPaymentAdapter implements payment.OrderPaymentManager.
 type orderPaymentAdapter struct {
 	orderRepo     order.Repository
 	orderItemRepo order.ItemRepository
@@ -37,12 +34,12 @@ func newOrderPaymentAdapter(o order.Repository, oi order.ItemRepository) *orderP
 	}
 }
 
-func (a *orderPaymentAdapter) GetOrderForPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*paymentusecase.OrderInfo, error) {
-	order, err := a.orderRepo.GetByID(ctx, exec, orderID)
+func (a *orderPaymentAdapter) GetOrderForPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.OrderInfo, error) {
+	ord, err := a.orderRepo.GetByID(ctx, exec, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch order: %w", err)
 	}
-	if order == nil {
+	if ord == nil {
 		return nil, nil
 	}
 
@@ -54,40 +51,40 @@ func (a *orderPaymentAdapter) GetOrderForPayment(ctx context.Context, exec trans
 			JOIN users u ON u.id = c.user_id
 			JOIN accounts a ON a.user_id = u.id
 			WHERE c.id = $1
-		`, order.CustomerID).Scan(&customerName, &customerEmail)
+		`, ord.CustomerID).Scan(&customerName, &customerEmail)
 	}
 
-	return &paymentusecase.OrderInfo{
-		ID:            order.ID,
-		CustomerID:    order.CustomerID,
-		Number:        order.Number,
-		Total:         order.Total,
+	return &payment.OrderInfo{
+		ID:            ord.ID,
+		CustomerID:    ord.CustomerID,
+		Number:        ord.Number,
+		Total:         ord.Total,
 		CustomerEmail: customerEmail,
 		CustomerName:  customerName,
 	}, nil
 }
 
 func (a *orderPaymentAdapter) GetInvoiceNumber(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (string, error) {
-	order, err := a.orderRepo.GetByID(ctx, exec, orderID)
+	ord, err := a.orderRepo.GetByID(ctx, exec, orderID)
 	if err != nil {
 		return "", err
 	}
-	if order == nil {
+	if ord == nil {
 		return "", nil
 	}
-	return order.Number, nil
+	return ord.Number, nil
 }
 
-func (a *orderPaymentAdapter) ConfirmOrderPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID, confirmedAt time.Time, handlingWindow time.Duration) ([]paymentusecase.OrderItemInfo, error) {
-	order, err := a.orderRepo.GetByID(ctx, exec, orderID)
+func (a *orderPaymentAdapter) ConfirmOrderPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID, confirmedAt time.Time, handlingWindow time.Duration) ([]payment.OrderItemInfo, error) {
+	ord, err := a.orderRepo.GetByID(ctx, exec, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load order: %w", err)
 	}
-	if order != nil {
-		if err := order.Confirm(confirmedAt, handlingWindow); err != nil {
+	if ord != nil {
+		if err := ord.Confirm(confirmedAt, handlingWindow); err != nil {
 			return nil, fmt.Errorf("failed to confirm order: %w", err)
 		}
-		if err := a.orderRepo.UpdateStatusWithSLA(ctx, exec, order.ID, order.Status, order.ConfirmedAt, order.HandlingExpiresAt); err != nil {
+		if err := a.orderRepo.UpdateStatusWithSLA(ctx, exec, ord.ID, ord.Status, ord.ConfirmedAt, ord.HandlingExpiresAt); err != nil {
 			return nil, fmt.Errorf("failed to update order: %w", err)
 		}
 	}
@@ -97,9 +94,9 @@ func (a *orderPaymentAdapter) ConfirmOrderPayment(ctx context.Context, exec tran
 		return nil, fmt.Errorf("failed to load order items: %w", err)
 	}
 
-	result := make([]paymentusecase.OrderItemInfo, len(items))
+	result := make([]payment.OrderItemInfo, len(items))
 	for i, item := range items {
-		result[i] = paymentusecase.OrderItemInfo{
+		result[i] = payment.OrderItemInfo{
 			ProductID: item.ProductID,
 			ShopID:    item.ShopID,
 			Quantity:  item.Quantity,
@@ -108,7 +105,7 @@ func (a *orderPaymentAdapter) ConfirmOrderPayment(ctx context.Context, exec tran
 	return result, nil
 }
 
-func (a *orderPaymentAdapter) ExpireOrderPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]paymentusecase.OrderItemInfo, error) {
+func (a *orderPaymentAdapter) ExpireOrderPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]payment.OrderItemInfo, error) {
 	ord, err := a.orderRepo.GetByID(ctx, exec, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load order: %w", err)
@@ -127,9 +124,9 @@ func (a *orderPaymentAdapter) ExpireOrderPayment(ctx context.Context, exec trans
 		return nil, fmt.Errorf("failed to load order items: %w", err)
 	}
 
-	result := make([]paymentusecase.OrderItemInfo, len(items))
+	result := make([]payment.OrderItemInfo, len(items))
 	for i, item := range items {
-		result[i] = paymentusecase.OrderItemInfo{
+		result[i] = payment.OrderItemInfo{
 			ProductID: item.ProductID,
 			ShopID:    item.ShopID,
 			Quantity:  item.Quantity,
@@ -138,7 +135,7 @@ func (a *orderPaymentAdapter) ExpireOrderPayment(ctx context.Context, exec trans
 	return result, nil
 }
 
-func (a *orderPaymentAdapter) CancelOrderPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]paymentusecase.OrderItemInfo, error) {
+func (a *orderPaymentAdapter) CancelOrderPayment(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]payment.OrderItemInfo, error) {
 	ord, err := a.orderRepo.GetByID(ctx, exec, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load order: %w", err)
@@ -157,9 +154,9 @@ func (a *orderPaymentAdapter) CancelOrderPayment(ctx context.Context, exec trans
 		return nil, fmt.Errorf("failed to load order items: %w", err)
 	}
 
-	result := make([]paymentusecase.OrderItemInfo, len(items))
+	result := make([]payment.OrderItemInfo, len(items))
 	for i, item := range items {
-		result[i] = paymentusecase.OrderItemInfo{
+		result[i] = payment.OrderItemInfo{
 			ProductID: item.ProductID,
 			ShopID:    item.ShopID,
 			Quantity:  item.Quantity,
@@ -168,7 +165,7 @@ func (a *orderPaymentAdapter) CancelOrderPayment(ctx context.Context, exec trans
 	return result, nil
 }
 
-// orderDeliveryAdapter implements shipmentusecase.OrderDeliveryUpdater.
+// orderDeliveryAdapter implements shipment.OrderDeliveryUpdater.
 type orderDeliveryAdapter struct {
 	orderRepo order.Repository
 }
@@ -246,7 +243,7 @@ func (a *inventoryStockHistoryAdapter) RecordStockEvent(ctx context.Context, exe
 	})
 }
 
-// shopProductAdapter implements shopusecase.ShopProductProvider.
+// shopProductAdapter implements shop.ShopProductProvider.
 type shopProductAdapter struct {
 	inventoryRepo inventory.Repository
 	productRepo   product.Repository
@@ -259,13 +256,13 @@ func newShopProductAdapter(i inventory.Repository, p product.Repository) *shopPr
 	}
 }
 
-func (a *shopProductAdapter) GetShopProducts(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) ([]shopusecase.ShopProductResult, error) {
+func (a *shopProductAdapter) GetShopProducts(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) ([]shop.ShopProductResult, error) {
 	inventories, err := a.inventoryRepo.ListByShopID(ctx, exec, shopID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve shop inventories: %w", err)
 	}
 	if len(inventories) == 0 {
-		return []shopusecase.ShopProductResult{}, nil
+		return []shop.ShopProductResult{}, nil
 	}
 
 	productIDs := make([]uuid.UUID, 0, len(inventories))
@@ -281,14 +278,14 @@ func (a *shopProductAdapter) GetShopProducts(ctx context.Context, exec transacti
 		productMap[p.ID] = p
 	}
 
-	results := make([]shopusecase.ShopProductResult, 0, len(inventories))
+	results := make([]shop.ShopProductResult, 0, len(inventories))
 	for _, inv := range inventories {
 		p, ok := productMap[inv.ProductID]
 		if !ok {
 			continue
 		}
-		results = append(results, shopusecase.ShopProductResult{
-			Product: shopusecase.ShopProductInfo{
+		results = append(results, shop.ShopProductResult{
+			Product: shop.ShopProductInfo{
 				ID:          p.ID,
 				SKU:         p.SKU,
 				Name:        p.Name,
@@ -300,7 +297,7 @@ func (a *shopProductAdapter) GetShopProducts(ctx context.Context, exec transacti
 				CreatedAt:   p.CreatedAt,
 				UpdatedAt:   p.UpdatedAt,
 			},
-			Inventory: shopusecase.ShopProductInventoryInfo{
+			Inventory: shop.ShopProductInventoryInfo{
 				TotalStock:    inv.TotalStock,
 				ReservedStock: inv.ReservedStock,
 			},
@@ -310,7 +307,7 @@ func (a *shopProductAdapter) GetShopProducts(ctx context.Context, exec transacti
 	return results, nil
 }
 
-// staffAccountAdapter implements staffusecase.AccountManager.
+// staffAccountAdapter implements staff.AccountManager.
 type staffAccountAdapter struct {
 	accountRepo auth.AccountRepository
 	sessionRepo auth.SessionRepository
@@ -323,7 +320,7 @@ func newStaffAccountAdapter(a auth.AccountRepository, s auth.SessionRepository) 
 	}
 }
 
-func (a *staffAccountAdapter) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*staffusecase.AccountInfo, error) {
+func (a *staffAccountAdapter) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*staff.AccountInfo, error) {
 	acc, err := a.accountRepo.GetByEmail(ctx, exec, email)
 	if err != nil {
 		return nil, err
@@ -331,14 +328,14 @@ func (a *staffAccountAdapter) GetByEmail(ctx context.Context, exec transaction.E
 	if acc == nil {
 		return nil, nil
 	}
-	return &staffusecase.AccountInfo{
+	return &staff.AccountInfo{
 		ID:     acc.ID,
 		UserID: acc.UserID,
 		Email:  acc.Email,
 	}, nil
 }
 
-func (a *staffAccountAdapter) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*staffusecase.AccountInfo, error) {
+func (a *staffAccountAdapter) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*staff.AccountInfo, error) {
 	acc, err := a.accountRepo.GetByUserID(ctx, exec, userID)
 	if err != nil {
 		return nil, err
@@ -346,14 +343,14 @@ func (a *staffAccountAdapter) GetByUserID(ctx context.Context, exec transaction.
 	if acc == nil {
 		return nil, nil
 	}
-	return &staffusecase.AccountInfo{
+	return &staff.AccountInfo{
 		ID:     acc.ID,
 		UserID: acc.UserID,
 		Email:  acc.Email,
 	}, nil
 }
 
-func (a *staffAccountAdapter) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staffusecase.AccountInfo, error) {
+func (a *staffAccountAdapter) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staff.AccountInfo, error) {
 	acc, err := a.accountRepo.GetByID(ctx, exec, id)
 	if err != nil {
 		return nil, err
@@ -361,14 +358,14 @@ func (a *staffAccountAdapter) GetByID(ctx context.Context, exec transaction.Exec
 	if acc == nil {
 		return nil, nil
 	}
-	return &staffusecase.AccountInfo{
+	return &staff.AccountInfo{
 		ID:     acc.ID,
 		UserID: acc.UserID,
 		Email:  acc.Email,
 	}, nil
 }
 
-func (a *staffAccountAdapter) CreateStaffAccount(ctx context.Context, exec transaction.Executor, input staffusecase.CreateAccountInput) error {
+func (a *staffAccountAdapter) CreateStaffAccount(ctx context.Context, exec transaction.Executor, input staff.CreateAccountInput) error {
 	acc := auth.Account{
 		ID:        input.ID,
 		UserID:    input.UserID,
@@ -388,7 +385,7 @@ func (a *staffAccountAdapter) RevokeSessionsByUserID(ctx context.Context, exec t
 	return a.sessionRepo.RevokeAllByUserID(ctx, exec, userID)
 }
 
-// userAccountAdapter implements userusecase.AccountReader.
+// userAccountAdapter implements user.AccountReader.
 type userAccountAdapter struct {
 	accountRepo auth.AccountRepository
 }
@@ -397,7 +394,7 @@ func newUserAccountAdapter(a auth.AccountRepository) *userAccountAdapter {
 	return &userAccountAdapter{accountRepo: a}
 }
 
-func (a *userAccountAdapter) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*userusecase.UserAccount, error) {
+func (a *userAccountAdapter) GetByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*user.UserAccount, error) {
 	acc, err := a.accountRepo.GetByUserID(ctx, exec, userID)
 	if err != nil {
 		return nil, err
@@ -405,12 +402,12 @@ func (a *userAccountAdapter) GetByUserID(ctx context.Context, exec transaction.E
 	if acc == nil {
 		return nil, nil
 	}
-	return &userusecase.UserAccount{
+	return &user.UserAccount{
 		Type: acc.Type,
 	}, nil
 }
 
-// userSessionAdapter implements userusecase.SessionReader.
+// userSessionAdapter implements user.SessionReader.
 type userSessionAdapter struct {
 	sessionRepo auth.SessionRepository
 }
@@ -430,7 +427,7 @@ func (a *userSessionAdapter) GetLastActivity(ctx context.Context, exec transacti
 	return sess.LastActivityAt, nil
 }
 
-// userStaffProfileAdapter implements userusecase.StaffProfileProvider.
+// userStaffProfileAdapter implements user.StaffProfileProvider.
 type userStaffProfileAdapter struct {
 	staffRepo staff.Repository
 }

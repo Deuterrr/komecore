@@ -6,21 +6,17 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/address/addressusecase"
+	"komecore/internal/modules/address"
 
 	"github.com/google/uuid"
 )
 
 type AddressHandler struct {
-	service *addressusecase.AddressService
+	service *address.Service
 }
 
-func NewAddressHandler(
-	service *addressusecase.AddressService,
-) *AddressHandler {
-	return &AddressHandler{
-		service: service,
-	}
+func NewAddressHandler(service *address.Service) *AddressHandler {
+	return &AddressHandler{service: service}
 }
 
 func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Request) error {
@@ -61,7 +57,6 @@ func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Reques
 	response := map[string][]customerAddressResponse{
 		"addresses": result,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -70,6 +65,12 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 	var req saveCustomerAddressRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
+	}
+	if req.FullAddress == "" {
+		return apperror.NewBadRequest("invalid full address")
+	}
+	if req.PostalCode == "" {
+		return apperror.NewBadRequest("invalid postal code")
 	}
 
 	prov := req.GetProvince()
@@ -83,12 +84,6 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 	dist := req.GetDistrict()
 	if dist == "" {
 		return apperror.NewBadRequest("invalid district")
-	}
-	if req.FullAddress == "" {
-		return apperror.NewBadRequest("invalid full address")
-	}
-	if req.PostalCode == "" {
-		return apperror.NewBadRequest("invalid postal code")
 	}
 
 	_, customerID, err := httpx.RequireCustomer(r)
@@ -114,7 +109,7 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 		parsedIsDefault = parsed
 	}
 
-	input := addressusecase.SaveCustomerAddressInput{
+	input := address.SaveCustomerAddressInput{
 		ID:           addressID,
 		CustomerID:   customerID,
 		ReceiverName: req.ReceiverName,
@@ -128,7 +123,6 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 		Latitude:     req.Latitude,
 		Longitude:    req.Longitude,
 	}
-
 	err = h.service.SaveCustomerAddress(r.Context(), input)
 	if err != nil {
 		return err
@@ -137,7 +131,6 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 	response := map[string]string{
 		"message": "address saved successfully",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -161,7 +154,6 @@ func (h *AddressHandler) DeleteUserAddress(w http.ResponseWriter, r *http.Reques
 	response := map[string]string{
 		"message": "address deleted successfully",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -203,7 +195,6 @@ func (h *AddressHandler) ListShopAddresses(w http.ResponseWriter, r *http.Reques
 	response := map[string][]shopAddressResponse{
 		"addresses": addresses,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -212,6 +203,12 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 	var req createShopAddressRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
+	}
+	if req.FullAddress == "" {
+		return apperror.NewBadRequest("invalid full address")
+	}
+	if req.PostalCode == "" {
+		return apperror.NewBadRequest("invalid postal code")
 	}
 
 	prov := req.GetProvince()
@@ -225,13 +222,6 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 	dist := req.GetDistrict()
 	if dist == "" {
 		return apperror.NewBadRequest("invalid district")
-	}
-
-	if req.FullAddress == "" {
-		return apperror.NewBadRequest("invalid full address")
-	}
-	if req.PostalCode == "" {
-		return apperror.NewBadRequest("invalid postal code")
 	}
 
 	parsedShopID, err := httpx.ParamUUID(r, "shopID")
@@ -245,7 +235,7 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 		return apperror.NewBadRequest("invalid active status")
 	}
 
-	input := addressusecase.CreateShopAddressInput{
+	input := address.CreateShopAddressInput{
 		ShopID:      parsedShopID,
 		Label:       req.Label,
 		Phone:       req.Phone,
@@ -258,7 +248,6 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 		Latitude:    req.Latitude,
 		Longitude:   req.Longitude,
 	}
-
 	err = h.service.CreateShopAddress(r.Context(), input)
 	if err != nil {
 		return err
@@ -267,7 +256,6 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 	response := map[string]string{
 		"message": "address successfully created",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -276,6 +264,12 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 	var req createShopAddressRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
+	}
+	if req.FullAddress == "" {
+		return apperror.NewBadRequest("invalid full address")
+	}
+	if req.PostalCode == "" {
+		return apperror.NewBadRequest("invalid postal code")
 	}
 
 	prov := req.GetProvince()
@@ -289,12 +283,6 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 	dist := req.GetDistrict()
 	if dist == "" {
 		return apperror.NewBadRequest("invalid district")
-	}
-	if req.FullAddress == "" {
-		return apperror.NewBadRequest("invalid full address")
-	}
-	if req.PostalCode == "" {
-		return apperror.NewBadRequest("invalid postal code")
 	}
 
 	parsedShopID, err := httpx.ParamUUID(r, "shopID")
@@ -313,7 +301,7 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 		return apperror.NewBadRequest("invalid active status")
 	}
 
-	input := addressusecase.UpdateShopAddressInput{
+	input := address.UpdateShopAddressInput{
 		ID:          addressID,
 		ShopID:      parsedShopID,
 		Label:       req.Label,
@@ -327,7 +315,6 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 		Latitude:    req.Latitude,
 		Longitude:   req.Longitude,
 	}
-
 	err = h.service.UpdateShopAddress(r.Context(), input)
 	if err != nil {
 		return err
@@ -336,7 +323,6 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 	response := map[string]string{
 		"message": "address updated successfully",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -360,7 +346,6 @@ func (h *AddressHandler) DeleteShopAddress(w http.ResponseWriter, r *http.Reques
 	response := map[string]string{
 		"message": "address deleted successfully",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }

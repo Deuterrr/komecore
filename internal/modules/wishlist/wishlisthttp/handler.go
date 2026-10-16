@@ -5,17 +5,15 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/wishlist/wishlistusecase"
+	"komecore/internal/modules/wishlist"
 )
 
 type WishlistHandler struct {
-	service *wishlistusecase.WishlistService
+	service *wishlist.Service
 }
 
-func NewWishlistHandler(service *wishlistusecase.WishlistService) *WishlistHandler {
-	return &WishlistHandler{
-		service: service,
-	}
+func NewWishlistHandler(service *wishlist.Service) *WishlistHandler {
+	return &WishlistHandler{service: service}
 }
 
 func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) error {
@@ -47,7 +45,7 @@ func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) 
 		return apperror.NewBadRequest("invalid product id")
 	}
 
-	err = h.service.AddToWishlist(r.Context(), wishlistusecase.AddToWishlistInput{
+	err = h.service.AddToWishlist(r.Context(), wishlist.AddToWishlistInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 	})
@@ -73,7 +71,7 @@ func (h *WishlistHandler) RemoveFromWishlist(w http.ResponseWriter, r *http.Requ
 		return apperror.NewBadRequest("invalid product id")
 	}
 
-	err = h.service.RemoveFromWishlist(r.Context(), wishlistusecase.RemoveFromWishlistInput{
+	err = h.service.RemoveFromWishlist(r.Context(), wishlist.RemoveFromWishlistInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 	})

@@ -12,7 +12,6 @@ import (
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/staff"
-	"komecore/internal/modules/staff/staffusecase"
 	"komecore/internal/modules/user"
 	applogger "komecore/pkg/logger"
 
@@ -101,20 +100,20 @@ func (r *testMembershipRepo) DeleteByStaffID(ctx context.Context, exec transacti
 }
 
 type testAccountRepo struct {
-	account       *staffusecase.AccountInfo
-	accountByUser *staffusecase.AccountInfo
+	account       *staff.AccountInfo
+	accountByUser *staff.AccountInfo
 }
 
-func (r *testAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*staffusecase.AccountInfo, error) {
+func (r *testAccountRepo) GetByEmail(ctx context.Context, exec transaction.Executor, email string) (*staff.AccountInfo, error) {
 	return nil, nil
 }
-func (r *testAccountRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staffusecase.AccountInfo, error) {
+func (r *testAccountRepo) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staff.AccountInfo, error) {
 	return r.account, nil
 }
-func (r *testAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staffusecase.AccountInfo, error) {
+func (r *testAccountRepo) GetByUserID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*staff.AccountInfo, error) {
 	return r.accountByUser, nil
 }
-func (r *testAccountRepo) CreateStaffAccount(ctx context.Context, exec transaction.Executor, input staffusecase.CreateAccountInput) error {
+func (r *testAccountRepo) CreateStaffAccount(ctx context.Context, exec transaction.Executor, input staff.CreateAccountInput) error {
 	return nil
 }
 func (r *testAccountRepo) DeleteByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
@@ -170,7 +169,7 @@ type testHasher struct{}
 func (h *testHasher) Hash(p string) (string, error) { return "hash", nil }
 func (h *testHasher) Compare(hash, p string) error  { return nil }
 
-func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRepo, *testMembershipRepo) {
+func setupTestHandler(staffID, accountID uuid.UUID) (*StaffHandler, *testStaffRepo, *testMembershipRepo) {
 	sRepo := &testStaffRepo{
 		staff: &staff.Staff{
 			ID:     staffID,
@@ -203,7 +202,7 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRe
 		},
 	}
 	aRepo := &testAccountRepo{
-		account: &staffusecase.AccountInfo{
+		account: &staff.AccountInfo{
 			ID:     uuid.New(),
 			UserID: uuid.New(),
 		},
@@ -219,7 +218,7 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*staffHandler, *testStaffRe
 	audit := &mockAuditor{}
 	userDeletionSvc := &testUserDeletionService{}
 
-	svc := staffusecase.NewStaffService(
+	svc := staff.NewService(
 		exec,
 		tx,
 		sRepo,

@@ -4,27 +4,27 @@ import (
 	"context"
 	"time"
 
-	"komecore/internal/modules/payment/paymentusecase"
+	"komecore/internal/modules/payment"
 	applogger "komecore/pkg/logger"
 )
 
 // PaymentExpiryJob is a background ticker that runs the automated
-// ExpirePastDuePaymentsUsecase on a fixed 1-minute interval.
+// ExpirePastDuePayments on a fixed 1-minute interval.
 type PaymentExpiryJob struct {
-	expiryUsecase *paymentusecase.ExpirePastDuePaymentsUsecase
-	interval      time.Duration
-	logger        applogger.Logger
+	service  *payment.Service
+	interval time.Duration
+	logger   applogger.Logger
 }
 
 func NewPaymentExpiryJob(
-	expiryUsecase *paymentusecase.ExpirePastDuePaymentsUsecase,
+	service *payment.Service,
 	interval time.Duration,
 	logger applogger.Logger,
 ) *PaymentExpiryJob {
 	return &PaymentExpiryJob{
-		expiryUsecase: expiryUsecase,
-		interval:      interval,
-		logger:        logger,
+		service:  service,
+		interval: interval,
+		logger:   logger,
 	}
 }
 
@@ -45,7 +45,7 @@ func (j *PaymentExpiryJob) Start(ctx context.Context) {
 			return
 		case <-ticker.C:
 			j.logger.Info(ctx, "payment expiry job: tick — expiring past-due payments")
-			j.expiryUsecase.Execute(ctx)
+			j.service.ExpirePastDuePayments(ctx)
 		}
 	}
 }

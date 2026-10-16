@@ -10,7 +10,6 @@ import (
 
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/staff"
-	"komecore/internal/modules/staff/staffusecase"
 
 	"github.com/google/uuid"
 )
@@ -40,7 +39,7 @@ func TestHandler_GetRevenueAnalytics(t *testing.T) {
 		},
 	}
 
-	svc := staffusecase.NewStaffService(
+	svc := staff.NewService(
 		&mockExec{}, &mockTx{}, nil, nil, nil, nil, nil, nil, nil, nil,
 	).WithAnalyticsRepository(repo)
 
@@ -82,7 +81,7 @@ func TestHandler_GetOrderPipelineAnalytics(t *testing.T) {
 		},
 	}
 
-	svc := staffusecase.NewStaffService(
+	svc := staff.NewService(
 		&mockExec{}, &mockTx{}, nil, nil, nil, nil, nil, nil, nil, nil,
 	).WithAnalyticsRepository(repo)
 
@@ -124,7 +123,7 @@ func TestHandler_GetTopProductsAnalytics(t *testing.T) {
 		},
 	}
 
-	svc := staffusecase.NewStaffService(
+	svc := staff.NewService(
 		&mockExec{}, &mockTx{}, nil, nil, nil, nil, nil, nil, nil, nil,
 	).WithAnalyticsRepository(repo)
 

@@ -7,18 +7,15 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
 	"komecore/internal/modules/discount"
-	"komecore/internal/modules/discount/discountusecase"
 	"komecore/internal/pagination"
 )
 
 type DiscountHandler struct {
-	service *discountusecase.DiscountService
+	service *discount.Service
 }
 
-func NewDiscountHandler(service *discountusecase.DiscountService) *DiscountHandler {
-	return &DiscountHandler{
-		service: service,
-	}
+func NewDiscountHandler(service *discount.Service) *DiscountHandler {
+	return &DiscountHandler{service: service}
 }
 
 func (h *DiscountHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request) error {
@@ -26,12 +23,11 @@ func (h *DiscountHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request)
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
-
 	if req.Code == "" {
 		return apperror.NewBadRequest("coupon code is required")
 	}
 
-	result, err := h.service.ValidateCoupon(r.Context(), discountusecase.ValidateCouponInput{
+	result, err := h.service.ValidateCoupon(r.Context(), discount.ValidateCouponInput{
 		Code:        req.Code,
 		Subtotal:    req.Subtotal,
 		ShippingFee: req.ShippingFee,
@@ -58,12 +54,11 @@ func (h *DiscountHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) e
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
-
 	if req.Code == "" {
 		return apperror.NewBadRequest("coupon code is required")
 	}
 
-	coupon, err := h.service.CreateCoupon(r.Context(), discountusecase.CreateCouponInput{
+	coupon, err := h.service.CreateCoupon(r.Context(), discount.CreateCouponInput{
 		Code:          req.Code,
 		Description:   req.Description,
 		Type:          req.Type,
@@ -99,7 +94,7 @@ func (h *DiscountHandler) ListCoupons(w http.ResponseWriter, r *http.Request) er
 		isActivePtr = &val
 	}
 
-	coupons, total, err := h.service.ListCoupons(r.Context(), discountusecase.ListCouponsInput{
+	coupons, total, err := h.service.ListCoupons(r.Context(), discount.ListCouponsInput{
 		Code:     codePtr,
 		IsActive: isActivePtr,
 		Page:     page,

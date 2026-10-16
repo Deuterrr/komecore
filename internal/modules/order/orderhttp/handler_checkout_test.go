@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseCheckoutInput_CartItemWithoutProductID(t *testing.T) {
-	h := &orderHandler{}
+	h := &OrderHandler{}
 
 	shopID := uuid.New().String()
 	cartItemID := uuid.New().String()

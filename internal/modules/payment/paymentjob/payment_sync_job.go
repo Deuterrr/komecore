@@ -4,27 +4,27 @@ import (
 	"context"
 	"time"
 
-	"komecore/internal/modules/payment/paymentusecase"
+	"komecore/internal/modules/payment"
 	applogger "komecore/pkg/logger"
 )
 
 // PaymentSyncJob is a background ticker that drives the
-// SyncPendingPaymentsUsecase on a fixed interval.
+// SyncPendingPayments on a fixed interval.
 type PaymentSyncJob struct {
-	syncUsecase *paymentusecase.SyncPendingPaymentsUsecase
-	interval    time.Duration
-	logger      applogger.Logger
+	service  *payment.Service
+	interval time.Duration
+	logger   applogger.Logger
 }
 
 func NewPaymentSyncJob(
-	syncUsecase *paymentusecase.SyncPendingPaymentsUsecase,
+	service *payment.Service,
 	interval time.Duration,
 	logger applogger.Logger,
 ) *PaymentSyncJob {
 	return &PaymentSyncJob{
-		syncUsecase: syncUsecase,
-		interval:    interval,
-		logger:      logger,
+		service:  service,
+		interval: interval,
+		logger:   logger,
 	}
 }
 
@@ -45,7 +45,7 @@ func (j *PaymentSyncJob) Start(ctx context.Context) {
 			return
 		case <-ticker.C:
 			j.logger.Info(ctx, "payment sync job: tick — running reconciliation")
-			j.syncUsecase.Execute(ctx)
+			j.service.SyncPendingPayments(ctx)
 		}
 	}
 }

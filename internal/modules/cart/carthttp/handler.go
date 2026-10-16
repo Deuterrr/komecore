@@ -6,21 +6,16 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
 	"komecore/internal/modules/cart"
-	"komecore/internal/modules/cart/cartusecase"
 
 	"github.com/google/uuid"
 )
 
 type CartHandler struct {
-	service *cartusecase.CartService
+	service *cart.Service
 }
 
-func NewCartHandler(
-	service *cartusecase.CartService,
-) *CartHandler {
-	return &CartHandler{
-		service: service,
-	}
+func NewCartHandler(service *cart.Service) *CartHandler {
+	return &CartHandler{service: service}
 }
 
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
@@ -93,7 +88,6 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
 		Items:  items,
 		Total:  total,
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -102,6 +96,17 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 	var req addItemRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
+	}
+	if req.Quantity <= 0 {
+		return apperror.NewBadRequest("invalid quantity")
+	}
+	if req.ProductID == "" {
+		return apperror.NewBadRequest("product_id is required")
+	}
+
+	productID, err := uuid.Parse(req.ProductID)
+	if err != nil {
+		return apperror.NewBadRequest("invalid product id")
 	}
 
 	_, customerID, err := httpx.RequireCustomer(r)
@@ -114,23 +119,12 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 		return apperror.NewBadRequest("invalid shop id")
 	}
 
-	if req.ProductID == "" {
-		return apperror.NewBadRequest("product_id is required")
-	}
-	productID, err := uuid.Parse(req.ProductID)
-	if err != nil {
-		return apperror.NewBadRequest("invalid product id")
-	}
-	if req.Quantity <= 0 {
-		return apperror.NewBadRequest("invalid quantity")
-	}
-
 	var opt cart.ItemOptions
 	if req.ItemOptions != nil {
 		opt = cart.ItemOptions(req.ItemOptions)
 	}
 
-	input := cartusecase.AddItemInput{
+	input := cart.AddItemInput{
 		CustomerID:  customerID,
 		ProductID:   productID,
 		ShopID:      shopID,
@@ -144,7 +138,6 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 	response := map[string]string{
 		"message": "item added",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -153,6 +146,9 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 	var req updateItemRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
+	}
+	if req.Quantity < 0 {
+		return apperror.NewBadRequest("invalid quantity")
 	}
 
 	_, customerID, err := httpx.RequireCustomer(r)
@@ -170,17 +166,13 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 		return apperror.NewBadRequest("invalid product id")
 	}
 
-	if req.Quantity < 0 {
-		return apperror.NewBadRequest("invalid quantity")
-	}
-
 	var opt *cart.ItemOptions
 	if req.ItemOptions != nil {
 		norm := cart.ItemOptions(req.ItemOptions).Normalized()
 		opt = &norm
 	}
 
-	input := cartusecase.UpdateItemInput{
+	input := cart.UpdateItemInput{
 		CustomerID:  customerID,
 		ProductID:   productID,
 		ShopID:      shopID,
@@ -195,7 +187,6 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 	response := map[string]string{
 		"message": "item updated",
 	}
-
 	httpx.WriteJSON(w, http.StatusOK, response)
 	return nil
 }
@@ -204,6 +195,9 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 	var req updateItemByIDRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
+	}
+	if req.Quantity <= 0 {
+		return apperror.NewBadRequest("invalid quantity")
 	}
 
 	_, customerID, err := httpx.RequireCustomer(r)
@@ -216,17 +210,13 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 		return apperror.NewBadRequest("invalid cart item id")
 	}
 
-	if req.Quantity <= 0 {
-		return apperror.NewBadRequest("invalid quantity")
-	}
-
 	var opt *cart.ItemOptions
 	if req.ItemOptions != nil {
 		norm := cart.ItemOptions(req.ItemOptions).Normalized()
 		opt = &norm
 	}
 
-	input := cartusecase.UpdateItemByIDInput{
+	input := cart.UpdateItemByIDInput{
 		CustomerID:  customerID,
 		CartItemID:  cartItemID,
 		Quantity:    req.Quantity,
@@ -259,7 +249,7 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 		return apperror.NewBadRequest("invalid shop id")
 	}
 
-	input := cartusecase.RemoveItemInput{
+	input := cart.RemoveItemInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		ShopID:     shopID,
@@ -286,7 +276,7 @@ func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) err
 		return apperror.NewBadRequest("invalid cart item id")
 	}
 
-	input := cartusecase.RemoveItemByIDInput{
+	input := cart.RemoveItemByIDInput{
 		CustomerID: customerID,
 		CartItemID: cartItemID,
 	}

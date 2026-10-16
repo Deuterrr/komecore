@@ -6,20 +6,16 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/authctx"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/review/reviewusecase"
+	"komecore/internal/modules/review"
 	"komecore/internal/pagination"
 )
 
 type ReviewHandler struct {
-	service *reviewusecase.ReviewService
+	service *review.Service
 }
 
-func NewReviewHandler(
-	service *reviewusecase.ReviewService,
-) *ReviewHandler {
-	return &ReviewHandler{
-		service: service,
-	}
+func NewReviewHandler(service *review.Service) *ReviewHandler {
+	return &ReviewHandler{service: service}
 }
 
 func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) error {
@@ -38,7 +34,7 @@ func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) err
 		return apperror.NewBadRequest("invalid request body")
 	}
 
-	review, err := h.service.CreateReview(r.Context(), reviewusecase.CreateReviewInput{
+	rev, err := h.service.CreateReview(r.Context(), review.CreateReviewInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		OrderID:    req.OrderID,
@@ -51,17 +47,17 @@ func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) err
 	}
 
 	resp := reviewResponse{
-		ID:           review.ID,
-		ProductID:    review.ProductID,
-		CustomerID:   review.CustomerID,
-		OrderID:      review.OrderID,
-		Rating:       review.Rating,
-		Title:        review.Title,
-		Comment:      review.Comment,
+		ID:           rev.ID,
+		ProductID:    rev.ProductID,
+		CustomerID:   rev.CustomerID,
+		OrderID:      rev.OrderID,
+		Rating:       rev.Rating,
+		Title:        rev.Title,
+		Comment:      rev.Comment,
 		HelpfulCount: 0,
 		Media:        make([]string, 0),
-		CreatedAt:    review.CreatedAt.UTC(),
-		UpdatedAt:    httpx.ToUTCPtr(review.UpdatedAt),
+		CreatedAt:    rev.CreatedAt.UTC(),
+		UpdatedAt:    httpx.ToUTCPtr(rev.UpdatedAt),
 	}
 	httpx.WriteJSON(w, http.StatusCreated, resp)
 	return nil
@@ -76,7 +72,7 @@ func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Reques
 	page := httpx.QueryIntDefault(r, "page", 1)
 	limit := httpx.QueryIntDefault(r, "limit", 10)
 
-	result, err := h.service.ListReviews(r.Context(), reviewusecase.ListReviewsInput{
+	result, err := h.service.ListReviews(r.Context(), review.ListReviewsInput{
 		ProductID: productID,
 		Page:      page,
 		Limit:     limit,
@@ -131,7 +127,7 @@ func (h *ReviewHandler) DeleteReview(w http.ResponseWriter, r *http.Request) err
 		return apperror.NewBadRequest("invalid review id")
 	}
 
-	err = h.service.DeleteReview(r.Context(), reviewusecase.DeleteReviewInput{
+	err = h.service.DeleteReview(r.Context(), review.DeleteReviewInput{
 		ReviewID: reviewID,
 		Actor:    actor,
 	})

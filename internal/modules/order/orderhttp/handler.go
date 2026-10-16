@@ -11,52 +11,34 @@ import (
 	"komecore/internal/httpx"
 	"komecore/internal/modules/cart"
 	"komecore/internal/modules/order"
-	"komecore/internal/modules/order/orderusecase"
 	"komecore/internal/modules/payment"
 	"komecore/internal/modules/shipment"
-	"komecore/internal/modules/shop/shopusecase"
+	"komecore/internal/modules/shop"
 	"komecore/internal/pagination"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
-type OrderHandler = orderHandler
-
-type orderHandler struct {
-	findOrders           *orderusecase.FindOrdersUsecase
-	getOrder             *orderusecase.GetOrderUsecase
-	createOrder          *orderusecase.CreateOrderUsecase
-	updateOrderStatus    *orderusecase.UpdateOrderStatusUsecase
-	dispatchShopShipment *orderusecase.DispatchShopShipmentUsecase
-	getOrderTracking     *orderusecase.GetOrderTrackingUsecase
-	shopService          *shopusecase.ShopService
-	checkout             *orderusecase.CheckoutUsecase
+type OrderHandler struct {
+	service     *order.Service
+	createOrder *order.CreateOrderWorkflow
+	shopService *shop.Service
 }
 
 func NewOrderHandler(
-	findOrders *orderusecase.FindOrdersUsecase,
-	getOrder *orderusecase.GetOrderUsecase,
-	createOrder *orderusecase.CreateOrderUsecase,
-	updateOrderStatus *orderusecase.UpdateOrderStatusUsecase,
-	dispatchShopShipment *orderusecase.DispatchShopShipmentUsecase,
-	getOrderTracking *orderusecase.GetOrderTrackingUsecase,
-	shopService *shopusecase.ShopService,
-	checkout *orderusecase.CheckoutUsecase,
-) *orderHandler {
-	return &orderHandler{
-		findOrders:           findOrders,
-		getOrder:             getOrder,
-		createOrder:          createOrder,
-		updateOrderStatus:    updateOrderStatus,
-		dispatchShopShipment: dispatchShopShipment,
-		getOrderTracking:     getOrderTracking,
-		shopService:          shopService,
-		checkout:             checkout,
+	service *order.Service,
+	createOrder *order.CreateOrderWorkflow,
+	shopService *shop.Service,
+) *OrderHandler {
+	return &OrderHandler{
+		service:     service,
+		createOrder: createOrder,
+		shopService: shopService,
 	}
 }
 
-func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error {
+func (h *OrderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -81,7 +63,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 	customerIDStr := httpx.Query(r, "customer_id")
 	status := httpx.Query(r, "status")
 
-	input := orderusecase.FindOrdersInput{
+	input := order.FindOrdersInput{
 		Page:  page,
 		Limit: limit,
 		Sort:  sort,
@@ -182,7 +164,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 		}
 	}
 
-	orders, total, err := h.findOrders.Execute(r.Context(), input)
+	orders, total, err := h.service.FindOrders(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -198,7 +180,7 @@ func (h *orderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 }
 
 // GetOrder handles GET /orders/{orderID} â€” staff-only, returns a single order with full detail.
-func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
+func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -213,7 +195,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 		return apperror.NewBadRequest("invalid order id")
 	}
 
-	result, err := h.getOrder.Execute(r.Context(), orderusecase.GetOrderInput{
+	result, err := h.service.GetOrder(r.Context(), order.GetOrderInput{
 		OrderID: orderID,
 	})
 	if err != nil {
@@ -256,7 +238,7 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 
-	resp := buildOrderResponse(orderusecase.OrderSearchResult{
+	resp := buildOrderResponse(order.OrderSearchResult{
 		Order:       result.Order,
 		Items:       result.Items,
 		Payment:     result.Payment,
@@ -268,8 +250,8 @@ func (h *orderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// ListMyOrders handles GET /users/me/orders â€” customer-only, returns the caller's orders with detail.
-func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) error {
+// ListMyOrders handles GET /users/me/orders — customer-only, returns the caller's orders with detail.
+func (h *OrderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -287,7 +269,7 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 	sort := httpx.Query(r, "sort")
 	status := httpx.Query(r, "status")
 
-	input := orderusecase.FindOrdersInput{
+	input := order.FindOrdersInput{
 		Page:       page,
 		Limit:      limit,
 		Sort:       sort,
@@ -341,7 +323,7 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 		input.ShopID = shopID
 	}
 
-	orders, total, err := h.findOrders.Execute(r.Context(), input)
+	orders, total, err := h.service.FindOrders(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -356,8 +338,8 @@ func (h *orderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-// GetMyOrder handles GET /users/me/orders/{orderID} â€” customer-only, returns their own order with full detail.
-func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error {
+// GetMyOrder handles GET /users/me/orders/{orderID} — customer-only, returns their own order with full detail.
+func (h *OrderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -369,7 +351,7 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 		return apperror.NewBadRequest("invalid order id")
 	}
 
-	result, err := h.getOrder.Execute(r.Context(), orderusecase.GetOrderInput{
+	result, err := h.service.GetOrder(r.Context(), order.GetOrderInput{
 		OrderID:    orderID,
 		CustomerID: &customerID,
 	})
@@ -380,7 +362,7 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 		return apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 	}
 
-	resp := buildOrderResponse(orderusecase.OrderSearchResult{
+	resp := buildOrderResponse(order.OrderSearchResult{
 		Order:       result.Order,
 		Items:       result.Items,
 		Payment:     result.Payment,
@@ -393,7 +375,7 @@ func (h *orderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 }
 
 // CreateOrder handles POST /order â€” customer-only.
-func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error {
+func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error {
 	authCtx, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -415,7 +397,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 		return apperror.NewBadRequest("invalid payment method id")
 	}
 
-	var shopsInput []orderusecase.OrderShopInput
+	var shopsInput []order.OrderShopInput
 	for _, shopReq := range req.Shops {
 		parsedShopID, err := uuid.Parse(shopReq.ShopID)
 		if err != nil {
@@ -425,7 +407,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 			return apperror.NewBadRequest("invalid shop name")
 		}
 
-		var itemsInput []orderusecase.OrderItemInput
+		var itemsInput []order.OrderItemInput
 		for _, itemReq := range shopReq.Items {
 			if itemReq.Quantity <= 0 {
 				return apperror.NewBadRequest("invalid quantity")
@@ -448,7 +430,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 
 			itemsInput = append(
 				itemsInput,
-				orderusecase.OrderItemInput{
+				order.OrderItemInput{
 					ProductID:   productID,
 					ItemOptions: opt.Normalized(),
 					ProductName: productName,
@@ -457,9 +439,9 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 			)
 		}
 
-		var courierInput *orderusecase.OrderCourierInput
+		var courierInput *order.OrderCourierInput
 		if shopReq.Courier != nil {
-			courierInput = &orderusecase.OrderCourierInput{
+			courierInput = &order.OrderCourierInput{
 				Code:    shopReq.Courier.Code,
 				Service: shopReq.Courier.Service,
 			}
@@ -467,7 +449,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 
 		shopsInput = append(
 			shopsInput,
-			orderusecase.OrderShopInput{
+			order.OrderShopInput{
 				ShopID:   parsedShopID,
 				ShopName: shopReq.ShopName,
 				Courier:  courierInput,
@@ -476,7 +458,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 		)
 	}
 
-	input := orderusecase.CreateOrderInput{
+	input := order.CreateOrderInput{
 		UserID:          userID,
 		CustomerID:      customerID,
 		AddressID:       parsedAddressID,
@@ -484,7 +466,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 		CouponCode:      req.CouponCode,
 		Shops:           shopsInput,
 	}
-	result, err := h.createOrder.Execute(r.Context(), input)
+	result, err := h.createOrder.CreateOrder(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -519,7 +501,7 @@ func (h *orderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 // In Komerce mode the provider calls the external API and returns a tracking
 // number automatically. In manual mode the optional "tracking_number" field
 // in the request body is used instead â€” no external call is made.
-func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) error {
+func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -543,7 +525,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
-		existingOrder, err := h.getOrder.Execute(r.Context(), orderusecase.GetOrderInput{
+		existingOrder, err := h.service.GetOrder(r.Context(), order.GetOrderInput{
 			OrderID: orderID,
 		})
 		if err != nil || existingOrder == nil {
@@ -561,7 +543,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	var shipmentsInput []orderusecase.ShipmentDispatchInput
+	var shipmentsInput []order.ShipmentDispatchInput
 	if len(req.Shipments) > 0 {
 		for _, sReq := range req.Shipments {
 			var itemUUIDs []uuid.UUID
@@ -572,7 +554,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 				}
 				itemUUIDs = append(itemUUIDs, parsed)
 			}
-			shipmentsInput = append(shipmentsInput, orderusecase.ShipmentDispatchInput{
+			shipmentsInput = append(shipmentsInput, order.ShipmentDispatchInput{
 				FulfillmentMethod: sReq.FulfillmentMethod,
 				Courier:           sReq.Courier,
 				Service:           sReq.Service,
@@ -582,7 +564,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	result, err := h.updateOrderStatus.Execute(r.Context(), orderusecase.UpdateOrderStatusInput{
+	result, err := h.service.UpdateOrderStatus(r.Context(), order.UpdateOrderStatusInput{
 		OrderID:           orderID,
 		Status:            order.OrderStatus(req.Status),
 		TrackingNumber:    req.TrackingNumber,
@@ -593,7 +575,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 		return err
 	}
 
-	resp := buildOrderResponse(orderusecase.OrderSearchResult{
+	resp := buildOrderResponse(order.OrderSearchResult{
 		Order:     result.Order,
 		Items:     []order.OrderItem{},
 		Shipment:  result.Shipment,
@@ -605,7 +587,7 @@ func (h *orderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 
 // DispatchOrderShipment handles POST /orders/{orderID}/shipments â€” staff-only.
 // Creates a shipment for a specific shop's order items.
-func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Request) error {
+func (h *OrderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -649,7 +631,7 @@ func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	res, err := h.dispatchShopShipment.Execute(r.Context(), orderusecase.DispatchShopShipmentInput{
+	res, err := h.service.DispatchShopShipment(r.Context(), order.DispatchShopShipmentInput{
 		OrderID:           orderID,
 		ShopID:            shopID,
 		FulfillmentMethod: req.FulfillmentMethod,
@@ -672,7 +654,7 @@ func (h *orderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request) error {
+func (h *OrderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -683,12 +665,11 @@ func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 		return apperror.NewBadRequest("invalid order id")
 	}
 
-	input := orderusecase.GetOrderTrackingInput{
+	input := order.GetOrderTrackingInput{
 		OrderID:    orderID,
 		CustomerID: customerID,
 	}
-
-	result, err := h.getOrderTracking.Execute(r.Context(), input)
+	result, err := h.service.GetOrderTracking(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -703,8 +684,8 @@ func (h *orderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 	return nil
 }
 
-// GetOrderTrackingForStaff handles GET /orders/{orderID}/tracking â€” staff-only.
-func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.Request) error {
+// GetOrderTrackingForStaff handles GET /orders/{orderID}/tracking — staff-only.
+func (h *OrderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -720,7 +701,7 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 	}
 
 	if actor.StaffID != nil && !actor.IsSuperAdmin() {
-		existingOrder, err := h.getOrder.Execute(r.Context(), orderusecase.GetOrderInput{
+		existingOrder, err := h.service.GetOrder(r.Context(), order.GetOrderInput{
 			OrderID: orderID,
 		})
 		if err != nil || existingOrder == nil {
@@ -739,11 +720,11 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	input := orderusecase.GetOrderTrackingInput{
+	input := order.GetOrderTrackingInput{
 		OrderID:    orderID,
 		CustomerID: uuid.Nil,
 	}
-	result, err := h.getOrderTracking.Execute(r.Context(), input)
+	result, err := h.service.GetOrderTracking(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -759,7 +740,7 @@ func (h *orderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.R
 }
 
 // buildOrderResponse converts an OrderSearchResult into the wire response.
-func buildOrderResponse(o orderusecase.OrderSearchResult) orderResponse {
+func buildOrderResponse(o order.OrderSearchResult) orderResponse {
 	items := make([]orderItemResponse, len(o.Items))
 	for j, item := range o.Items {
 		var shipmentIDStr *string
@@ -809,7 +790,6 @@ func buildOrderResponse(o orderusecase.OrderSearchResult) orderResponse {
 		Items:             items,
 		Shipments:         shipments,
 	}
-
 	if o.Payment != nil {
 		resp.Payment = mapPaymentDetail(o.Payment, o.ChannelData)
 	}
@@ -838,7 +818,6 @@ func buildOrderResponse(o orderusecase.OrderSearchResult) orderResponse {
 			Longitude:    o.Address.Detail.Longitude,
 		}
 	}
-
 	return resp
 }
 
@@ -859,7 +838,6 @@ func mapPaymentDetail(p *payment.Payment, cd *payment.PaymentChannelData) *payme
 			ExpiresAt:   httpx.ToUTCPtr(cd.ExpiresAt),
 		}
 	}
-
 	return resp
 }
 
@@ -879,7 +857,7 @@ func mapShipmentDetail(s *shipment.Shipment) *shipmentDetailResponse {
 	}
 }
 
-func (h *orderHandler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, error) {
+func (h *OrderHandler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, error) {
 	shopIDStr := httpx.Query(r, "shop_id")
 	shopSlug := httpx.Query(r, "shop_slug")
 	shopParam := httpx.Query(r, "shop")

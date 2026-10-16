@@ -8,37 +8,18 @@ import (
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
 	appmultipart "komecore/internal/httpx/multipart"
-	"komecore/internal/modules/product/productusecase"
+	"komecore/internal/modules/product"
 	"komecore/internal/pagination"
 
 	"github.com/google/uuid"
 )
 
 type ProductHandler struct {
-	findProducts    *productusecase.FindProductsUsecase
-	getProduct      *productusecase.GetProductUsecase
-	saveProduct     *productusecase.SaveProductUsecase
-	deleteProduct   *productusecase.DeleteProductUsecase
-	addProductImage *productusecase.AddProductImagesUsecase
-	getProductStats *productusecase.GetProductStatsUsecase
+	service *product.Service
 }
 
-func NewProductHandler(
-	findProducts *productusecase.FindProductsUsecase,
-	getProduct *productusecase.GetProductUsecase,
-	saveProduct *productusecase.SaveProductUsecase,
-	deleteProduct *productusecase.DeleteProductUsecase,
-	addProductImage *productusecase.AddProductImagesUsecase,
-	getProductStats *productusecase.GetProductStatsUsecase,
-) *ProductHandler {
-	return &ProductHandler{
-		findProducts:    findProducts,
-		getProduct:      getProduct,
-		saveProduct:     saveProduct,
-		deleteProduct:   deleteProduct,
-		addProductImage: addProductImage,
-		getProductStats: getProductStats,
-	}
+func NewProductHandler(service *product.Service) *ProductHandler {
+	return &ProductHandler{service: service}
 }
 
 func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) error {
@@ -63,7 +44,7 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 		shopID = r.Header.Get("X-Shop-ID")
 	}
 
-	input := productusecase.FindProductsInput{
+	input := product.FindProductsInput{
 		Page:  page,
 		Limit: limit,
 		Sort:  sort,
@@ -88,7 +69,7 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 	} else if !includeArchived && status != "all" && status != "any" {
 		input.ExcludeArchived = true
 	}
-	products, total, err := h.findProducts.Execute(r.Context(), input)
+	products, total, err := h.service.FindProducts(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -141,7 +122,7 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) error {
 	productSlug := httpx.Param(r, "slug")
 
-	productDetail, err := h.getProduct.Execute(r.Context(), productSlug)
+	productDetail, err := h.service.GetProduct(r.Context(), productSlug)
 	if err != nil {
 		return err
 	}
@@ -254,7 +235,7 @@ func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) err
 		productID = &parsed
 	}
 
-	input := productusecase.SaveProductInput{
+	input := product.SaveProductInput{
 		ID:                   productID,
 		SKU:                  req.SKU,
 		Name:                 req.Name,
@@ -265,7 +246,7 @@ func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) err
 		CostPrice:            req.CostPrice,
 		SupplierLeadTimeDays: req.SupplierLeadTimeDays,
 	}
-	err := h.saveProduct.Execute(r.Context(), input)
+	err := h.service.SaveProduct(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -283,7 +264,7 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 		return err
 	}
 
-	images := make([]productusecase.ProductImageInput, 0, len(files))
+	images := make([]product.ProductImageInput, 0, len(files))
 	for i, file := range files {
 		data, err := io.ReadAll(file.File)
 		if err != nil {
@@ -295,7 +276,7 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 			return apperror.NewInternal(errors.New("failed to close uploaded file"))
 		}
 
-		images = append(images, productusecase.ProductImageInput{
+		images = append(images, product.ProductImageInput{
 			Data:         data,
 			OriginalName: file.Filename,
 			MIMEType:     file.ContentType,
@@ -310,11 +291,11 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 		return apperror.NewBadRequest(err.Error())
 	}
 
-	input := productusecase.AddProductImageInput{
+	input := product.AddProductImageInput{
 		ProductID: productID,
 		Images:    images,
 	}
-	err = h.addProductImage.Execute(r.Context(), input)
+	err = h.service.AddProductImages(r.Context(), input)
 	if err != nil {
 		return err
 	}
@@ -332,7 +313,7 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) e
 		return apperror.NewBadRequest(err.Error())
 	}
 
-	err = h.deleteProduct.Execute(r.Context(), productID)
+	err = h.service.DeleteProduct(r.Context(), productID)
 	if err != nil {
 		return err
 	}
@@ -369,7 +350,7 @@ func (h *ProductHandler) GetProductStats(w http.ResponseWriter, r *http.Request)
 	id := httpx.Query(r, "id")
 	sort := httpx.Query(r, "sort")
 
-	input := productusecase.GetProductStatsInput{
+	input := product.GetProductStatsInput{
 		Page:  page,
 		Limit: limit,
 		Sort:  sort,
@@ -380,7 +361,7 @@ func (h *ProductHandler) GetProductStats(w http.ResponseWriter, r *http.Request)
 	if id != "" {
 		input.ID = &id
 	}
-	stats, total, err := h.getProductStats.Execute(r.Context(), input)
+	stats, total, err := h.service.GetProductStats(r.Context(), input)
 	if err != nil {
 		return err
 	}

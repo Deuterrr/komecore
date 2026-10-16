@@ -10,6 +10,7 @@ import (
 	"time"
 
 	applogger "komecore/pkg/logger"
+	appversion "komecore/pkg/version"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -63,6 +64,7 @@ func (a *App) Run() error {
 	fmt.Print(komecoreBanner)
 	firstWords := fmt.Sprintf("rise and shine, %s!", a.cfg.App.Name)
 	a.logger.Info(ctx, firstWords,
+		applogger.Field{Key: "version", Value: appversion.Version},
 		applogger.Field{Key: "host", Value: a.cfg.App.Host},
 		applogger.Field{Key: "port", Value: a.cfg.App.Port},
 		applogger.Field{Key: "server_timeout", Value: serverTimeout.String()},

@@ -8,7 +8,6 @@ import (
 	"komecore/internal/authctx"
 	"komecore/internal/httpx"
 	"komecore/internal/modules/shop"
-	"komecore/internal/modules/shop/shopusecase"
 	"komecore/internal/pagination"
 
 	"github.com/go-chi/chi/v5"
@@ -16,15 +15,11 @@ import (
 )
 
 type ShopHandler struct {
-	service *shopusecase.ShopService
+	service *shop.Service
 }
 
-func NewShopHandler(
-	service *shopusecase.ShopService,
-) *ShopHandler {
-	return &ShopHandler{
-		service: service,
-	}
+func NewShopHandler(service *shop.Service) *ShopHandler {
+	return &ShopHandler{service: service}
 }
 
 func (h *ShopHandler) resolveShopID(r *http.Request) (uuid.UUID, error) {
@@ -71,7 +66,7 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 	activeParam := httpx.Query(r, "active")
 	approvalParam := httpx.Query(r, "approval_status")
 
-	input := shopusecase.FindShopsInput{
+	input := shop.FindShopsInput{
 		Page:  page,
 		Limit: limit,
 		Sort:  sort,
@@ -211,7 +206,7 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 		isActivePtr = &parsedIsActive
 	}
 
-	input := shopusecase.SaveShopInput{
+	input := shop.SaveShopInput{
 		ID:             shopID,
 		Name:           req.Name,
 		Description:    req.Description,

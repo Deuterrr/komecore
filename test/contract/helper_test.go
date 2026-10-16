@@ -20,19 +20,13 @@ import (
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/auth"
 	"komecore/internal/modules/courier"
-	"komecore/internal/modules/courier/courierusecase"
 	"komecore/internal/modules/discount"
-	"komecore/internal/modules/discount/discountusecase"
 	"komecore/internal/modules/inventory"
 	"komecore/internal/modules/order"
-	"komecore/internal/modules/order/orderusecase"
 	"komecore/internal/modules/payment"
-	"komecore/internal/modules/payment/paymentusecase"
 	"komecore/internal/modules/product"
-	"komecore/internal/modules/product/productusecase"
 	"komecore/internal/modules/shop"
 	"komecore/internal/modules/staff"
-	"komecore/internal/modules/staff/staffusecase"
 	"komecore/internal/pagination"
 	"komecore/pkg/clock"
 	applogger "komecore/pkg/logger"
@@ -410,20 +404,26 @@ func newTestContractServer(t *testing.T) *httptest.Server {
 	discountRepo := &contractDiscountRepo{}
 	pricingSvc := &contractPricingService{}
 
-	findProductsUC := productusecase.NewFindProductsUsecase(
+	catalogSvc := product.NewService(
+		nil,
+		nil,
 		prodRepo,
 		invRepo,
 		prodImgRepo,
+		nil,
 		shopRepo,
+		nil,
 		nil,
 		nil,
 	)
 
-	courierSvc := courierusecase.NewCourierService(nil, courierRepo)
-	listPaymentMethodUC := paymentusecase.NewListPaymentMethodUsecase(paymentMethodRepo, nil)
-	staffSvc := staffusecase.NewStaffService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).WithAnalyticsRepository(analyticsRepo)
-	discountSvc := discountusecase.NewDiscountService(discountRepo, nil, mockClock)
-	checkoutUC := orderusecase.NewCheckoutUsecase(nil, pricingSvc)
+	courierSvc := courier.NewService(nil, courierRepo)
+	paymentSvc := payment.NewService(nil, paymentMethodRepo, nil, nil, nil, nil, nil, nil, nil, nil, nil, 0, 0, 0)
+	staffSvc := staff.NewService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).WithAnalyticsRepository(analyticsRepo)
+	discountSvc := discount.NewService(discountRepo, nil, mockClock)
+	createOrder := order.NewCreateOrderWorkflow(
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pricingSvc,
+	)
 
 	staffID := uuid.MustParse("a0000000-0000-0000-0000-000000000003")
 	custID := uuid.MustParse("a0000000-0000-0000-0000-000000000004")
@@ -449,12 +449,12 @@ func newTestContractServer(t *testing.T) *httptest.Server {
 		CORSAllowedOrigins: []string{"*"},
 		Authenticator:      authMock,
 		Authorizer:         authMock,
-		FindProducts:       *findProductsUC,
-		Courier:            *courierSvc,
-		ListPaymentMethod:  *listPaymentMethodUC,
-		Staff:              *staffSvc,
-		Discount:           *discountSvc,
-		Checkout:           *checkoutUC,
+		Catalog:            catalogSvc,
+		Courier:            courierSvc,
+		Payment:            paymentSvc,
+		Staff:              staffSvc,
+		Discount:           discountSvc,
+		CreateOrder:        createOrder,
 	}
 
 	router := bootstrap.NewRouter(container)

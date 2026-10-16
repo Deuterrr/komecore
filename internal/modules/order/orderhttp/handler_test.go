@@ -13,7 +13,6 @@ import (
 	"komecore/internal/authctx"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/order"
-	"komecore/internal/modules/order/orderusecase"
 	"komecore/internal/modules/payment"
 	"komecore/internal/modules/shipment"
 
@@ -144,7 +143,7 @@ func (m *hMockShipmentRepo) Update(_ context.Context, _ transaction.Executor, _ 
 // Tests
 
 func TestResolveShopFilter_NilGetShopDependency_ReturnsError(t *testing.T) {
-	handler := &orderHandler{
+	handler := &OrderHandler{
 		shopService: nil,
 	}
 
@@ -177,17 +176,26 @@ func TestGetOrderTrackingForStaff_CustomerActor_ReturnsForbidden(t *testing.T) {
 	orderRepoMock := &hMockOrderRepo{order: ord}
 	orderItemRepoMock := &hMockOrderItemRepo{items: items}
 
-	getOrderUC := orderusecase.NewGetOrderUsecase(
+	orderSvc := order.NewService(
 		&hMockExecutor{},
+		nil,
 		orderRepoMock,
 		orderItemRepoMock,
+		nil,
 		&hMockPaymentRepo{},
 		&hMockPaymentChannelDataRepo{},
+		nil,
 		&hMockShipmentRepo{},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
 	)
 
-	handler := &orderHandler{
-		getOrder: getOrderUC,
+	handler := &OrderHandler{
+		service: orderSvc,
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/orders/"+orderID.String()+"/tracking", nil)
@@ -218,7 +226,7 @@ func TestUpdateOrderStatus_CustomerActor_ReturnsForbidden(t *testing.T) {
 	customerID := uuid.New()
 	orderID := uuid.New()
 
-	handler := &orderHandler{}
+	handler := &OrderHandler{}
 
 	actor := &authctx.Actor{
 		Type:       authctx.AccountTypeCustomer,

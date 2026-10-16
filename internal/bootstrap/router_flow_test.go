@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"komecore/internal/modules/auth/authsvc"
+	"komecore/internal/modules/auth/authhttp"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -136,8 +136,8 @@ func (m *mockRouterAuthorizer) OptionalLoadActor(_ transaction.Executor) appmidd
 	}
 }
 
-var _ authsvc.Authenticator = (*mockRouterAuthenticator)(nil)
-var _ authsvc.Authorizer = (*mockRouterAuthorizer)(nil)
+var _ authhttp.Authenticator = (*mockRouterAuthenticator)(nil)
+var _ authhttp.Authorizer = (*mockRouterAuthorizer)(nil)
 
 func createTestContainer(authenticated bool, authCtx *authctx.AuthContext) *Container {
 	log := applogger.NewSlogLogger("test")

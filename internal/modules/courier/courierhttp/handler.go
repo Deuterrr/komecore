@@ -4,19 +4,15 @@ import (
 	"net/http"
 
 	"komecore/internal/httpx"
-	"komecore/internal/modules/courier/courierusecase"
+	"komecore/internal/modules/courier"
 )
 
 type CourierHandler struct {
-	service *courierusecase.CourierService
+	service *courier.Service
 }
 
-func NewCourierHandler(
-	service *courierusecase.CourierService,
-) *CourierHandler {
-	return &CourierHandler{
-		service: service,
-	}
+func NewCourierHandler(service *courier.Service) *CourierHandler {
+	return &CourierHandler{service: service}
 }
 
 func (h *CourierHandler) ListAllCouriers(w http.ResponseWriter, r *http.Request) error {

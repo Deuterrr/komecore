@@ -13,7 +13,6 @@ import (
 	"komecore/internal/modules/product/productpersistence"
 	"komecore/internal/modules/review"
 	"komecore/internal/modules/review/reviewpersistence"
-	"komecore/internal/modules/review/reviewusecase"
 	"komecore/test/testutil/testdb"
 
 	"github.com/google/uuid"
@@ -68,7 +67,7 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	orderItemRepo := orderpersistence.NewOrderItemRepository()
 	memCache := cache.NewMemoryCache()
 
-	reviewSvc := reviewusecase.NewReviewService(
+	reviewSvc := review.NewService(
 		reviewRepo,
 		productRatingUpdater,
 		orderRepo,
@@ -82,7 +81,7 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	comment := "The roses arrived fresh and beautifully wrapped!"
 
 	// 4. Invariant Check: Review on unfulfilled (pending) order must be rejected
-	_, err = reviewSvc.CreateReview(ctx, reviewusecase.CreateReviewInput{
+	_, err = reviewSvc.CreateReview(ctx, review.CreateReviewInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		OrderID:    &orderID,
@@ -100,7 +99,7 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	require.NoError(t, err)
 
 	// 6. Review submission on delivered order must succeed
-	rev, err := reviewSvc.CreateReview(ctx, reviewusecase.CreateReviewInput{
+	rev, err := reviewSvc.CreateReview(ctx, review.CreateReviewInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		OrderID:    &orderID,
@@ -129,7 +128,7 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	assert.Equal(t, 1, totalReviews)
 
 	// 7. Duplicate review on the same order must be rejected
-	_, err = reviewSvc.CreateReview(ctx, reviewusecase.CreateReviewInput{
+	_, err = reviewSvc.CreateReview(ctx, review.CreateReviewInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		OrderID:    &orderID,

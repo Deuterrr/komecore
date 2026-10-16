@@ -6,19 +6,15 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/user/userusecase"
+	"komecore/internal/modules/user"
 )
 
 type UserHandler struct {
-	service *userusecase.UserService
+	service *user.Service
 }
 
-func NewUserHandler(
-	service *userusecase.UserService,
-) *UserHandler {
-	return &UserHandler{
-		service: service,
-	}
+func NewUserHandler(service *user.Service) *UserHandler {
+	return &UserHandler{service: service}
 }
 
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error {
@@ -141,7 +137,7 @@ func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Reques
 	result, err := h.service.UpdateCurrentProfile(
 		r.Context(),
 		*authCtx,
-		userusecase.UpdateProfileInput{
+		user.UpdateProfileInput{
 			Name:      req.Name,
 			Phone:     req.Phone,
 			AvatarURL: req.AvatarURL,

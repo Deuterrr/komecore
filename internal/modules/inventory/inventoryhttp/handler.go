@@ -5,25 +5,24 @@ import (
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
-	"komecore/internal/modules/inventory/inventoryusecase"
+	"komecore/internal/modules/inventory"
 )
 
 type InventoryHandler struct {
-	service *inventoryusecase.InventoryService
+	service *inventory.Service
 }
 
-func NewInventoryHandler(
-	service *inventoryusecase.InventoryService,
-) *InventoryHandler {
-	return &InventoryHandler{
-		service: service,
-	}
+func NewInventoryHandler(service *inventory.Service) *InventoryHandler {
+	return &InventoryHandler{service: service}
 }
 
 func (h *InventoryHandler) AddInventory(w http.ResponseWriter, r *http.Request) error {
 	var req createInventoryRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
+	}
+	if req.Stock < 0 {
+		return apperror.NewBadRequest("invalid stock")
 	}
 
 	shopID, err := httpx.ParamUUID(r, "shopID")
@@ -36,11 +35,7 @@ func (h *InventoryHandler) AddInventory(w http.ResponseWriter, r *http.Request) 
 		return apperror.NewBadRequest("invalid product id")
 	}
 
-	if req.Stock < 0 {
-		return apperror.NewBadRequest("invalid stock")
-	}
-
-	input := inventoryusecase.CreateInventoryInput{
+	input := inventory.CreateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     req.Stock,
@@ -60,6 +55,9 @@ func (h *InventoryHandler) UpdateInventory(w http.ResponseWriter, r *http.Reques
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
 	}
+	if req.Stock < 0 {
+		return apperror.NewBadRequest("invalid stock")
+	}
 
 	shopID, err := httpx.ParamUUID(r, "shopID")
 	if err != nil {
@@ -71,11 +69,7 @@ func (h *InventoryHandler) UpdateInventory(w http.ResponseWriter, r *http.Reques
 		return apperror.NewBadRequest("invalid product id")
 	}
 
-	if req.Stock < 0 {
-		return apperror.NewBadRequest("invalid stock")
-	}
-
-	input := inventoryusecase.UpdateInventoryInput{
+	input := inventory.UpdateInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 		Stock:     req.Stock,
@@ -101,7 +95,7 @@ func (h *InventoryHandler) RemoveInventory(w http.ResponseWriter, r *http.Reques
 		return apperror.NewBadRequest("invalid product id")
 	}
 
-	input := inventoryusecase.DeleteInventoryInput{
+	input := inventory.DeleteInventoryInput{
 		ProductID: productID,
 		ShopID:    shopID,
 	}

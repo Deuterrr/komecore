@@ -8,7 +8,7 @@ import (
 	"komecore/internal/httpx"
 )
 
-func (h *staffHandler) GetRevenueAnalytics(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) GetRevenueAnalytics(w http.ResponseWriter, r *http.Request) error {
 	rangeParam := r.URL.Query().Get("range")
 	if rangeParam == "" {
 		rangeParam = "30d"
@@ -44,7 +44,7 @@ func (h *staffHandler) GetRevenueAnalytics(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *staffHandler) GetOrderPipelineAnalytics(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) GetOrderPipelineAnalytics(w http.ResponseWriter, r *http.Request) error {
 	result, err := h.service.GetOrderPipelineAnalytics(r.Context())
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (h *staffHandler) GetOrderPipelineAnalytics(w http.ResponseWriter, r *http.
 	return nil
 }
 
-func (h *staffHandler) GetTopProductsAnalytics(w http.ResponseWriter, r *http.Request) error {
+func (h *StaffHandler) GetTopProductsAnalytics(w http.ResponseWriter, r *http.Request) error {
 	limitStr := r.URL.Query().Get("limit")
 	limit := 10
 	if limitStr != "" {
