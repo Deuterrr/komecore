@@ -1,16 +1,21 @@
-# komecore
+# 🌾KomeCore
 
-**A high-performance, modular general e-commerce engine written in Go.**
+Clean, scalable backend service engineered for modern e-commerce platforms in Go.
 
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://go.dev)
 [![Router](https://img.shields.io/badge/Router-Chi%20v5-blue)](https://github.com/go-chi/chi)
-[![Database](https://img.shields.io/badge/Database-PostgreSQL%2016+-4169E1?logo=postgresql)](https://www.postgresql.org)
+[![Database](https://img.shields.io/badge/Databases-PostgreSQL%20|%20SQL%20Server-4169E1?logo=postgresql)](https://www.postgresql.org)
 [![Payments](https://img.shields.io/badge/Payments-Midtrans%20Core%20API-002f6c)](https://midtrans.com)
+[![Version](https://img.shields.io/badge/Release-v1.0.0-emerald.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-### Overview
+#### Developer Preface
 
-**komecore** is a clean, scalable backend service engineered for modern e-commerce platforms. Built with **Clean Architecture** and **Domain-Driven Design (DDD)** principles, it provides a lean, framework-agnostic core capable of managing complete commerce lifecycles—from authentication and multi-shop catalog management to checkout, dynamic pricing, automated payment reconciliation, and fulfillment.
+Learning Go has been a journey of exploring not only a new language, but also the community and philosophies that shape it. KomeCore began as a personal project to understand idiomatic Go, question architectural conventions, and discover where principles like Clean Architecture truly fit.
+
+Open-sourced as a practical foundation for Go e-commerce backends, it reflects my ongoing exploration of building software that is not just well-structured, but ✨ purposeful.
+
+> Discover the engineering behind KomeCore in the **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)**
 
 ### License
 
@@ -18,31 +23,65 @@ This project is open-source software licensed under the [MIT License](LICENSE).
 
 ---
 
+### Features & System Capabilities
+
+#### E-Commerce Domain Features
+* **Multi-Shop Catalog & Variants**: Manage multiple independent shops, rich product options and variants, media image galleries, and search-friendly URLs.
+* **Cart & Multi-Shop Checkout**: Customers can buy items from multiple shops in a single cart, with real-time calculations for shipping fees, discounts, and taxes.
+* **Discounts & Promotions Engine**: Create promotional vouchers and coupons with rules like minimum spend requirements, discount limits, and customer usage quotas.
+* **Payments & Automated Reconciliation**: Supports popular payment methods (bank transfers, QRIS, e-wallets) with automatic verification and instant order status updates.
+* **Fulfillment & Logistics**: Accurate courier rate calculations, waybill generation, and complete parcel tracking from packing to final delivery.
+* **Product Reviews & Customer Wishlists**: Verified buyer reviews and star ratings to build shopper trust, plus saved favorites and wishlist collections.
+* **Staff Administration & Analytics**: Management portal for merchant staff with role permissions, sales reports, and insights into top-performing products.
+
+#### System & Architectural Features
+* **Dual-Dialect Database Support**: Works seamlessly on both PostgreSQL and Microsoft SQL Server without changing any business logic.
+* **Flash-Sale Inventory Protection**: Prevents overselling during high-traffic sales by holding stock during checkout and automatically restoring it if payment fails.
+* **Double-Charge Protection (Idempotency)**: Shields customers from duplicate orders and accidental double-charges caused by double-clicks or dropped internet connections.
+* **Guaranteed Event Delivery (Outbox)**: Ensures background tasks (like order confirmation emails and notifications) are never lost, even if a service temporarily restarts.
+* **Smart Catalog Search**: Fast product discovery that understands word variations and ranks the most relevant products first.
+* **Customer & Staff Security**: Safe authentication for shoppers and store admins, featuring Google one-click login, email verification codes, and secure sessions.
+* **Built-In Reliability & Safety**: Protects the API from traffic abuse, hides sensitive internal errors from clients, and includes automated contract testing.
+
+### Dependencies & Tech Stack
+
+| Category | Technology | Tool / Library |
+| :--- | :--- | :--- |
+| **Language & Runtime** | Go | Go 1.25+ |
+| **HTTP Routing** | Chi | `github.com/go-chi/chi/v5` |
+| **Relational Database** | PostgreSQL & SQL Server | `pgx/v5`, `go-mssqldb` |
+| **Distributed Caching** | Redis | Redis 7+ (`go-redis/v9`) |
+| **Payment Processing** | Midtrans | Core API |
+| **Object Storage** | Cloud Storage | Supabase, GCS, S3 |
+| **Auth & Security** | JWT & Cookies | `golang-jwt/v5`, `bcrypt` |
+| **Observability** | Structured Logging | `uber-go/zap` |
+
+---
+
 ### Quick Start
 
-> Configure `DB_TARGET` (`postgres` · `supabase` · `sqlserver`) and `STORAGE_PROVIDER` (`supabase` · `gcs` · `noop`) in `.env`. Migration SQL lives in `migrations/<dialect>/`.
+> **Environment Setup**: Configure `DB_TARGET` (`postgres` · `supabase` · `sqlserver`), `STORAGE_PROVIDER` (`supabase` · `gcs` · `noop`), and `REDIS_ENABLED` (`true` · `false`) directly in `.env`. Database migrations live in `migrations/<dialect>/`.
 
-#### 1. Docker Compose (Fastest Stack)
+#### 1. Docker Compose
+*Spins up the application server, PostgreSQL 16 database container, and isolated network in one command.*
 
 ```bash
 docker compose up --build -d
 curl http://localhost:7129/health
+# {"status":"healthy"}
 ```
 
-* **Tools & Environment Provided**: PostgreSQL 16 database container, isolated app server container, Docker network.
-
 #### 2. Live Reload / Hot Reload (`air`)
+*Uses the Air daemon (`.air.toml`) for instant automatic recompilation whenever `.go` files are saved.*
 
 ```bash
 cp .env.example .env
-# set DB_TARGET=postgres | supabase | sqlserver in .env
 make migrate && make seed
 make dev   # or run `air`
 ```
 
-* **Tools & Environment Provided**: Air live-reload daemon (`.air.toml`), automated instant rebuilds on `.go` file save *(compatible with alternative watchers like `CompileDaemon` or `modd`)*.
-
 #### 3. Makefile Automation
+*Task runner shortcuts for database migrations, seeds, test execution, and server startup.*
 
 ```bash
 cp .env.example .env
@@ -52,55 +91,61 @@ make run
 make test
 ```
 
-* **Tools & Environment Provided**: Task runner CLI (`Makefile`), database migration tooling (`make migrate`).
-
-#### 4. Traditional Go Toolchain
+#### 4. Standard Go Toolchain
+*Runs and tests the clean single-binary application daemon directly via the `go` CLI.*
 
 ```bash
 cp .env.example .env
 go mod download
 make migrate
 go run ./cmd/komecore
+go run ./cmd/komecore --version   # outputs: komecore v1.0.0
 go test -v -count=1 ./...
 ```
 
-* **Tools & Environment Provided**: Direct Go toolchain (`go` CLI), clean single-binary application daemon (`cmd/komecore`).
+---
 
-#### Compatible Development Tools
+### API Documentation & Ready-to-Test Collections
 
-This repository is pre-configured and compatible with standard developer tooling:
-* **Live Reloading**: Pre-configured for [Air](https://github.com/air-verse/air) (`.air.toml` / `make dev`), and compatible with any file watcher (**CompileDaemon**, **Modd**, or **watchexec**).
-* **Containers & Runtimes**: Docker Desktop, Docker Compose, or Podman for service isolation.
-* **IDEs & Code Editors**: VS Code (with Go extension), GoLand, or Neovim / LSP.
-* **Database Management**: `psql` CLI, DBeaver, TablePlus, or pgAdmin for PostgreSQL 16.
-* **API Testing & Client**: Postman, Bruno, Insomnia, or `curl` for testing API endpoints.
-* **Linters & Formatters**: `golangci-lint`, `go vet`, `gofmt`, and internal repository scripts (`tools/utf8_bom_cleaner.go`).
+KomeCore provides 100% verified testing collections covering all **95 API endpoints** across 14 business domains:
 
-### API Documentation & Testing Collections
+| Client / Format | Source File / Directory | Description & Instructions |
+| :--- | :--- | :--- |
+| **Postman** | [`api/postman_collection.json`](api/postman_collection.json) | Import directly into Postman Desktop or Web. Complete with collection variables and pre-configured request payloads. |
+| **VS Code REST Client** | [`api/komecore.http`](api/komecore.http) | Open in VS Code and click **Send Request** directly in your editor. Zero external desktop client required. |
+| **Bruno** | [`api/bruno/`](api/bruno) | Open the folder in the [Bruno API Client](https://www.usebruno.com/). Fully offline, Git-friendly `.bru` request files. |
+| **OpenAPI / Swagger** | [`api/openapi.yaml`](api/openapi.yaml) & [`api/openapi-v1.0.0.yaml`](api/openapi-v1.0.0.yaml) | Import into Swagger UI, Redoc, or Insomnia. Full JSON schemas for all request/response DTOs and envelopes. |
 
-Complete, pre-configured API collections, specs, and environment files are located in the [`api/`](api/) directory:
-
-* **Postman**: Import [`api/postman_collection.json`](api/postman_collection.json) directly into Postman Desktop/Web.
-* **VS Code REST Client**: Open [`api/komecore.http`](api/komecore.http) and click **Send Request** directly inside your editor.
-* **Bruno**: Open the [`api/bruno`](api/bruno) folder in the [Bruno API Client](https://www.usebruno.com/).
-* **OpenAPI / Swagger**: View or import [`api/openapi.yaml`](api/openapi.yaml) into Swagger UI, Redoc, or Insomnia.
-
-For step-by-step instructions on setting up environment variables and testing auth flows, see the [API README](api/README.md).
+For detailed steps on setting up environment variables, auth tokens, and testing order flows, see the [API README](api/README.md).
 
 ---
 
-### Dependencies & Tech Stack
+### Repository Architecture Layout
 
-* **Runtime & Routing**: [Go 1.25+](https://golang.org) with [Chi v5](https://github.com/go-chi/chi) for fast, zero-allocation composable routing.
-* **Database & Storage**: [PostgreSQL 16+](https://www.postgresql.org) via [pgx v5](https://github.com/jackc/pgx) with `TIMESTAMPTZ` timezone consistency; [Supabase / S3](https://supabase.com) for media assets.
-* **External Integrations**: [Midtrans Core API](https://midtrans.com) (VA, QRIS, e-Wallets), [Google OAuth2](https://developers.google.com/identity), and SMTP for OTP email challenges.
-* **Security & Observability**: [golang-jwt/jwt/v5](https://github.com/golang-jwt/jwt), [crypto/bcrypt](https://pkg.go.dev/golang.org/x/crypto), and [uber-go/zap](https://github.com/uber-go/zap) structured audit logging.
+```text
+komecore/
+├── cmd/komecore/         # App entry point
+├── internal/
+│   ├── apperror/         # Error types and codes
+│   ├── authctx/          # Authenticated actor context
+│   ├── bootstrap/        # Dependency wiring and lifecycle
+│   ├── config/           # Environment configuration
+│   ├── httpx/            # HTTP utilities and middleware
+│   ├── infra/            # External infrastructure adapters
+│   └── modules/          # Business domains
+│       └── <module>/                       # Domain logic
+│              ├── <module>http/            # HTTP handlers and DTOs
+│              └── <module>persistence/     # Database operations
+├── api/                  # API specs and collections
+├── docs/                 # Architecture and guides
+├── migrations/           # Database migrations
+├── pkg/                  # Reusable utilities
+└── test/                 # Architecture and integration tests
+```
 
-### Features
+### Architecture & Documentation
 
-* **Identity & Access**: Dual-actor auth (Customer and Staff) using JWT & secure HTTP-only cookies, Google OAuth2 social login, role/permission guards, and SMTP-driven OTP verification & password resets.
-* **Catalog & Multi-Shop**: Merchant shop isolation, real-time stock reservations and rollbacks, automated multi-resolution image transformation to Supabase/S3, and SEO slug generation.
-* **Cart & Checkout Engine**: Flexible product variants stored via PostgreSQL `JSONB`, dynamic real-time price aggregation (subtotals, shipping, gateway fees), and atomic stock validation.
-* **Payments & Background Workers**: Midtrans Core API (Virtual Accounts, QRIS, e-Wallets), signature-verified idempotent webhooks, plus autonomous cron jobs for payment reconciliation, past-due expiry, and order SLA refund processing.
-* **Fulfillment & Logistics**: Multi-tier courier rate estimation, manual/integrated waybill dispatch, and lifecycle shipment tracking (`pending` → `shipped` → `delivered`).
-* **Reliability & Observability**: Sliding-window rate limiting, structured Zap audit logging, and graceful termination that drains active workers before closing database pools.
+Explore the technical guides to understand the internal mechanics:
+
+* **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)**: Deep walkthrough explaining module architecture, the full request journey, and five complex distributed lifecycles (multi-shop checkout, atomic stock reservation, webhook settlement, transactional outbox, and 24h Redis idempotency).
+* **[API Documentation & Collections](api/README.md)**: Complete guide to all 95 endpoints with ready-to-use Postman collections, Bruno workspace, VS Code REST Client files, and frozen OpenAPI 3.0 specifications.
