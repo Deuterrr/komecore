@@ -106,7 +106,16 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 			return errors.New("coupon quota exhausted")
 		}
 
-		// c. Persist coupon redemption
+		// c. Persist order
+		_, err = exec.Exec(ctx, `
+			INSERT INTO orders (id, customer_id, address_id, number, status, subtotal, shipping_fee, total, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, 'pending', $5, 0, $6, $7, $7);
+		`, orderID, customerID, addressID, orderNumber, subtotal, totalAmount, now)
+		if err != nil {
+			return err
+		}
+
+		// d. Persist coupon redemption
 		redemptionID := uuid.New()
 		_, err = exec.Exec(ctx, `
 			INSERT INTO coupon_redemptions (id, coupon_id, customer_id, order_id, discount_amount, redeemed_at)
@@ -116,21 +125,12 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 			return err
 		}
 
-		// d. Persist order
-		_, err = exec.Exec(ctx, `
-			INSERT INTO orders (id, customer_id, address_id, number, status, subtotal, shipping_fee, total, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, 'pending', $5, 0, $6, $7, $7);
-		`, orderID, customerID, addressID, orderNumber, subtotal, totalAmount, now)
-		if err != nil {
-			return err
-		}
-
 		// e. Persist order items
 		orderItemID := uuid.New()
 		_, err = exec.Exec(ctx, `
-			INSERT INTO order_items (id, order_id, shop_id, shop_name, product_id, product_name, quantity, unit_price, subtotal, shipping_fee_total, created_at)
-			VALUES ($1, $2, $3, 'Florist Boutique', $4, 'Red Rose Bouquet', $5, $6, $7, 0, $8);
-		`, orderItemID, orderID, shopID, productID, qtyToBuy, itemPrice, subtotal, now)
+			INSERT INTO order_items (id, order_id, shop_id, shop_name, product_id, product_name, quantity, unit_price, subtotal, shipping_fee_total)
+			VALUES ($1, $2, $3, 'Florist Boutique', $4, 'Red Rose Bouquet', $5, $6, $7, 0);
+		`, orderItemID, orderID, shopID, productID, qtyToBuy, itemPrice, subtotal)
 		if err != nil {
 			return err
 		}

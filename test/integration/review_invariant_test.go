@@ -58,9 +58,9 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 
 	orderItemID := uuid.New()
 	_, err = tdb.Pool.Exec(ctx, `
-		INSERT INTO order_items (id, order_id, shop_id, shop_name, product_id, product_name, quantity, unit_price, subtotal, shipping_fee_total, created_at)
-		VALUES ($1, $2, $3, 'Florist Boutique', $4, 'Red Rose Bouquet', 1, 150000, 150000, 0, $5);
-	`, orderItemID, orderID, shopID, productID, now)
+		INSERT INTO order_items (id, order_id, shop_id, shop_name, product_id, product_name, quantity, unit_price, subtotal, shipping_fee_total)
+		VALUES ($1, $2, $3, 'Florist Boutique', $4, 'Red Rose Bouquet', 1, 150000, 150000, 0);
+	`, orderItemID, orderID, shopID, productID)
 	require.NoError(t, err)
 
 	// 3. Instantiate ReviewService with real repositories
