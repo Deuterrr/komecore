@@ -39,6 +39,9 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 	_, _, customerID, err := seedUserAndCustomer(ctx, tdb.Pool)
 	require.NoError(t, err)
 
+	addressID, err := seedCustomerAddress(ctx, tdb.Pool, customerID)
+	require.NoError(t, err)
+
 	shopID, productID, err := seedShopAndProduct(ctx, tdb.Pool, 10)
 	require.NoError(t, err)
 
@@ -46,8 +49,8 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 	courierID := uuid.New()
 	now := time.Now().UTC()
 	_, err = tdb.Pool.Exec(ctx, `
-		INSERT INTO couriers (id, code, name, service, is_active, created_at, updated_at)
-		VALUES ($1, 'JNE', 'JNE Express', 'REG', true, $2, $2);
+		INSERT INTO couriers (id, code, name, is_active, created_at, updated_at)
+		VALUES ($1, 'JNE', 'JNE Express', true, $2, $2);
 	`, courierID, now)
 	require.NoError(t, err)
 
@@ -106,7 +109,7 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 		// c. Persist coupon redemption
 		redemptionID := uuid.New()
 		_, err = exec.Exec(ctx, `
-			INSERT INTO coupon_redemptions (id, coupon_id, customer_id, order_id, discount_applied, redeemed_at)
+			INSERT INTO coupon_redemptions (id, coupon_id, customer_id, order_id, discount_amount, redeemed_at)
 			VALUES ($1, $2, $3, $4, $5, $6);
 		`, redemptionID, couponID, customerID, orderID, discountAmount, now)
 		if err != nil {
@@ -115,9 +118,9 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 
 		// d. Persist order
 		_, err = exec.Exec(ctx, `
-			INSERT INTO orders (id, customer_id, number, total, status, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, 'pending', $5, $5);
-		`, orderID, customerID, orderNumber, totalAmount, now)
+			INSERT INTO orders (id, customer_id, address_id, number, status, subtotal, shipping_fee, total, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, 'pending', $5, 0, $6, $7, $7);
+		`, orderID, customerID, addressID, orderNumber, subtotal, totalAmount, now)
 		if err != nil {
 			return err
 		}
@@ -125,9 +128,9 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 		// e. Persist order items
 		orderItemID := uuid.New()
 		_, err = exec.Exec(ctx, `
-			INSERT INTO order_items (id, order_id, product_id, shop_id, quantity, price, created_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7);
-		`, orderItemID, orderID, productID, shopID, qtyToBuy, itemPrice, now)
+			INSERT INTO order_items (id, order_id, shop_id, shop_name, product_id, product_name, quantity, unit_price, subtotal, shipping_fee_total, created_at)
+			VALUES ($1, $2, $3, 'Florist Boutique', $4, 'Red Rose Bouquet', $5, $6, $7, 0, $8);
+		`, orderItemID, orderID, shopID, productID, qtyToBuy, itemPrice, subtotal, now)
 		if err != nil {
 			return err
 		}

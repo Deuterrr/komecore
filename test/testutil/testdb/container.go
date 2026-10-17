@@ -4,11 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -30,11 +27,7 @@ func StartPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 		postgres.WithDatabase(testDBName),
 		postgres.WithUsername(testDBUser),
 		postgres.WithPassword(testDBPassword),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second),
-		),
+		postgres.BasicWaitStrategies(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start postgres container: %w", err)

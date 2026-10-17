@@ -41,6 +41,9 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	_, _, customerID, err := seedUserAndCustomer(ctx, tdb.Pool)
 	require.NoError(t, err)
 
+	addressID, err := seedCustomerAddress(ctx, tdb.Pool, customerID)
+	require.NoError(t, err)
+
 	shopID, productID, err := seedShopAndProduct(ctx, tdb.Pool, 50)
 	require.NoError(t, err)
 
@@ -48,16 +51,16 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	orderID := uuid.New()
 	now := time.Now().UTC()
 	_, err = tdb.Pool.Exec(ctx, `
-		INSERT INTO orders (id, customer_id, number, total, status, created_at, updated_at)
-		VALUES ($1, $2, 'ORD-REV-001', 150000, 'pending', $3, $3);
-	`, orderID, customerID, now)
+		INSERT INTO orders (id, customer_id, address_id, number, status, subtotal, shipping_fee, total, created_at, updated_at)
+		VALUES ($1, $2, $3, 'ORD-REV-001', 'pending', 150000, 0, 150000, $4, $4);
+	`, orderID, customerID, addressID, now)
 	require.NoError(t, err)
 
 	orderItemID := uuid.New()
 	_, err = tdb.Pool.Exec(ctx, `
-		INSERT INTO order_items (id, order_id, product_id, shop_id, quantity, price, created_at)
-		VALUES ($1, $2, $3, $4, 1, 150000, $5);
-	`, orderItemID, orderID, productID, shopID, now)
+		INSERT INTO order_items (id, order_id, shop_id, shop_name, product_id, product_name, quantity, unit_price, subtotal, shipping_fee_total, created_at)
+		VALUES ($1, $2, $3, 'Florist Boutique', $4, 'Red Rose Bouquet', 1, 150000, 150000, 0, $5);
+	`, orderItemID, orderID, shopID, productID, now)
 	require.NoError(t, err)
 
 	// 3. Instantiate ReviewService with real repositories
@@ -119,10 +122,10 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, reviewCount)
 
-	// Verify product performance rating is updated
+	// Verify product rating is updated
 	var avgRating float64
 	var totalReviews int
-	err = tdb.Pool.QueryRow(ctx, "SELECT average_rating, reviews_count FROM product_performance WHERE product_id = $1;", productID).Scan(&avgRating, &totalReviews)
+	err = tdb.Pool.QueryRow(ctx, "SELECT average_rating, review_count FROM products WHERE id = $1;", productID).Scan(&avgRating, &totalReviews)
 	require.NoError(t, err)
 	assert.Equal(t, 5.0, avgRating)
 	assert.Equal(t, 1, totalReviews)

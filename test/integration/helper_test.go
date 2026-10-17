@@ -35,17 +35,18 @@ func seedUserAndCustomer(ctx context.Context, pool *pgxpool.Pool) (uuid.UUID, uu
 	customerID := uuid.New()
 	now := time.Now().UTC()
 
+	username := fmt.Sprintf("buyer_%s", customerID.String()[:8])
 	_, err := pool.Exec(ctx, `
-		INSERT INTO users (id, name, phone, created_at, updated_at)
-		VALUES ($1, 'Test Buyer', '+628123456789', $2, $2);
-	`, userID, now)
+		INSERT INTO users (id, name, username, phone, created_at, updated_at)
+		VALUES ($1, 'Test Buyer', $2, '+628123456789', $3, $3);
+	`, userID, username, now)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, uuid.Nil, fmt.Errorf("insert user: %w", err)
 	}
 
 	_, err = pool.Exec(ctx, `
-		INSERT INTO accounts (id, user_id, email, password_hash, role, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, '$2a$10$abcdefghijklmnopqrstuvwxyz123456', 'customer', true, $4, $4);
+		INSERT INTO accounts (id, user_id, email, password, type, status, created_at, updated_at)
+		VALUES ($1, $2, $3, '$2a$10$abcdefghijklmnopqrstuvwxyz123456', 'customer', 'active', $4, $4);
 	`, accountID, userID, fmt.Sprintf("buyer-%s@example.com", customerID.String()[:8]), now)
 	if err != nil {
 		return uuid.Nil, uuid.Nil, uuid.Nil, fmt.Errorf("insert account: %w", err)
@@ -60,6 +61,26 @@ func seedUserAndCustomer(ctx context.Context, pool *pgxpool.Pool) (uuid.UUID, uu
 	}
 
 	return userID, accountID, customerID, nil
+}
+
+func seedCustomerAddress(ctx context.Context, pool *pgxpool.Pool, customerID uuid.UUID) (uuid.UUID, error) {
+	addressID := uuid.New()
+	now := time.Now().UTC()
+	_, err := pool.Exec(ctx, `
+		INSERT INTO customer_addresses (
+			id, customer_id, recipient_name, phone, is_default,
+			province, city, district, village, full_address, postal_code,
+			created_at, updated_at
+		) VALUES (
+			$1, $2, 'Test Buyer', '+628123456789', true,
+			'DKI Jakarta', 'Jakarta Selatan', 'Kebayoran Baru', 'Senayan', 'Jl. Jend. Sudirman No. 1', '12190',
+			$3, $3
+		);
+	`, addressID, customerID, now)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("insert customer address: %w", err)
+	}
+	return addressID, nil
 }
 
 func seedShopAndProduct(ctx context.Context, pool *pgxpool.Pool, initialStock int) (uuid.UUID, uuid.UUID, error) {
@@ -95,8 +116,8 @@ func seedShopAndProduct(ctx context.Context, pool *pgxpool.Pool, initialStock in
 	}
 
 	_, err = pool.Exec(ctx, `
-		INSERT INTO product_performance (product_id, sales_count, views_count, average_rating, reviews_count, updated_at)
-		VALUES ($1, 0, 0, 0.0, 0, $2)
+		INSERT INTO product_performance (product_id, cost_price, view_count, created_at, updated_at)
+		VALUES ($1, 100000, 0, $2, $2)
 		ON CONFLICT (product_id) DO NOTHING;
 	`, productID, now)
 	if err != nil {
