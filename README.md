@@ -137,6 +137,14 @@ go test -v -count=1 ./...
 
 For detailed steps on setting up environment variables, auth tokens, and testing order flows, see the [API README](api/README.md).
 
+### Community & Contributing
+
+We warmly welcome contributions from the community! Whether you are fixing a bug, writing documentation, or building new features, please review our contribution and behavioral standards:
+
+* **[Contributing Guidelines](CONTRIBUTING.md)**: Complete local setup instructions, Docker workflows, testing conventions, and pull request requirements.
+* **[Code of Conduct](CODE_OF_CONDUCT.md)**: Community standards, behavioral pledges, and reporting channels to ensure a welcoming and inclusive environment.
+* **Good First Issues**: Looking for an easy task to get started? Explore issues tagged with [`good first issue`](https://github.com/deuterrr/komecore/issues?q=is%3Aissue+is%3Aopen+label%3A%22.contrib%3Agood+first+issue%22).
+
 ### More Documentation
 
 * **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)**: Deep walkthrough explaining module architecture, the full request journey, and five complex distributed lifecycles (multi-shop checkout, atomic stock reservation, webhook settlement, transactional outbox, and 24h Redis idempotency).
