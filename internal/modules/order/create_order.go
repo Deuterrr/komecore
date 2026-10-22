@@ -1,9 +1,11 @@
 package order
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -544,12 +546,21 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 				ExpiresAt:     pmt.ExpiresAt,
 				CreatedAt:     now,
 			}
-
 			if err := u.paymentChannelDataRepo.Save(ctx, exec, cd); err != nil {
 				return fmt.Errorf("failed to save payment channel data: %w", err)
 			}
 			channelData = &cd
 		}
+
+		// Deterministically sort order items by (ShopID, ProductID) prior to inventory reservation
+		// to guarantee monotonic lock acquisition order across concurrent transactions and prevent
+		// relational database deadlocks (SQLSTATE 40P01).
+		slices.SortStableFunc(orderItems, func(a, b OrderItem) int {
+			if c := cmp.Compare(a.ShopID.String(), b.ShopID.String()); c != 0 {
+				return c
+			}
+			return cmp.Compare(a.ProductID.String(), b.ProductID.String())
+		})
 
 		for _, item := range orderItems {
 			if err := u.inventoryRepo.Reserve(ctx, exec,

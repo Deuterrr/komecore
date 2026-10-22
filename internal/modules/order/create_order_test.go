@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -315,9 +317,13 @@ func (m *coMockInvoiceItemRepo) SaveBulk(_ context.Context, _ transaction.Execut
 // --- inventory repo ---
 
 type coMockInventoryRepo struct {
-	reserveCalls []string
-	reserveErr   error
+	mu                 sync.Mutex
+	reserveCalls       []string
+	reserveErr         error
+	lockInversionCount atomic.Int64
 }
+
+type txLockStateKey struct{}
 
 func (m *coMockInventoryRepo) GetByProductIDAndShopID(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID) (*inventory.Inventory, error) {
 	return nil, nil
@@ -334,7 +340,19 @@ func (m *coMockInventoryRepo) ListByShopID(_ context.Context, _ transaction.Exec
 func (m *coMockInventoryRepo) Create(_ context.Context, _ transaction.Executor, _ *inventory.Inventory) error {
 	return nil
 }
-func (m *coMockInventoryRepo) Reserve(_ context.Context, _ transaction.Executor, productID uuid.UUID, shopID uuid.UUID, qty int) error {
+func (m *coMockInventoryRepo) Reserve(ctx context.Context, _ transaction.Executor, productID uuid.UUID, shopID uuid.UUID, qty int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	currentKey := fmt.Sprintf("%s/%s", shopID.String(), productID.String())
+	if state, ok := ctx.Value(txLockStateKey{}).(*string); ok && state != nil {
+		if *state != "" && currentKey < *state {
+			// Lock inversion detected! Resource acquired out of monotonic order
+			m.lockInversionCount.Add(1)
+		}
+		*state = currentKey
+	}
+
 	m.reserveCalls = append(m.reserveCalls, fmt.Sprintf("%s-%s-%d", productID, shopID, qty))
 	return m.reserveErr
 }
@@ -1411,3 +1429,208 @@ func TestCreateOrder_PaymentMethodNotFound(t *testing.T) {
 		t.Fatal("expected error when payment method not found")
 	}
 }
+
+// ===========================================================================
+// Concurrency invariant: deterministic monotonic item sorting for reservation (MC-C1)
+// ===========================================================================
+
+func TestCreateOrder_InventoryReservation_DeterministicSorting(t *testing.T) {
+	ctx := context.Background()
+	customerID := uuid.New()
+	methodID := uuid.New()
+	usr := coDefaultUser()
+	acc := coDefaultAccount(usr.ID)
+	method := coDefaultMethod(methodID, "qris")
+
+	// Ensure predictable lexicographical ordering
+	shopA := uuid.New()
+	shopB := uuid.New()
+	if shopA.String() > shopB.String() {
+		shopA, shopB = shopB, shopA
+	}
+
+	prod1 := uuid.New()
+	prod2 := uuid.New()
+	if prod1.String() > prod2.String() {
+		prod1, prod2 = prod2, prod1
+	}
+
+	// Deliberately construct pricing result in reverse/non-monotonic order:
+	// Shop B items: [Prod 2, Prod 1]
+	// Shop A items: [Prod 2, Prod 1]
+	pricing := &PricingResult{
+		Subtotal:         400000,
+		TotalShippingFee: 30000,
+		GrandTotal:       430000,
+		Shops: []PricingShopResult{
+			{
+				ShopID:   shopB,
+				ShopName: "Shop B",
+				Items: []PricingItemResult{
+					{ProductID: prod2, ProductName: "Product B2", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+					{ProductID: prod1, ProductName: "Product B1", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+				},
+				SelectedCourier: SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
+			},
+			{
+				ShopID:   shopA,
+				ShopName: "Shop A",
+				Items: []PricingItemResult{
+					{ProductID: prod2, ProductName: "Product A2", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+					{ProductID: prod1, ProductName: "Product A1", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+				},
+				SelectedCourier: SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
+			},
+		},
+	}
+
+	invRepo := &coMockInventoryRepo{}
+	gateway := &coMockGateway{chargeResp: coDefaultChargeResp(uuid.New().String())}
+
+	uc := buildUC(nil, gateway,
+		&coMockPricingService{result: pricing},
+		&coMockPaymentMethodRepo{method: method},
+		&coMockPaymentAccountRepo{},
+		&coMockUserRepo{user: usr},
+		&coMockAccountRepo{account: acc},
+		invRepo,
+		&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+		&coMockOrderRepo{orders: map[uuid.UUID]*Order{}},
+		nil,
+	)
+
+	_, err := uc.CreateOrder(ctx, coInput(customerID, methodID, false, prod1, shopA))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Expected calls must be monotonically sorted by (ShopID, ProductID):
+	// 1. (Shop A, Prod 1)
+	// 2. (Shop A, Prod 2)
+	// 3. (Shop B, Prod 1)
+	// 4. (Shop B, Prod 2)
+	expectedCalls := []string{
+		fmt.Sprintf("%s-%s-1", prod1, shopA),
+		fmt.Sprintf("%s-%s-1", prod2, shopA),
+		fmt.Sprintf("%s-%s-1", prod1, shopB),
+		fmt.Sprintf("%s-%s-1", prod2, shopB),
+	}
+
+	if len(invRepo.reserveCalls) != len(expectedCalls) {
+		t.Fatalf("expected %d reserve calls, got %d: %v", len(expectedCalls), len(invRepo.reserveCalls), invRepo.reserveCalls)
+	}
+
+	for i, exp := range expectedCalls {
+		if invRepo.reserveCalls[i] != exp {
+			t.Errorf("call [%d]: expected %s, got %s", i, exp, invRepo.reserveCalls[i])
+		}
+	}
+}
+
+func TestCreateOrder_ConcurrentReservations_NoLockInversion(t *testing.T) {
+	const concurrency = 50
+
+	shopA := uuid.New()
+	shopB := uuid.New()
+	if shopA.String() > shopB.String() {
+		shopA, shopB = shopB, shopA
+	}
+
+	prod1 := uuid.New()
+	prod2 := uuid.New()
+	if prod1.String() > prod2.String() {
+		prod1, prod2 = prod2, prod1
+	}
+
+	// Two pricing configurations with reverse item ordering
+	pricingOrderForward := &PricingResult{
+		Subtotal:         200000,
+		TotalShippingFee: 15000,
+		GrandTotal:       215000,
+		Shops: []PricingShopResult{
+			{
+				ShopID:   shopA,
+				ShopName: "Shop A",
+				Items: []PricingItemResult{
+					{ProductID: prod1, ProductName: "Product 1", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+					{ProductID: prod2, ProductName: "Product 2", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+				},
+				SelectedCourier: SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
+			},
+		},
+	}
+
+	pricingOrderReverse := &PricingResult{
+		Subtotal:         200000,
+		TotalShippingFee: 15000,
+		GrandTotal:       215000,
+		Shops: []PricingShopResult{
+			{
+				ShopID:   shopA,
+				ShopName: "Shop A",
+				Items: []PricingItemResult{
+					{ProductID: prod2, ProductName: "Product 2", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+					{ProductID: prod1, ProductName: "Product 1", Quantity: 1, UnitPrice: 100000, Subtotal: 100000},
+				},
+				SelectedCourier: SelectedCourierResult{Code: "jne", Service: "REG", Fee: 15000},
+			},
+		},
+	}
+
+	methodID := uuid.New()
+	method := coDefaultMethod(methodID, "qris")
+	invRepo := &coMockInventoryRepo{}
+
+	var wg sync.WaitGroup
+	errCh := make(chan error, concurrency)
+
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+
+			usr := coDefaultUser()
+			acc := coDefaultAccount(usr.ID)
+			customerID := uuid.New()
+
+			pricing := pricingOrderForward
+			if workerID%2 == 1 {
+				pricing = pricingOrderReverse
+			}
+
+			gateway := &coMockGateway{chargeResp: coDefaultChargeResp(uuid.New().String())}
+			uc := buildUC(nil, gateway,
+				&coMockPricingService{result: pricing},
+				&coMockPaymentMethodRepo{method: method},
+				&coMockPaymentAccountRepo{},
+				&coMockUserRepo{user: usr},
+				&coMockAccountRepo{account: acc},
+				invRepo,
+				&coMockPaymentRepo{payments: map[uuid.UUID]*payment.Payment{}},
+				&coMockOrderRepo{orders: map[uuid.UUID]*Order{}},
+				nil,
+			)
+
+			// Thread-safe per-transaction lock state tracker
+			var lastLockedKey string
+			ctx := context.WithValue(context.Background(), txLockStateKey{}, &lastLockedKey)
+
+			_, err := uc.CreateOrder(ctx, coInput(customerID, methodID, false, prod1, shopA))
+			if err != nil {
+				errCh <- fmt.Errorf("worker %d failed: %w", workerID, err)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Fatalf("concurrent create order failed: %v", err)
+	}
+
+	if inversions := invRepo.lockInversionCount.Load(); inversions != 0 {
+		t.Fatalf("detected %d lock hierarchy inversions (deadlock risk!)", inversions)
+	}
+}
+
