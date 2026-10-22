@@ -4,7 +4,7 @@ We'd love your help making KomeCore the cleanest, most reliable modular monolith
 
 If you'd like to add new endpoints, domain services, or exported APIs, please [open an issue][open-issue] describing your proposal &mdash; discussing architectural and API changes ahead of time makes pull request review much smoother. In your issue, pull request, and any other communications, please remember to treat your fellow contributors with respect! We take our [code of conduct](CODE_OF_CONDUCT.md) seriously.
 
-Looking for an easy place to get started? Explore issues tagged with [good first issue][good-first-issues] or browse our curated starter blueprints in [`legacy_docs/issues/`](legacy_docs/issues).
+Looking for an easy place to get started? Explore issues tagged with [good first issue][good-first-issues].
 
 ## Setup
 
