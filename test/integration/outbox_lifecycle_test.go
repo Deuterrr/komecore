@@ -149,4 +149,23 @@ func TestIntegration_Outbox_WorkerLifecycle_And_Backoff(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "failed", maxStatus, "event must transition to failed after reaching max retries")
 	assert.Equal(t, 5, maxRetriesRecorded)
+
+	// 4. Atomic Claim Verification (MC-C2): FetchPending transitions status to 'processing'
+	claimEventID := uuid.New()
+	_, err = tdb.Pool.Exec(ctx, `
+		INSERT INTO outbox_events (id, event_type, payload, status, retry_count, max_retries, scheduled_at, created_at)
+		VALUES ($1, $2, $3, 'pending', 0, 5, $4, $4);
+	`, claimEventID, outbox.EventOrderCreated, payloadBytes, now)
+	require.NoError(t, err)
+
+	claimedEvents, err := repo.FetchPending(ctx, tdb.Executor, 10)
+	require.NoError(t, err)
+	assert.Len(t, claimedEvents, 1)
+	assert.Equal(t, claimEventID, claimedEvents[0].ID)
+	assert.Equal(t, outbox.StatusProcessing, claimedEvents[0].Status)
+
+	// Second fetch must return 0 events because the row is now in 'processing' status
+	secondFetch, err := repo.FetchPending(ctx, tdb.Executor, 10)
+	require.NoError(t, err)
+	assert.Empty(t, secondFetch, "concurrent or subsequent fetch must skip claimed processing event")
 }

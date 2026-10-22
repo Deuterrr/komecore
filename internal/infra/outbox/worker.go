@@ -99,12 +99,12 @@ func (w *Worker) Start(ctx context.Context) {
 func (w *Worker) ProcessBatch(ctx context.Context) (int, error) {
 	var events []Event
 
-	// Fetch pending rows inside a transaction boundary to hold row-level locks
+	// Fetch and atomically claim pending rows ('pending' -> 'processing') inside a transaction boundary
 	err := w.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
 		var err error
 		events, err = w.repo.FetchPending(ctx, exec, w.batchSize)
 		if err != nil {
-			return fmt.Errorf("failed to fetch pending outbox events: %w", err)
+			return fmt.Errorf("failed to fetch and claim pending outbox events: %w", err)
 		}
 		return nil
 	})

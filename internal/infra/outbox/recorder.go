@@ -31,12 +31,7 @@ func NewOutboxRepository() *OutboxRepository {
 	return &OutboxRepository{}
 }
 
-func (r *OutboxRepository) Enqueue(
-	ctx context.Context,
-	exec transaction.Executor,
-	eventType string,
-	payload any,
-) error {
+func (r *OutboxRepository) Enqueue(ctx context.Context, exec transaction.Executor, eventType string, payload any) error {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal outbox event payload: %w", err)
@@ -66,33 +61,37 @@ func (r *OutboxRepository) Enqueue(
 	return nil
 }
 
-func (r *OutboxRepository) FetchPending(
-	ctx context.Context,
-	exec transaction.Executor,
-	limit int,
-) ([]Event, error) {
+func (r *OutboxRepository) FetchPending(ctx context.Context, exec transaction.Executor, limit int) ([]Event, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 
 	query := `
-		SELECT
-			id,
-			event_type,
-			payload,
-			status,
-			retry_count,
-			max_retries,
-			last_error,
-			scheduled_at,
-			processed_at,
-			created_at
-		FROM outbox_events
-		WHERE status = 'pending'
-		  AND scheduled_at <= $1
-		ORDER BY scheduled_at ASC
-		LIMIT $2
-		FOR UPDATE SKIP LOCKED
+		WITH claimed AS (
+			SELECT id
+			FROM outbox_events
+			WHERE (status = 'pending' AND scheduled_at <= $1)
+			   OR (status = 'processing' AND scheduled_at <= $1 - INTERVAL '10 minutes')
+			ORDER BY scheduled_at ASC
+			LIMIT $2
+			FOR UPDATE SKIP LOCKED
+		)
+		UPDATE outbox_events o
+		SET status = 'processing',
+		    scheduled_at = $1
+		FROM claimed c
+		WHERE o.id = c.id
+		RETURNING
+			o.id,
+			o.event_type,
+			o.payload,
+			o.status,
+			o.retry_count,
+			o.max_retries,
+			o.last_error,
+			o.scheduled_at,
+			o.processed_at,
+			o.created_at
 	`
 
 	now := appclock.Now()
@@ -145,12 +144,7 @@ func (r *OutboxRepository) FetchPending(
 	return events, nil
 }
 
-func (r *OutboxRepository) MarkCompleted(
-	ctx context.Context,
-	exec transaction.Executor,
-	id uuid.UUID,
-	processedAt time.Time,
-) error {
+func (r *OutboxRepository) MarkCompleted(ctx context.Context, exec transaction.Executor, id uuid.UUID, processedAt time.Time) error {
 	query := `
 		UPDATE outbox_events
 		SET status = 'completed',
