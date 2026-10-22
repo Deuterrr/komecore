@@ -20,6 +20,7 @@ import (
 	"komecore/pkg/slug"
 
 	"github.com/google/uuid"
+	"golang.org/x/sync/singleflight"
 )
 
 var specs = []image.VariantSpec{
@@ -40,6 +41,7 @@ type Service struct {
 	resolutionGen  image.VariantCreator
 	fileStore      storage.Provider
 	cache          cache.Cache
+	requestGroup   singleflight.Group
 }
 
 func NewService(
@@ -111,28 +113,67 @@ type FindProductsInput struct {
 	Sort            string
 }
 
+type findProductsFlightResult struct {
+	Results []ProductCatalogResult
+	Total   int
+}
+
 func (s *Service) FindProducts(ctx context.Context, input FindProductsInput) ([]ProductCatalogResult, int, error) {
-	var cacheKey string
+	nameStr := ""
+	if input.Name != nil {
+		nameStr = *input.Name
+	}
+	queryStr := ""
+	if input.SearchQuery != nil {
+		queryStr = *input.SearchQuery
+	}
+	statusStr := ""
+	if input.Status != nil {
+		statusStr = *input.Status
+	}
+	cacheKey := fmt.Sprintf("cache:products:list:%s:%s:%s:%s:%d:%d", nameStr, queryStr, statusStr, input.Sort, input.Page, input.Limit)
+
 	if s.cache != nil {
-		nameStr := ""
-		if input.Name != nil {
-			nameStr = *input.Name
-		}
-		queryStr := ""
-		if input.SearchQuery != nil {
-			queryStr = *input.SearchQuery
-		}
-		statusStr := ""
-		if input.Status != nil {
-			statusStr = *input.Status
-		}
-		cacheKey = fmt.Sprintf("cache:products:list:%s:%s:%s:%s:%d:%d", nameStr, queryStr, statusStr, input.Sort, input.Page, input.Limit)
 		var cached findProductsCacheEntry
 		if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
 			return cached.Results, cached.Total, nil
 		}
 	}
 
+	flightKey := fmt.Sprintf("flight:products:list:%s:%s:%s:%s:%d:%d", nameStr, queryStr, statusStr, input.Sort, input.Page, input.Limit)
+	res, err, _ := s.requestGroup.Do(flightKey, func() (any, error) {
+		// Double-check cache in case a concurrent flight already populated it
+		if s.cache != nil {
+			var cached findProductsCacheEntry
+			if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+				return findProductsFlightResult{Results: cached.Results, Total: cached.Total}, nil
+			}
+		}
+
+		fetchCtx := ctx
+		if ctx.Err() == nil {
+			var cancel context.CancelFunc
+			fetchCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+			defer cancel()
+		}
+
+		results, total, err := s.fetchFindProductsFromDB(fetchCtx, input, cacheKey)
+		if err != nil {
+			return nil, err
+		}
+		return findProductsFlightResult{Results: results, Total: total}, nil
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	fr := res.(findProductsFlightResult)
+	copiedResults := make([]ProductCatalogResult, len(fr.Results))
+	copy(copiedResults, fr.Results)
+	return copiedResults, fr.Total, nil
+}
+
+func (s *Service) fetchFindProductsFromDB(ctx context.Context, input FindProductsInput, cacheKey string) ([]ProductCatalogResult, int, error) {
 	var productSortKeys = map[string]pagination.SortKey{
 		"latest":    ProductSortLatest,
 		"date":      ProductSortLatest,
@@ -334,19 +375,50 @@ type ProductDetailResult struct {
 	Availability    []ShopAvailabilityResult
 }
 
-func (s *Service) GetProduct(
-	ctx context.Context,
-	slug string,
-) (*ProductDetailResult, error) {
-	var cacheKey string
+func (s *Service) GetProduct(ctx context.Context, slug string) (*ProductDetailResult, error) {
+	cacheKey := fmt.Sprintf("cache:product:slug:%s", slug)
 	if s.cache != nil {
-		cacheKey = fmt.Sprintf("cache:product:slug:%s", slug)
 		var cached ProductDetailResult
 		if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
 			return &cached, nil
 		}
 	}
 
+	flightKey := fmt.Sprintf("flight:product:slug:%s", slug)
+	res, err, _ := s.requestGroup.Do(flightKey, func() (any, error) {
+		// Double-check cache in case a concurrent flight already populated it
+		if s.cache != nil {
+			var cached ProductDetailResult
+			if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+				return &cached, nil
+			}
+		}
+
+		fetchCtx := ctx
+		if ctx.Err() == nil {
+			var cancel context.CancelFunc
+			fetchCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+			defer cancel()
+		}
+
+		return s.fetchProductDetailFromDB(fetchCtx, slug, cacheKey)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return nil, nil
+	}
+
+	detail := res.(*ProductDetailResult)
+	if detail == nil {
+		return nil, nil
+	}
+	copied := *detail
+	return &copied, nil
+}
+
+func (s *Service) fetchProductDetailFromDB(ctx context.Context, slug string, cacheKey string) (*ProductDetailResult, error) {
 	prod, err := s.productRepo.GetBySlug(ctx, s.executor, slug)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load products with inventory: %w", err)
@@ -482,10 +554,7 @@ type GetProductStatsInput struct {
 	Sort  string
 }
 
-func (s *Service) GetProductStats(
-	ctx context.Context,
-	input GetProductStatsInput,
-) ([]ProductStats, int, error) {
+func (s *Service) GetProductStats(ctx context.Context, input GetProductStatsInput) ([]ProductStats, int, error) {
 	var statsSortKeys = map[string]pagination.SortKey{
 		"latest":       ProductSortLatest,
 		"date":         ProductSortLatest,
@@ -588,10 +657,7 @@ type SaveProductInput struct {
 	SupplierLeadTimeDays *int
 }
 
-func (s *Service) SaveProduct(
-	ctx context.Context,
-	input SaveProductInput,
-) error {
+func (s *Service) SaveProduct(ctx context.Context, input SaveProductInput) error {
 	now := appclock.Now()
 
 	var productID uuid.UUID
@@ -658,10 +724,7 @@ func (s *Service) SaveProduct(
 	return nil
 }
 
-func (s *Service) DeleteProduct(
-	ctx context.Context,
-	id uuid.UUID,
-) error {
+func (s *Service) DeleteProduct(ctx context.Context, id uuid.UUID) error {
 	prod, err := s.productRepo.GetByID(ctx, s.executor, id)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve product: %w", err)
@@ -700,10 +763,7 @@ type productToVariants struct {
 	variantType image.ResolutionType
 }
 
-func (s *Service) AddProductImages(
-	ctx context.Context,
-	input AddProductImageInput,
-) error {
+func (s *Service) AddProductImages(ctx context.Context, input AddProductImageInput) error {
 	prod, err := s.productRepo.GetByID(ctx, s.executor, input.ProductID)
 	if err != nil {
 		return fmt.Errorf("failed to get product: %w", err)
@@ -782,14 +842,10 @@ func (s *Service) AddProductImages(
 			}
 	}
 
-	return s.transactor.WithinTransaction(
-		ctx,
-		func(exec transaction.Executor) error {
-			if err := s.productImgRepo.Create(ctx, exec, productImages); err != nil {
-				return fmt.Errorf("failed to save product image: %w", err)
-			}
-
-			return nil
-		},
-	)
+	return s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
+		if err := s.productImgRepo.Create(ctx, exec, productImages); err != nil {
+			return fmt.Errorf("failed to save product image: %w", err)
+		}
+		return nil
+	})
 }
