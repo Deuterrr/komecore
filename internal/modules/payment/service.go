@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"komecore/internal/apperror"
@@ -715,7 +716,7 @@ func (s *Service) SyncPaymentMethods(ctx context.Context) error {
 }
 
 // SyncPendingPayments reconciles pending payments with the upstream gateway within the
-// configured lookback window.
+// configured lookback window using a bounded parallel worker pool.
 func (s *Service) SyncPendingPayments(ctx context.Context) {
 	since := appclock.Now().Add(-s.lookbackWindow)
 	var msg string
@@ -740,87 +741,119 @@ func (s *Service) SyncPendingPayments(ctx context.Context) {
 		applogger.Field{Key: "since", Value: since.Format(time.RFC3339)},
 	)
 
-	resolved := 0
-	for _, pmt := range payments {
-		if pmt.ProviderOrderID == nil {
-			s.logger.Error(ctx, "gateway payment is missing provider order id",
-				applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
-			)
-			continue
-		}
-
-		gatewayOrderID := *pmt.ProviderOrderID
-		result, err := s.paymentGateway.GetTransactionStatus(ctx, gatewayOrderID)
-		if err != nil {
-			msg = "failed to fetch transaction status"
-			s.logger.Error(ctx, msg,
-				applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
-				applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
-				applogger.Field{Key: "error", Value: err.Error()},
-			)
-			continue
-		}
-
-		// Skip if Midtrans still reports pending — nothing to do yet.
-		if result.Status == paymentgateway.NotificationStatusPending {
-			if pmt.ExpiresAt != nil && appclock.Now().After(*pmt.ExpiresAt) {
-				msg = "payment has expired locally, cancelling at gateway and expiring locally"
-				s.logger.Info(ctx, msg,
-					applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
-					applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
-				)
-
-				// Best effort cancel at gateway
-				if err := s.paymentGateway.CancelTransaction(ctx, gatewayOrderID); err != nil {
-					s.logger.Warn(ctx, "failed to cancel transaction at gateway, proceeding with local expiry",
-						applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
-						applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
-						applogger.Field{Key: "error", Value: err.Error()},
-					)
-				}
-
-				if err := s.expirePaymentLocally(ctx, pmt); err != nil {
-					s.logger.Error(ctx, "failed to locally expire payment",
-						applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
-						applogger.Field{Key: "error", Value: err.Error()},
-					)
-				} else {
-					resolved++
-				}
-			}
-			continue
-		}
-
-		// Drive resolved status directly through the webhook processing pipeline
-		// without redundant outbound network calls.
-		if err := s.processWebhook.Execute(ctx, ProcessPaymentWebhookInput{
-			NotificationResult: result,
-		}); err != nil {
-			msg = "failed to process reconciled payment"
-			s.logger.Error(ctx, msg,
-				applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
-				applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
-				applogger.Field{Key: "gateway_status", Value: string(result.Status)},
-				applogger.Field{Key: "error", Value: err.Error()},
-			)
-			continue
-		}
-
-		msg = "successfully reconciled payment"
-		s.logger.Info(ctx, msg,
-			applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
-			applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
-			applogger.Field{Key: "gateway_status", Value: string(result.Status)},
-		)
-		resolved++
+	workerCount := s.concurrency
+	if workerCount <= 0 {
+		workerCount = 5
+	}
+	if len(payments) < workerCount {
+		workerCount = len(payments)
 	}
 
+	paymentChan := make(chan Payment, len(payments))
+	for _, pmt := range payments {
+		paymentChan <- pmt
+	}
+	close(paymentChan)
+
+	var resolved int32
+	var wg sync.WaitGroup
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for pmt := range paymentChan {
+				if ctx.Err() != nil {
+					return
+				}
+				if s.reconcileSinglePayment(ctx, pmt) {
+					atomic.AddInt32(&resolved, 1)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	totalResolved := int(atomic.LoadInt32(&resolved))
 	msg = "reconciliation cycle complete"
 	s.logger.Info(ctx, msg,
 		applogger.Field{Key: "total", Value: len(payments)},
-		applogger.Field{Key: "resolved", Value: resolved},
-		applogger.Field{Key: "skipped", Value: fmt.Sprintf("%d", len(payments)-resolved)},
+		applogger.Field{Key: "resolved", Value: totalResolved},
+		applogger.Field{Key: "skipped", Value: fmt.Sprintf("%d", len(payments)-totalResolved)},
 	)
+}
+
+func (s *Service) reconcileSinglePayment(ctx context.Context, pmt Payment) bool {
+	var msg string
+	if pmt.ProviderOrderID == nil {
+		s.logger.Error(ctx, "gateway payment is missing provider order id",
+			applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+		)
+		return false
+	}
+
+	gatewayOrderID := *pmt.ProviderOrderID
+	result, err := s.paymentGateway.GetTransactionStatus(ctx, gatewayOrderID)
+	if err != nil {
+		msg = "failed to fetch transaction status"
+		s.logger.Error(ctx, msg,
+			applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+			applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
+			applogger.Field{Key: "error", Value: err.Error()},
+		)
+		return false
+	}
+
+	if result.Status == paymentgateway.NotificationStatusPending {
+		if pmt.ExpiresAt != nil && appclock.Now().After(*pmt.ExpiresAt) {
+			msg := "payment has expired locally, cancelling at gateway and expiring locally"
+			s.logger.Info(ctx, msg,
+				applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+				applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
+			)
+
+			// Best effort cancel at gateway
+			if err := s.paymentGateway.CancelTransaction(ctx, gatewayOrderID); err != nil {
+				s.logger.Warn(ctx, "failed to cancel transaction at gateway, proceeding with local expiry",
+					applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+					applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
+					applogger.Field{Key: "error", Value: err.Error()},
+				)
+			}
+
+			if err := s.expirePaymentLocally(ctx, pmt); err != nil {
+				s.logger.Error(ctx, "failed to locally expire payment",
+					applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+					applogger.Field{Key: "error", Value: err.Error()},
+				)
+				return false
+			}
+			return true
+		}
+		return false
+	}
+
+	// Drive resolved status directly through the webhook processing pipeline
+	// without redundant outbound network calls.
+	if err := s.processWebhook.Execute(ctx, ProcessPaymentWebhookInput{
+		NotificationResult: result,
+	}); err != nil {
+		msg := "failed to process reconciled payment"
+		s.logger.Error(ctx, msg,
+			applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+			applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
+			applogger.Field{Key: "gateway_status", Value: string(result.Status)},
+			applogger.Field{Key: "error", Value: err.Error()},
+		)
+		return false
+	}
+
+	msg = "successfully reconciled payment"
+	s.logger.Info(ctx, msg,
+		applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
+		applogger.Field{Key: "gateway_order_id", Value: gatewayOrderID},
+		applogger.Field{Key: "gateway_status", Value: string(result.Status)},
+	)
+	return true
 }
 
 func (s *Service) expirePaymentLocally(ctx context.Context, pmt Payment) error {

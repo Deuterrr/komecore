@@ -1633,4 +1633,3 @@ func TestCreateOrder_ConcurrentReservations_NoLockInversion(t *testing.T) {
 		t.Fatalf("detected %d lock hierarchy inversions (deadlock risk!)", inversions)
 	}
 }
-

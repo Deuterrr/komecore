@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	transaction "komecore/internal/infra/transactor"
@@ -20,6 +21,7 @@ type mockOrder struct {
 }
 
 type mockOrderPaymentManager struct {
+	mu         sync.RWMutex
 	orders     map[uuid.UUID]*mockOrder
 	invoices   map[uuid.UUID]string
 	items      map[uuid.UUID][]OrderItemInfo
@@ -42,6 +44,8 @@ func (m *mockOrderPaymentManager) GetOrderForPayment(_ context.Context, _ transa
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	o, ok := m.orders[orderID]
 	if !ok || o == nil {
 		return nil, nil
@@ -57,6 +61,8 @@ func (m *mockOrderPaymentManager) GetOrderForPayment(_ context.Context, _ transa
 }
 
 func (m *mockOrderPaymentManager) GetInvoiceNumber(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.invoices[orderID], nil
 }
 
@@ -67,6 +73,8 @@ func (m *mockOrderPaymentManager) ConfirmOrderPayment(_ context.Context, _ trans
 	if m.updateErr != nil {
 		return nil, m.updateErr
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	o, ok := m.orders[orderID]
 	if !ok || o == nil {
 		return nil, errors.New("order not found for payment")
@@ -85,6 +93,8 @@ func (m *mockOrderPaymentManager) ExpireOrderPayment(_ context.Context, _ transa
 	if m.updateErr != nil {
 		return nil, m.updateErr
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	o, ok := m.orders[orderID]
 	if !ok || o == nil {
 		return nil, errors.New("order not found for payment")
@@ -103,6 +113,8 @@ func (m *mockOrderPaymentManager) CancelOrderPayment(_ context.Context, _ transa
 	if m.updateErr != nil {
 		return nil, m.updateErr
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	o, ok := m.orders[orderID]
 	if !ok || o == nil {
 		return nil, errors.New("order not found for payment")

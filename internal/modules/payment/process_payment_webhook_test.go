@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,14 +33,19 @@ func (m *mockTransactor) WithinTransaction(ctx context.Context, fn func(transact
 
 // mockPaymentRepo supports configurable updateErr so tests can inject failures.
 type mockPaymentRepo struct {
+	mu        sync.RWMutex
 	payments  map[uuid.UUID]*Payment
 	updateErr error
 }
 
 func (m *mockPaymentRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*Payment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.payments[id], nil
 }
 func (m *mockPaymentRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*Payment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	for _, p := range m.payments {
 		if p.OrderID == orderID {
 			return p, nil
@@ -51,6 +57,8 @@ func (m *mockPaymentRepo) GetByOrderIDForUpdate(ctx context.Context, exec transa
 	return m.GetByOrderID(ctx, exec, orderID)
 }
 func (m *mockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, orderIDs []uuid.UUID) ([]Payment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	var result []Payment
 	idx := make(map[uuid.UUID]bool)
 	for _, id := range orderIDs {
@@ -64,6 +72,8 @@ func (m *mockPaymentRepo) ListByOrderIDs(_ context.Context, _ transaction.Execut
 	return result, nil
 }
 func (m *mockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor, id uuid.UUID, status PaymentStatus) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.updateErr != nil {
 		return m.updateErr
 	}
@@ -74,10 +84,14 @@ func (m *mockPaymentRepo) UpdateStatus(_ context.Context, _ transaction.Executor
 	return errors.New("not found")
 }
 func (m *mockPaymentRepo) Save(_ context.Context, _ transaction.Executor, pmt Payment) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.payments[pmt.ID] = &pmt
 	return nil
 }
 func (m *mockPaymentRepo) ListPendingGateway(_ context.Context, _ transaction.Executor, since time.Time) ([]Payment, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	var result []Payment
 	for _, p := range m.payments {
 		if p.Status == PaymentStatusPending &&
@@ -98,6 +112,7 @@ type mockPaymentAccountRepo struct{}
 
 // mockPaymentEventRepo tracks created events and supports injecting createErr.
 type mockPaymentEventRepo struct {
+	mu        sync.Mutex
 	events    []PaymentEvent
 	createErr error
 }
@@ -109,6 +124,8 @@ func (m *mockPaymentEventRepo) ListByPaymentID(_ context.Context, _ transaction.
 	return nil, nil
 }
 func (m *mockPaymentEventRepo) Create(_ context.Context, _ transaction.Executor, event PaymentEvent) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.createErr != nil {
 		return m.createErr
 	}
@@ -118,6 +135,7 @@ func (m *mockPaymentEventRepo) Create(_ context.Context, _ transaction.Executor,
 
 // mockInventoryRepo supports configurable commitErr, releaseErr, reserveErr.
 type mockInventoryRepo struct {
+	mu           sync.Mutex
 	commits      []string
 	releases     []string
 	reserveCalls []string
@@ -142,10 +160,14 @@ func (m *mockInventoryRepo) Create(_ context.Context, _ transaction.Executor, _ 
 	return nil
 }
 func (m *mockInventoryRepo) Reserve(_ context.Context, _ transaction.Executor, productID uuid.UUID, shopID uuid.UUID, qty int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.reserveCalls = append(m.reserveCalls, fmt.Sprintf("%s-%s-%d", productID, shopID, qty))
 	return m.reserveErr
 }
 func (m *mockInventoryRepo) Release(_ context.Context, _ transaction.Executor, productID uuid.UUID, shopID uuid.UUID, qty int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.releaseErr != nil {
 		return m.releaseErr
 	}
@@ -153,6 +175,8 @@ func (m *mockInventoryRepo) Release(_ context.Context, _ transaction.Executor, p
 	return nil
 }
 func (m *mockInventoryRepo) Commit(_ context.Context, _ transaction.Executor, productID uuid.UUID, shopID uuid.UUID, qty int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.commitErr != nil {
 		return m.commitErr
 	}
@@ -201,6 +225,7 @@ func (m *mockPaymentGateway) Supports(_ string) bool {
 // mockPaymentWebhookEventRepo is a simple in-memory implementation of
 // PaymentWebhookEventRepository used in tests.
 type mockPaymentWebhookEventRepo struct {
+	mu          sync.Mutex
 	events      map[string]*PaymentWebhookEvent // key: order_id+":"+tx_status
 	upsertErr   error
 	markProcErr error
@@ -220,6 +245,8 @@ func (m *mockPaymentWebhookEventRepo) Upsert(
 	_ transaction.Executor,
 	event PaymentWebhookEvent,
 ) (*PaymentWebhookEvent, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.upsertErr != nil {
 		return nil, m.upsertErr
 	}
@@ -236,6 +263,8 @@ func (m *mockPaymentWebhookEventRepo) MarkProcessed(
 	_ transaction.Executor,
 	id uuid.UUID,
 ) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.markProcErr != nil {
 		return m.markProcErr
 	}
@@ -249,6 +278,8 @@ func (m *mockPaymentWebhookEventRepo) MarkFailed(
 	id uuid.UUID,
 	_ string,
 ) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.markFailErr != nil {
 		return m.markFailErr
 	}
@@ -258,10 +289,13 @@ func (m *mockPaymentWebhookEventRepo) MarkFailed(
 
 // mockAuditLogger captures audit events emitted during tests.
 type mockAuditLogger struct {
+	mu     sync.Mutex
 	events []applogger.AuditEvent
 }
 
 func (m *mockAuditLogger) Log(_ context.Context, event applogger.AuditEvent) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.events = append(m.events, event)
 }
 
