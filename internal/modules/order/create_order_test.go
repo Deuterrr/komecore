@@ -229,6 +229,9 @@ type coMockOrderRepo struct {
 func (m *coMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id uuid.UUID) (*Order, error) {
 	return m.orders[id], nil
 }
+func (m *coMockOrderRepo) GetByIDForUpdate(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Order, error) {
+	return m.GetByID(ctx, exec, id)
+}
 func (m *coMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*Order, error) {
 	return nil, nil
 }

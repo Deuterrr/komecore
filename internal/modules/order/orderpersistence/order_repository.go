@@ -72,11 +72,55 @@ func (r *OrderRepository) GetByID(
 	return &order, nil
 }
 
-func (r *OrderRepository) GetByNumber(
-	ctx context.Context,
-	exec transaction.Executor,
-	number string,
-) (*order.Order, error) {
+func (r *OrderRepository) GetByIDForUpdate(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*order.Order, error) {
+	query := `
+		SELECT
+			id,
+			number,
+			customer_id,
+			address_id,
+			status,
+			subtotal,
+			shipping_fee,
+			total,
+			confirmed_at,
+			handling_expires_at,
+			created_at,
+			updated_at
+		FROM
+			orders
+		WHERE
+			id = $1
+		LIMIT 1
+		FOR UPDATE
+	`
+
+	var order order.Order
+	err := exec.QueryRow(ctx, query, id).Scan(
+		&order.ID,
+		&order.Number,
+		&order.CustomerID,
+		&order.AddressID,
+		&order.Status,
+		&order.Subtotal,
+		&order.ShippingFee,
+		&order.Total,
+		&order.ConfirmedAt,
+		&order.HandlingExpiresAt,
+		&order.CreatedAt,
+		&order.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("query order by id for update failed: %w", err)
+	}
+
+	return &order, nil
+}
+
+func (r *OrderRepository) GetByNumber(ctx context.Context, exec transaction.Executor, number string) (*order.Order, error) {
 	query := `
 		SELECT
 			id,

@@ -48,6 +48,10 @@ func (m *uosMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, id
 	return nil, m.err
 }
 
+func (m *uosMockOrderRepo) GetByIDForUpdate(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Order, error) {
+	return m.GetByID(ctx, exec, id)
+}
+
 func (m *uosMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*Order, error) {
 	return nil, nil
 }

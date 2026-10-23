@@ -48,6 +48,12 @@ type Repository interface {
 		id uuid.UUID,
 	) (*Order, error)
 
+	GetByIDForUpdate(
+		ctx context.Context,
+		exec transaction.Executor,
+		id uuid.UUID,
+	) (*Order, error)
+
 	GetByNumber(
 		ctx context.Context,
 		exec transaction.Executor,

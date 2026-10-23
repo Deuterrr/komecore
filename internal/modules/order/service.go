@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"komecore/internal/apperror"
@@ -1441,7 +1442,6 @@ func (s *Service) ExpireUnfulfilledOrders(ctx context.Context) {
 	var (
 		successCount int64
 		wg           sync.WaitGroup
-		mu           sync.Mutex
 	)
 
 	numWorkers := min(len(orders), concurrency)
@@ -1450,17 +1450,16 @@ func (s *Service) ExpireUnfulfilledOrders(ctx context.Context) {
 		go func() {
 			defer wg.Done()
 			for ord := range orderChan {
-				if err := s.expireSingleOrder(ctx, ord); err != nil {
+				expired, err := s.expireSingleOrder(ctx, ord)
+				if err != nil {
 					if s.logger != nil {
 						s.logger.Error(ctx, "failed to expire unfulfilled order",
 							applogger.Field{Key: "order_id", Value: ord.ID.String()},
 							applogger.Field{Key: "error", Value: err.Error()},
 						)
 					}
-				} else {
-					mu.Lock()
-					successCount++
-					mu.Unlock()
+				} else if expired {
+					atomic.AddInt64(&successCount, 1)
 				}
 			}
 		}()
@@ -1471,27 +1470,52 @@ func (s *Service) ExpireUnfulfilledOrders(ctx context.Context) {
 	if s.logger != nil {
 		s.logger.Info(ctx, "order staff expiry job: processing complete",
 			applogger.Field{Key: "total", Value: len(orders)},
-			applogger.Field{Key: "expired_count", Value: successCount},
+			applogger.Field{Key: "expired_count", Value: atomic.LoadInt64(&successCount)},
 		)
 	}
 }
 
-func (s *Service) expireSingleOrder(ctx context.Context, ord Order) error {
-	oldStatus := string(ord.Status)
-	if err := ord.UpdateStatus(OrderStatusExpired); err != nil {
-		return fmt.Errorf("invalid domain state transition: %w", err)
-	}
+func (s *Service) expireSingleOrder(ctx context.Context, ord Order) (bool, error) {
+	var (
+		oldStatus    string
+		shouldRefund bool
+	)
 
 	err := s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		if err := s.orderRepo.UpdateStatus(ctx, exec, ord.ID, OrderStatusExpired); err != nil {
+		// Lock order row for update and verify active status.
+		// Prevents concurrent processing of already handled orders.
+		currentOrd, err := s.orderRepo.GetByIDForUpdate(ctx, exec, ord.ID)
+		if err != nil {
+			return fmt.Errorf("failed to lock order for expiry: %w", err)
+		}
+		if currentOrd == nil {
+			return nil
+		}
+		// Skip restock and refund if status has already changed.
+		// Handles concurrent updates from other replicas or workers.
+		if currentOrd.Status != OrderStatusConfirmed && currentOrd.Status != OrderStatusProcessing {
+			if s.logger != nil {
+				s.logger.Info(ctx, "order already processed or no longer eligible for staff expiry, skipping",
+					applogger.Field{Key: "order_id", Value: ord.ID.String()},
+					applogger.Field{Key: "current_status", Value: string(currentOrd.Status)},
+				)
+			}
+			return nil
+		}
+
+		oldStatus = string(currentOrd.Status)
+		if err := currentOrd.UpdateStatus(OrderStatusExpired); err != nil {
+			return fmt.Errorf("invalid domain state transition: %w", err)
+		}
+
+		if err := s.orderRepo.UpdateStatus(ctx, exec, currentOrd.ID, OrderStatusExpired); err != nil {
 			return fmt.Errorf("failed to update order status to expired: %w", err)
 		}
 
-		items, err := s.orderItemRepo.ListByOrderID(ctx, exec, ord.ID)
+		items, err := s.orderItemRepo.ListByOrderID(ctx, exec, currentOrd.ID)
 		if err != nil {
 			return fmt.Errorf("failed to list order items: %w", err)
 		}
-
 		for _, item := range items {
 			if err := s.inventoryRepo.Restock(ctx, exec,
 				item.ProductID,
@@ -1500,7 +1524,7 @@ func (s *Service) expireSingleOrder(ctx context.Context, ord Order) error {
 			); err != nil {
 				if s.logger != nil {
 					s.logger.Warn(ctx, "restock anomaly during order expiry",
-						applogger.Field{Key: "order_id", Value: ord.ID.String()},
+						applogger.Field{Key: "order_id", Value: currentOrd.ID.String()},
 						applogger.Field{Key: "product_id", Value: item.ProductID.String()},
 						applogger.Field{Key: "reason", Value: err.Error()},
 					)
@@ -1508,9 +1532,9 @@ func (s *Service) expireSingleOrder(ctx context.Context, ord Order) error {
 			}
 		}
 
+		shouldRefund = true
 		return nil
 	})
-
 	if err != nil {
 		if s.auditLogger != nil {
 			s.auditLogger.Log(ctx, applogger.AuditEvent{
@@ -1524,7 +1548,10 @@ func (s *Service) expireSingleOrder(ctx context.Context, ord Order) error {
 				},
 			})
 		}
-		return err
+		return false, err
+	}
+	if !shouldRefund {
+		return false, nil
 	}
 
 	refundReason := "Staff handling SLA (3 days) expired without fulfillment"
@@ -1555,7 +1582,7 @@ func (s *Service) expireSingleOrder(ctx context.Context, ord Order) error {
 		})
 	}
 
-	return nil
+	return true, nil
 }
 
 // derefPhone safely dereferences a nullable phone pointer, returning an

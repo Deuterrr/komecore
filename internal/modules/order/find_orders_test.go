@@ -27,6 +27,9 @@ type foMockOrderRepo struct {
 func (m *foMockOrderRepo) GetByID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*Order, error) {
 	return nil, nil
 }
+func (m *foMockOrderRepo) GetByIDForUpdate(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Order, error) {
+	return m.GetByID(ctx, exec, id)
+}
 func (m *foMockOrderRepo) GetByNumber(_ context.Context, _ transaction.Executor, _ string) (*Order, error) {
 	return nil, nil
 }
