@@ -2,6 +2,7 @@ package wishlist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -174,6 +175,9 @@ func (s *Service) AddToWishlist(ctx context.Context, input AddToWishlistInput) e
 	}
 
 	if err := s.wishlistRepo.Add(ctx, s.executor, item); err != nil {
+		if errors.Is(err, ErrWishlistItemAlreadyExists) || errors.Is(transaction.MapDBError(err), transaction.ErrUniqueViolation) {
+			return apperror.NewConflict(ErrWishlistItemAlreadyExists.Error())
+		}
 		return fmt.Errorf("failed to add item to wishlist: %w", err)
 	}
 

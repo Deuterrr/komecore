@@ -2,8 +2,11 @@ package cart
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 	"testing"
 
+	"komecore/internal/apperror"
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory"
 	"komecore/internal/modules/product"
@@ -478,5 +481,173 @@ func TestAddItem_MultiStyle_Success(t *testing.T) {
 	}
 	if c.Items[0].Quantity != 2 || c.Items[1].Quantity != 2 {
 		t.Errorf("expected quantities (2, 2), got (%d, %d)", c.Items[0].Quantity, c.Items[1].Quantity)
+	}
+}
+
+type mockConcurrentCartRepository struct {
+	mu           sync.RWMutex
+	cart         *Cart
+	newCartCalls int32
+	saveErr      error
+}
+
+func (m *mockConcurrentCartRepository) GetWithItemsByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (*Cart, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.cart == nil {
+		return nil, nil
+	}
+	copied := *m.cart
+	copied.Items = make([]CartItem, len(m.cart.Items))
+	copy(copied.Items, m.cart.Items)
+	return &copied, nil
+}
+
+func (m *mockConcurrentCartRepository) NewCart(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (*Cart, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	atomic.AddInt32(&m.newCartCalls, 1)
+	if m.cart != nil {
+		// Simulates ON CONFLICT (customer_id) returning the concurrently created cart
+		copied := *m.cart
+		copied.Items = make([]CartItem, len(m.cart.Items))
+		copy(copied.Items, m.cart.Items)
+		return &copied, nil
+	}
+	m.cart = &Cart{
+		ID:         uuid.New(),
+		CustomerID: customerID,
+		Items:      []CartItem{},
+	}
+	copied := *m.cart
+	return &copied, nil
+}
+
+func (m *mockConcurrentCartRepository) Save(ctx context.Context, exec transaction.Executor, c *Cart) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.saveErr != nil {
+		return m.saveErr
+	}
+	copied := *c
+	copied.Items = make([]CartItem, len(c.Items))
+	copy(copied.Items, c.Items)
+	m.cart = &copied
+	return nil
+}
+
+func (m *mockConcurrentCartRepository) DeleteByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) error {
+	return nil
+}
+
+func TestAddItem_ConcurrentNewCartCreation(t *testing.T) {
+	ctx := context.Background()
+	customerID := uuid.New()
+	shopID := uuid.New()
+	productID := uuid.New()
+
+	cartR := &mockConcurrentCartRepository{}
+	invR := &mockAddItemInvRepo{
+		inv: &inventory.Inventory{
+			ProductID:  productID,
+			ShopID:     shopID,
+			TotalStock: 1000,
+		},
+	}
+	prodR := &mockAddItemProdRepo{
+		prod: &product.Product{
+			ID:     productID,
+			Name:   "Test Item",
+			Status: product.ProductStatusActive,
+		},
+	}
+	shopR := &mockCartShopRepo{}
+	tx := &mockTransactor{}
+	exec := &mockExecutor{}
+
+	uc := NewService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
+
+	const numWorkers = 10
+	var wg sync.WaitGroup
+	var unexpectedErrors []error
+	var errMu sync.Mutex
+
+	startBarrier := make(chan struct{})
+
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			<-startBarrier
+			err := uc.AddItem(ctx, AddItemInput{
+				CustomerID:  customerID,
+				ShopID:      shopID,
+				ProductID:   productID,
+				Quantity:    1,
+				ItemOptions: ItemOptions{"option": uuid.New().String()},
+			})
+			if err != nil {
+				errMu.Lock()
+				unexpectedErrors = append(unexpectedErrors, err)
+				errMu.Unlock()
+			}
+		}(i)
+	}
+
+	close(startBarrier)
+	wg.Wait()
+
+	if len(unexpectedErrors) > 0 {
+		t.Fatalf("expected 0 unexpected errors during concurrent AddItem, got %d: %v", len(unexpectedErrors), unexpectedErrors[0])
+	}
+
+	cartR.mu.RLock()
+	defer cartR.mu.RUnlock()
+	if cartR.cart == nil {
+		t.Fatal("expected cart to be created and non-nil")
+	}
+}
+
+func TestAddItem_UniqueViolationMappedToConflict(t *testing.T) {
+	ctx := context.Background()
+	customerID := uuid.New()
+	shopID := uuid.New()
+	productID := uuid.New()
+
+	cartR := &mockConcurrentCartRepository{
+		saveErr: transaction.ErrUniqueViolation,
+	}
+	invR := &mockAddItemInvRepo{
+		inv: &inventory.Inventory{
+			ProductID:  productID,
+			ShopID:     shopID,
+			TotalStock: 100,
+		},
+	}
+	prodR := &mockAddItemProdRepo{
+		prod: &product.Product{
+			ID:     productID,
+			Name:   "Test Item",
+			Status: product.ProductStatusActive,
+		},
+	}
+	shopR := &mockCartShopRepo{}
+	tx := &mockTransactor{}
+	exec := &mockExecutor{}
+
+	uc := NewService(cartR, invR, prodR, nil, shopR, nil, exec, tx)
+
+	err := uc.AddItem(ctx, AddItemInput{
+		CustomerID: customerID,
+		ShopID:     shopID,
+		ProductID:  productID,
+		Quantity:   1,
+	})
+
+	if err == nil {
+		t.Fatal("expected error on unique constraint violation, got nil")
+	}
+	if !apperror.IsConflict(err) {
+		t.Fatalf("expected 409 Conflict error, got %v", err)
 	}
 }

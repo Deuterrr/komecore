@@ -2,6 +2,7 @@ package wishlist_test
 
 import (
 	"context"
+	"sync"
 
 	transaction "komecore/internal/infra/transactor"
 	"komecore/internal/modules/inventory"
@@ -12,11 +13,13 @@ import (
 )
 
 type mockWishlistRepo struct {
-	items     map[string]wishlist.WishlistItem
-	addErr    error
-	removeErr error
-	listErr   error
-	existsErr error
+	mu                      sync.RWMutex
+	items                   map[string]wishlist.WishlistItem
+	addErr                  error
+	removeErr               error
+	listErr                 error
+	existsErr               error
+	simulateUniqueViolation bool
 }
 
 func newMockWishlistRepo() *mockWishlistRepo {
@@ -30,14 +33,24 @@ func (m *mockWishlistRepo) key(customerID, productID uuid.UUID) string {
 }
 
 func (m *mockWishlistRepo) Add(_ context.Context, _ transaction.Executor, item wishlist.WishlistItem) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.addErr != nil {
 		return m.addErr
 	}
-	m.items[m.key(item.CustomerID, item.ProductID)] = item
+	k := m.key(item.CustomerID, item.ProductID)
+	if m.simulateUniqueViolation {
+		if _, ok := m.items[k]; ok {
+			return wishlist.ErrWishlistItemAlreadyExists
+		}
+	}
+	m.items[k] = item
 	return nil
 }
 
 func (m *mockWishlistRepo) Remove(_ context.Context, _ transaction.Executor, customerID, productID uuid.UUID) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.removeErr != nil {
 		return m.removeErr
 	}
@@ -46,6 +59,8 @@ func (m *mockWishlistRepo) Remove(_ context.Context, _ transaction.Executor, cus
 }
 
 func (m *mockWishlistRepo) ListByCustomerID(_ context.Context, _ transaction.Executor, customerID uuid.UUID) ([]wishlist.WishlistItem, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if m.listErr != nil {
 		return nil, m.listErr
 	}
@@ -59,6 +74,8 @@ func (m *mockWishlistRepo) ListByCustomerID(_ context.Context, _ transaction.Exe
 }
 
 func (m *mockWishlistRepo) Exists(_ context.Context, _ transaction.Executor, customerID, productID uuid.UUID) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if m.existsErr != nil {
 		return false, m.existsErr
 	}

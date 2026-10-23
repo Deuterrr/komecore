@@ -2,6 +2,7 @@ package cart
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"komecore/internal/apperror"
@@ -256,6 +257,9 @@ func (s *Service) AddItem(ctx context.Context, input AddItemInput) error {
 		}
 		return nil
 	}); err != nil {
+		if errors.Is(transaction.MapDBError(err), transaction.ErrUniqueViolation) {
+			return apperror.NewConflict("item already exists in cart or concurrently modified")
+		}
 		return err
 	}
 

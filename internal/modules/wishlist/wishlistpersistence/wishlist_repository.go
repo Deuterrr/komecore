@@ -2,6 +2,7 @@ package wishlistpersistence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	transaction "komecore/internal/infra/transactor"
@@ -24,10 +25,14 @@ func (r *WishlistRepository) Add(
 	query := `
 		INSERT INTO wishlists (customer_id, product_id, created_at)
 		VALUES ($1, $2, $3)
+		ON CONFLICT (customer_id, product_id) DO NOTHING
 	`
 
 	_, err := exec.Exec(ctx, query, item.CustomerID, item.ProductID, item.CreatedAt)
 	if err != nil {
+		if errors.Is(transaction.MapDBError(err), transaction.ErrUniqueViolation) {
+			return wishlist.ErrWishlistItemAlreadyExists
+		}
 		return fmt.Errorf("add to wishlist failed: %w", err)
 	}
 

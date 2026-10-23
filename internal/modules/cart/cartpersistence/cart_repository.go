@@ -130,6 +130,8 @@ func (r *CartRepository) NewCart(
 			customer_id
 		)
 		VALUES ($1)
+		ON CONFLICT (customer_id)
+		DO UPDATE SET updated_at = NOW()
 		RETURNING
 			id,
 			customer_id,
@@ -145,6 +147,12 @@ func (r *CartRepository) NewCart(
 		&c.UpdatedAt,
 	)
 	if err != nil {
+		if errors.Is(transaction.MapDBError(err), transaction.ErrUniqueViolation) {
+			existing, getErr := r.GetWithItemsByCustomerID(ctx, exec, customerID)
+			if getErr == nil && existing != nil {
+				return existing, nil
+			}
+		}
 		return nil, fmt.Errorf("insert cart failed: %w", err)
 	}
 

@@ -2,6 +2,8 @@ package wishlist_test
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"komecore/internal/apperror"
@@ -83,4 +85,62 @@ func TestAddToWishlist_InvalidInput(t *testing.T) {
 
 	err = svc.AddToWishlist(ctx, wishlist.AddToWishlistInput{CustomerID: uuid.New(), ProductID: uuid.Nil})
 	require.Error(t, err)
+}
+
+func TestAddToWishlist_ConcurrentDuplicateRequests(t *testing.T) {
+	ctx := context.Background()
+	wishlistRepo := newMockWishlistRepo()
+	wishlistRepo.simulateUniqueViolation = true
+
+	prodID := uuid.New()
+	custID := uuid.New()
+
+	pRepo := &mockProductRepo{
+		products: map[uuid.UUID]*product.Product{
+			prodID: {ID: prodID, Name: "Sneakers", Status: product.ProductStatusActive, Price: 500000},
+		},
+	}
+
+	svc := wishlist.NewService(wishlistRepo, pRepo, nil, nil, nil, nil)
+
+	const numWorkers = 10
+	var wg sync.WaitGroup
+	var successCount int32
+	var conflictCount int32
+	var unexpectedErrors []error
+	var errMu sync.Mutex
+
+	startBarrier := make(chan struct{})
+
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-startBarrier
+			err := svc.AddToWishlist(ctx, wishlist.AddToWishlistInput{
+				CustomerID: custID,
+				ProductID:  prodID,
+			})
+			if err == nil {
+				atomic.AddInt32(&successCount, 1)
+			} else if apperror.IsConflict(err) {
+				atomic.AddInt32(&conflictCount, 1)
+			} else {
+				errMu.Lock()
+				unexpectedErrors = append(unexpectedErrors, err)
+				errMu.Unlock()
+			}
+		}()
+	}
+
+	close(startBarrier)
+	wg.Wait()
+
+	require.Empty(t, unexpectedErrors, "expected zero 500/unexpected errors during concurrent add")
+	assert.GreaterOrEqual(t, atomic.LoadInt32(&successCount), int32(1), "expected at least 1 success")
+	assert.Equal(t, int32(numWorkers), atomic.LoadInt32(&successCount)+atomic.LoadInt32(&conflictCount))
+
+	exists, err := wishlistRepo.Exists(ctx, nil, custID, prodID)
+	require.NoError(t, err)
+	assert.True(t, exists)
 }
