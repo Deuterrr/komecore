@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"komecore/internal/apperror"
@@ -17,9 +18,16 @@ import (
 	otp "komecore/pkg/otp"
 
 	"github.com/google/uuid"
+	"golang.org/x/sync/singleflight"
 )
 
 const meWriteInterval = 5 * time.Minute
+
+type tokenRotationGraceEntry struct {
+	previousTokenHash string
+	output            RefreshTokenOutput
+	expiresAt         time.Time
+}
 
 type Service struct {
 	executor            transaction.Executor
@@ -41,6 +49,11 @@ type Service struct {
 	challengeSvc        ChallengeService
 	auditLogger         applogger.AuditLogger
 	sysLogger           applogger.Logger
+
+	refreshGroup singleflight.Group
+	graceMu      sync.RWMutex
+	graceWindow  time.Duration
+	graceStore   map[uuid.UUID]tokenRotationGraceEntry
 }
 
 func NewService(
@@ -108,6 +121,8 @@ func NewService(
 		sessionIssuer:       sessionIssuer,
 		challengeSvc:        challengeSvc,
 		auditLogger:         auditLogger,
+		graceWindow:         15 * time.Second,
+		graceStore:          make(map[uuid.UUID]tokenRotationGraceEntry),
 	}
 }
 
@@ -1206,81 +1221,148 @@ func (s *Service) RefreshToken(ctx context.Context, input RefreshTokenInput) (*R
 		return nil, apperror.NewForbidden("customer account required")
 	}
 
-	session, err := s.sessionRepo.GetByID(ctx, s.executor, claims.SessionID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get session: %w", err)
-	}
-	if session == nil || session.RevokedAt != nil || session.ExpiresAt.Before(appclock.Now()) {
-		return nil, apperror.NewUnauthorized(ErrInvalidSession.Error())
-	}
-
-	dbRefreshToken, err := s.refreshTokenRepo.GetBySessionID(ctx, s.executor, claims.SessionID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get refresh token: %w", err)
-	}
-	if dbRefreshToken == nil || dbRefreshToken.RevokedAt != nil || dbRefreshToken.ExpiresAt.Before(appclock.Now()) {
-		return nil, apperror.NewUnauthorized("refresh token is invalid or expired")
+	// Fast-path: Handle concurrent requests inside the rotation grace window
+	s.graceMu.RLock()
+	graceEntry, inGrace := s.graceStore[claims.SessionID]
+	s.graceMu.RUnlock()
+	if inGrace && appclock.Now().Before(graceEntry.expiresAt) {
+		if s.tokenHasher.Compare(graceEntry.previousTokenHash, input.RefreshToken) {
+			out := graceEntry.output
+			return &out, nil
+		}
 	}
 
-	if !s.tokenHasher.Compare(dbRefreshToken.TokenHash, input.RefreshToken) {
-		return nil, apperror.NewUnauthorized("refresh token mismatch")
-	}
+	// Deduplicate simultaneous requests for the same session using singleflight
+	flightKey := claims.SessionID.String()
+	res, err, _ := s.refreshGroup.Do(flightKey, func() (any, error) {
+		// Re-check grace window inside the flight barrier
+		s.graceMu.RLock()
+		graceEntry, inGrace := s.graceStore[claims.SessionID]
+		s.graceMu.RUnlock()
 
-	roleCodes := make([]RoleCode, len(claims.Roles))
-	for i, rCode := range claims.Roles {
-		roleCodes[i] = RoleCode(rCode)
-	}
+		if inGrace && appclock.Now().Before(graceEntry.expiresAt) {
+			if s.tokenHasher.Compare(graceEntry.previousTokenHash, input.RefreshToken) {
+				out := graceEntry.output
+				return &out, nil
+			}
+		}
 
-	newAccessTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
-		UserID:     claims.UserID,
-		SessionID:  claims.SessionID,
-		StaffID:    claims.StaffID,
-		CustomerID: claims.CustomerID,
-		Roles:      roleCodes,
-		Type:       TokenTypeAccess,
-		Duration:   30 * time.Minute,
+		execCtx := ctx
+		if ctx.Err() == nil {
+			var cancel context.CancelFunc
+			execCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+			defer cancel()
+		}
+
+		session, err := s.sessionRepo.GetByID(execCtx, s.executor, claims.SessionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get session: %w", err)
+		}
+		if session == nil || session.RevokedAt != nil || session.ExpiresAt.Before(appclock.Now()) {
+			return nil, apperror.NewUnauthorized(ErrInvalidSession.Error())
+		}
+
+		dbRefreshToken, err := s.refreshTokenRepo.GetBySessionID(execCtx, s.executor, claims.SessionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get refresh token: %w", err)
+		}
+		if dbRefreshToken == nil || dbRefreshToken.RevokedAt != nil || dbRefreshToken.ExpiresAt.Before(appclock.Now()) {
+			return nil, apperror.NewUnauthorized("refresh token is invalid or expired")
+		}
+
+		if !s.tokenHasher.Compare(dbRefreshToken.TokenHash, input.RefreshToken) {
+			return nil, apperror.NewUnauthorized("refresh token mismatch")
+		}
+
+		oldTokenHash := dbRefreshToken.TokenHash
+
+		roleCodes := make([]RoleCode, len(claims.Roles))
+		for i, rCode := range claims.Roles {
+			roleCodes[i] = RoleCode(rCode)
+		}
+
+		newAccessTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
+			UserID:     claims.UserID,
+			SessionID:  claims.SessionID,
+			StaffID:    claims.StaffID,
+			CustomerID: claims.CustomerID,
+			Roles:      roleCodes,
+			Type:       TokenTypeAccess,
+			Duration:   30 * time.Minute,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate new access token: %w", err)
+		}
+
+		newRefreshTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
+			UserID:     claims.UserID,
+			SessionID:  claims.SessionID,
+			StaffID:    claims.StaffID,
+			CustomerID: claims.CustomerID,
+			Roles:      roleCodes,
+			Type:       TokenTypeRefresh,
+			Duration:   7 * 24 * time.Hour,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate new refresh token: %w", err)
+		}
+
+		now := appclock.Now()
+		session.ExpiresAt = now.Add(7 * 24 * time.Hour)
+		session.LastActivityAt = &now
+
+		newRefreshTknHashed := s.tokenHasher.Hash(newRefreshTkn.Token)
+		dbRefreshToken.TokenHash = newRefreshTknHashed
+		dbRefreshToken.ExpiresAt = now.Add(7 * 24 * time.Hour)
+
+		if err := s.transactor.WithinTransaction(execCtx, func(e transaction.Executor) error {
+			if err := s.sessionRepo.Save(execCtx, e, *session); err != nil {
+				return fmt.Errorf("failed to save updated session: %w", err)
+			}
+			if err := s.refreshTokenRepo.Save(execCtx, e, *dbRefreshToken); err != nil {
+				return fmt.Errorf("failed to save updated refresh token: %w", err)
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+
+		output := RefreshTokenOutput{
+			AccessToken:  newAccessTkn,
+			RefreshToken: newRefreshTkn,
+		}
+
+		// Store previous token hash and new tokens in the grace window
+		s.graceMu.Lock()
+		if s.graceStore == nil {
+			s.graceStore = make(map[uuid.UUID]tokenRotationGraceEntry)
+		}
+		// Enforce memory bounds by pruning expired entries
+		for sid, e := range s.graceStore {
+			if e.expiresAt.Before(now) {
+				delete(s.graceStore, sid)
+			}
+		}
+		graceDuration := s.graceWindow
+		if graceDuration <= 0 {
+			graceDuration = 15 * time.Second
+		}
+		s.graceStore[claims.SessionID] = tokenRotationGraceEntry{
+			previousTokenHash: oldTokenHash,
+			output:            output,
+			expiresAt:         now.Add(graceDuration),
+		}
+		s.graceMu.Unlock()
+
+		return &output, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate new access token: %w", err)
-	}
-
-	newRefreshTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
-		UserID:     claims.UserID,
-		SessionID:  claims.SessionID,
-		StaffID:    claims.StaffID,
-		CustomerID: claims.CustomerID,
-		Roles:      roleCodes,
-		Type:       TokenTypeRefresh,
-		Duration:   7 * 24 * time.Hour,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate new refresh token: %w", err)
-	}
-
-	now := appclock.Now()
-	session.ExpiresAt = now.Add(7 * 24 * time.Hour)
-	session.LastActivityAt = &now
-
-	newRefreshTknHashed := s.tokenHasher.Hash(newRefreshTkn.Token)
-	dbRefreshToken.TokenHash = newRefreshTknHashed
-	dbRefreshToken.ExpiresAt = now.Add(7 * 24 * time.Hour)
-
-	if err := s.transactor.WithinTransaction(ctx, func(e transaction.Executor) error {
-		if err := s.sessionRepo.Save(ctx, e, *session); err != nil {
-			return fmt.Errorf("failed to save updated session: %w", err)
-		}
-		if err := s.refreshTokenRepo.Save(ctx, e, *dbRefreshToken); err != nil {
-			return fmt.Errorf("failed to save updated refresh token: %w", err)
-		}
-		return nil
-	}); err != nil {
 		return nil, err
 	}
 
-	return &RefreshTokenOutput{
-		AccessToken:  newAccessTkn,
-		RefreshToken: newRefreshTkn,
-	}, nil
+	out := res.(*RefreshTokenOutput)
+	copied := *out
+	return &copied, nil
 }
 
 func (s *Service) DeleteAccount(ctx context.Context, authCtx AuthContext) error {
@@ -1325,4 +1407,11 @@ func (s *Service) DeleteAccount(ctx context.Context, authCtx AuthContext) error 
 	}
 
 	return nil
+}
+
+func (s *Service) withGraceWindow(window time.Duration) *Service {
+	s.graceMu.Lock()
+	defer s.graceMu.Unlock()
+	s.graceWindow = window
+	return s
 }
