@@ -14,35 +14,61 @@ type Limiter interface {
 	Allow(ip string) bool
 }
 
-// InMemorySlidingWindowLimiter implements the Limiter interface using
-// an in-memory map and a sliding window of request timestamps.
-type InMemorySlidingWindowLimiter struct {
+const numShards = 32
+
+type shard struct {
 	mu       sync.Mutex
 	requests map[string][]time.Time
+}
+
+// InMemorySlidingWindowLimiter implements the Limiter interface using
+// 32 partitioned lock shards to eliminate global mutex contention (MC-C6).
+type InMemorySlidingWindowLimiter struct {
+	shards   [numShards]*shard
 	window   time.Duration
 	maxLimit int
 }
 
 func NewInMemorySlidingWindowLimiter(window time.Duration, maxLimit int) *InMemorySlidingWindowLimiter {
-	return &InMemorySlidingWindowLimiter{
-		requests: make(map[string][]time.Time),
+	lim := &InMemorySlidingWindowLimiter{
 		window:   window,
 		maxLimit: maxLimit,
 	}
+	for i := range lim.shards {
+		lim.shards[i] = &shard{
+			requests: make(map[string][]time.Time),
+		}
+	}
+	return lim
+}
+
+const (
+	offset32 = 2166136261
+	prime32  = 16777619
+)
+
+func hashKey(s string) uint32 {
+	var h uint32 = offset32
+	for i := 0; i < len(s); i++ {
+		h ^= uint32(s[i])
+		h *= prime32
+	}
+	return h
 }
 
 // Allow returns true if the client IP has not exceeded the maxLimit
 // requests in the specified sliding window duration.
 func (l *InMemorySlidingWindowLimiter) Allow(ip string) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	shardIdx := hashKey(ip) & (numShards - 1)
+	s := l.shards[shardIdx]
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	now := clock.Now()
 	cutoff := now.Add(-l.window)
 
-	// Retrieve current timestamps for the IP
-	times := l.requests[ip]
-	var validTimes []time.Time
+	times := s.requests[ip]
+	validTimes := times[:0]
 	for _, t := range times {
 		if t.After(cutoff) {
 			validTimes = append(validTimes, t)
@@ -50,12 +76,12 @@ func (l *InMemorySlidingWindowLimiter) Allow(ip string) bool {
 	}
 
 	if len(validTimes) >= l.maxLimit {
-		l.requests[ip] = validTimes
+		s.requests[ip] = validTimes
 		return false
 	}
 
 	validTimes = append(validTimes, now)
-	l.requests[ip] = validTimes
+	s.requests[ip] = validTimes
 
 	return true
 }
