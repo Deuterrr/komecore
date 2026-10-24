@@ -69,7 +69,7 @@ func TestCollectionParity_CoverageAudit(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if !d.IsDir() && strings.HasSuffix(d.Name(), ".bru") {
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ".bru") && d.Name() != "collection.bru" {
 			brunoFilesCount++
 		}
 		return nil
