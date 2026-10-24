@@ -83,9 +83,11 @@ komecore/
 
 ### Quick Start
 
-> **Environment Setup**: Configure `DB_TARGET` (`postgres` · `supabase` · `sqlserver`), `STORAGE_PROVIDER` (`supabase` · `gcs` · `noop`), and `REDIS_ENABLED` (`true` · `false`) directly in `.env`. Database migrations live in `migrations/<dialect>/`.
+> **Environment Setup**: Copy `.env.example` to `.env`. Configure `DB_TARGET` (`postgres` · `supabase` · `sqlserver`), `STORAGE_PROVIDER` (`supabase` · `gcs` · `noop`), and `REDIS_ENABLED` (`true` · `false`). Schema migrations live in `migrations/<dialect>/` and seed data in `seeds/<dialect>/`.
+>
+> **Default Admin Account**: Running `make seed` or `make seed-dev` provisions a Super Admin with full platform permissions: `admin@komecore.com` / `AdminSecret123!`.
 
-#### 1. Docker Compose
+#### 1. Containerized Stack (Docker)
 
 ```bash
 docker compose up --build -d
@@ -93,22 +95,23 @@ curl http://localhost:7129/health
 # {"status":"healthy"}
 ```
 
-#### 2. Live Reload / Hot Reload (`air`)
+#### 2. Local Development (Live Reload)
 
 ```bash
 cp .env.example .env
-make migrate && make seed
-make dev   # or run `air`
+make migrate && make seed-dev   # apply schema & development fixtures
+make dev                        # run server with live reload (Air)
 ```
 
-#### 3. Makefile Automation
+#### 3. Database & CLI Operations
 
 ```bash
-cp .env.example .env
-make migrate        # or: make migrate-supabase / make migrate-sqlserver
-make seed
-make run
-make test
+make migrate            # apply pending migrations up
+make migrate-version    # inspect current schema migration version
+make seed               # populate base data (roles, super admin, couriers, payment guides)
+make seed-dev           # populate base + development data (shops, products, customers)
+make run                # run standalone server daemon
+make test               # run full test suite
 ```
 
 ---
