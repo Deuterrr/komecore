@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"komecore/internal/config"
-	database "komecore/internal/infra/db"
 	"komecore/internal/infra/transactor"
 	pgxtransactor "komecore/internal/infra/transactor/pgx"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -100,19 +103,61 @@ func NewTestDB(ctx context.Context) (*TestDB, error) {
 	}, nil
 }
 
+func resolveTestMigrationURL(cfg config.DatabaseConfig) string {
+	src := cfg.MigrationDir()
+	if strings.HasPrefix(src, "file://") || strings.HasPrefix(src, "file:") {
+		return src
+	}
+	return "file://" + filepath.ToSlash(src)
+}
+
+func (tdb *TestDB) newMigrator() (*migrate.Migrate, error) {
+	if tdb.Config.DSN == nil || *tdb.Config.DSN == "" {
+		return nil, fmt.Errorf("database DSN is not configured")
+	}
+	return migrate.New(resolveTestMigrationURL(tdb.Config), *tdb.Config.DSN)
+}
+
 // ApplyMigrations runs all UP migrations against the ephemeral database.
 func (tdb *TestDB) ApplyMigrations() error {
-	return database.RunMigration(tdb.Config)
+	m, err := tdb.newMigrator()
+	if err != nil {
+		return fmt.Errorf("init migration: %w", err)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("migration failed: %w", err)
+	}
+	return nil
 }
 
 // RollbackOneStep rolls back 1 migration step.
 func (tdb *TestDB) RollbackOneStep() error {
-	return database.RunRollback(tdb.Config)
+	m, err := tdb.newMigrator()
+	if err != nil {
+		return fmt.Errorf("init migration: %w", err)
+	}
+	defer m.Close()
+
+	if err := m.Steps(-1); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("rollback failed: %w", err)
+	}
+	return nil
 }
 
 // RollbackAll rolls back all applied migrations to version 0.
 func (tdb *TestDB) RollbackAll() error {
-	return database.RunMigrationDown(tdb.Config)
+	m, err := tdb.newMigrator()
+	if err != nil {
+		return fmt.Errorf("init migration: %w", err)
+	}
+	defer m.Close()
+
+	if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("rollback all failed: %w", err)
+	}
+	return nil
 }
 
 // Truncate cleans all tables in the public schema except schema_migrations.

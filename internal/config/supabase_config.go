@@ -1,5 +1,9 @@
 package config
 
+import (
+	"strings"
+)
+
 // SupabaseConfig intentionally groups all Supabase-related infrastructure
 // configuration, including database and storage concerns.
 //
@@ -41,15 +45,25 @@ func LoadSupabaseConfig() SupabaseConfig {
 		storageVersion = GetEnv("", "")
 	)
 
-	dsn := "postgresql://" +
-		user + ":" +
-		password + "@" +
-		host + ":" +
-		port + "/" +
-		name
+	if strings.EqualFold(sslMode, "enable") {
+		sslMode = "require"
+	}
+	if host != "" && sslMode == "" {
+		sslMode = "require"
+	}
 
-	if sslMode != "" {
-		dsn += "?sslmode=" + sslMode
+	dsn := ""
+	if host != "" && user != "" {
+		dsn = "postgresql://" +
+			user + ":" +
+			password + "@" +
+			host + ":" +
+			port + "/" +
+			name
+
+		if sslMode != "" {
+			dsn += "?sslmode=" + sslMode
+		}
 	}
 
 	return SupabaseConfig{

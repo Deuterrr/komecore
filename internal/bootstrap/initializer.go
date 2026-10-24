@@ -4,9 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
+	"strings"
 
 	"komecore/internal/config"
-	database "komecore/internal/infra/db"
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlserver"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 // Initializer handles pre-flight application startup tasks
@@ -36,7 +42,7 @@ func (i *Initializer) Run(ctx context.Context) error {
 			return fmt.Errorf("failed to apply migrations during startup: database DSN is not configured")
 		}
 		log.Printf("running pre-flight database migrations [dialect=%s]", i.dbCfg.Dialect)
-		if err := database.RunMigration(i.dbCfg); err != nil {
+		if err := runPreflightMigration(i.dbCfg); err != nil {
 			return fmt.Errorf("failed to apply migrations during startup: %w", err)
 		}
 	}
@@ -46,6 +52,29 @@ func (i *Initializer) Run(ctx context.Context) error {
 		if err := i.c.Payment.SyncPaymentMethods(ctx); err != nil {
 			return fmt.Errorf("failed to sync payment methods on startup: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func runPreflightMigration(cfg config.DatabaseConfig) error {
+	if cfg.DSN == nil || *cfg.DSN == "" {
+		return fmt.Errorf("database DSN is not configured")
+	}
+
+	src := cfg.MigrationDir()
+	if !strings.HasPrefix(src, "file://") && !strings.HasPrefix(src, "file:") {
+		src = "file://" + filepath.ToSlash(src)
+	}
+
+	m, err := migrate.New(src, *cfg.DSN)
+	if err != nil {
+		return fmt.Errorf("failed to init migration: %w", err)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("migration failed: %w", err)
 	}
 
 	return nil

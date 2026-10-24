@@ -20,15 +20,18 @@ func LoadPostgresConfig() PostgresConfig {
 		sslMode  = GetEnv("POSTGRES_DB_SSLMODE", "")
 	)
 
-	dsn := "postgresql://" +
-		user + ":" +
-		password + "@" +
-		host + ":" +
-		port + "/" +
-		name
+	dsn := ""
+	if host != "" && user != "" {
+		dsn = "postgresql://" +
+			user + ":" +
+			password + "@" +
+			host + ":" +
+			port + "/" +
+			name
 
-	if sslMode != "" {
-		dsn += "?sslmode=" + sslMode
+		if sslMode != "" {
+			dsn += "?sslmode=" + sslMode
+		}
 	}
 
 	return PostgresConfig{

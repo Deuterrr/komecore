@@ -50,6 +50,7 @@ func LoadDBConfig(
 // falling back to "postgres" for local/standalone Postgres.
 // If target is omitted or empty, it falls back to the DB_TARGET environment variable.
 func ResolveDBConfig(target ...string) DatabaseConfig {
+	LoadDotEnv()
 	selected := ""
 	if len(target) > 0 {
 		selected = target[0]
@@ -71,7 +72,6 @@ func ResolveDBConfig(target ...string) DatabaseConfig {
 			DSN:      &supa.DSN,
 			Dialect:  "postgres",
 		}
-
 	case "sqlserver":
 		ss := LoadSQLServerConfig()
 		return DatabaseConfig{
@@ -83,7 +83,6 @@ func ResolveDBConfig(target ...string) DatabaseConfig {
 			DSN:      &ss.DSN,
 			Dialect:  "sqlserver",
 		}
-
 	default: // "postgres"
 		pg := LoadPostgresConfig()
 		return DatabaseConfig{
