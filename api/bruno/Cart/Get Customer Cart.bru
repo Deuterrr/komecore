@@ -13,3 +13,59 @@ get {
 auth:bearer {
   token: {{customerToken}}
 }
+
+example {
+  name: v1.1.0-pre
+  
+  request: {
+    url: {{baseUrl}}/api/v1/carts
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      content-type: application/json
+      x-request-id: 9a3082c6-8dba-41bf-abf6-6b03d1e5de20
+      date: Sat, 24 Oct 2026 16:15:07 GMT
+      content-length: 490
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "cart_id": "77dc1ec2-e2a7-48e4-9b0b-7aebdf5485cd",
+          "items": [
+            {
+              "cart_item_id": "3592084e-65b8-49c4-845c-a28cf088dc1d",
+              "product_id": "b0000000-0000-0000-0000-000000000001",
+              "shop_id": "c0000000-0000-0000-0000-000000000001",
+              "shop_name": "Kome Central Store",
+              "shop_slug": "kome-central-store",
+              "name": "Organic Japonica Rice 5kg",
+              "price": 75000,
+              "subtotal": 450000,
+              "quantity": 6,
+              "images": {
+                "thumbnail": null,
+                "preview": null,
+                "detail": null
+              },
+              "item_options": {
+                "packaging": "vacuum",
+                "variant": "5kg"
+              }
+            }
+          ],
+          "total": 450000
+        }
+      '''
+    }
+  }
+}

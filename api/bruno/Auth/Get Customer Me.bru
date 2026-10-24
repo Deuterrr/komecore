@@ -13,3 +13,44 @@ get {
 auth:bearer {
   token: {{customerToken}}
 }
+
+example {
+  name: v1.1.0-pre
+  
+  request: {
+    url: {{baseUrl}}/api/v1/auth/me
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      content-type: application/json
+      x-request-id: c78381e7-565f-40b6-b436-bdadc7cc45de
+      date: Sat, 24 Oct 2026 16:10:43 GMT
+      content-length: 235
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "account_id": "513703c0-64f5-4a64-a32d-387b7b4794c7",
+          "account_type": "customer",
+          "is_authenticated": true,
+          "avatar_url": null,
+          "staff_id": null,
+          "roles": [],
+          "permissions": [],
+          "oauth_provider": null,
+          "last_login_at": "2026-10-24T16:10:43.4996281Z"
+        }
+      '''
+    }
+  }
+}

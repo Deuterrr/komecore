@@ -13,3 +13,47 @@ get {
 auth:bearer {
   token: {{customerToken}}
 }
+
+example {
+  name: v1.1.0-pre
+  
+  request: {
+    url: {{baseUrl}}/api/v1/profile
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      content-type: application/json
+      x-request-id: ea7e0909-3bda-4621-8f0c-228c7929146e
+      date: Sat, 24 Oct 2026 16:15:41 GMT
+      content-length: 322
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "profile": {
+            "customer_id": "f6a7b8c9-d0e1-4f2a-b3c4-5d6e7f8a9b0c",
+            "staff_id": null,
+            "user_id": "e5f6a7b8-c9d0-4e1f-a2b3-4c5d6e7f8a9b",
+            "Name": "Budi Santoso",
+            "Username": "budisantoso",
+            "Phone": "081298765432",
+            "AvatarURL": null,
+            "LastLoginAt": "2026-10-24T16:13:08.238215Z",
+            "CreatedAt": "2026-10-24T15:35:02.657673Z",
+            "UpdatedAt": null
+          }
+        }
+      '''
+    }
+  }
+}

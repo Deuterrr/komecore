@@ -12,8 +12,49 @@ post {
 
 body:json {
   {
-    "email": "customer@example.com",
-    "password": "Password123!",
+    "email": "customer@komecore.com",
+    "password": "CustomerSecret123!",
     "remember_me": true
+  }
+}
+
+example {
+  name: v1.1.0-pre
+  
+  request: {
+    url: {{baseUrl}}/api/v1/auth/signin
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "email": "customer@komecore.com",
+        "password": "CustomerSecret123!",
+        "remember_me": true
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      content-type: application/json
+      set-cookie: access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTVmNmE3YjgtYzlkMC00ZTFmLWEyYjMtNGM1ZDZlN2Y4YTliIiwic2Vzc2lvbl9pZCI6IjA4OTI1MGVmLTg4YmMtNDMzMy1hYmE4LTRiYjc5ZjJhOGFlZCIsInR5cGUiOiJhY2Nlc3MiLCJjdXN0b21lcl9pZCI6ImY2YTdiOGM5LWQwZTEtNGYyYS1iM2M0LTVkNmU3ZjhhOWIwYyIsImV4cCI6MTc5Mjg1ODk1NCwiaWF0IjoxNzkyODU3MTU0fQ.VTVD_S_yZyz4zJsj2SAUBw-IOkKYMqfBvH1KlzmxvFw; Path=/; Expires=Sat, 24 Oct 2026 16:22:34 GMT; HttpOnly; SameSite=Lax,refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTVmNmE3YjgtYzlkMC00ZTFmLWEyYjMtNGM1ZDZlN2Y4YTliIiwic2Vzc2lvbl9pZCI6IjA4OTI1MGVmLTg4YmMtNDMzMy1hYmE4LTRiYjc5ZjJhOGFlZCIsInR5cGUiOiJyZWZyZXNoIiwiY3VzdG9tZXJfaWQiOiJmNmE3YjhjOS1kMGUxLTRmMmEtYjNjNC01ZDZlN2Y4YTliMGMiLCJleHAiOjE3OTM0NjE5NTQsImlhdCI6MTc5Mjg1NzE1NH0.zfCwXWUOtAhyIBsZ5Xw8dRsDjL4b4AbHh9IqHVm4Kws; Path=/; Expires=Sat, 31 Oct 2026 15:52:34 GMT; HttpOnly; SameSite=Lax
+      x-request-id: a63ceb03-885e-4449-a660-a87fde3840c5
+      date: Sat, 24 Oct 2026 15:52:35 GMT
+      content-length: 28
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "message": "login success"
+        }
+      '''
+    }
   }
 }

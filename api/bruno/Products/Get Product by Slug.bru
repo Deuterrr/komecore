@@ -9,3 +9,72 @@ get {
   body: none
   auth: none
 }
+
+vars:pre-request {
+  productSlug: organic-japonica-rice-5kg
+}
+
+example {
+  name: v1.1.0-pre
+  
+  request: {
+    url: {{baseUrl}}/api/v1/products/{{productSlug}}
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      content-type: application/json
+      x-request-id: a9c20024-6c71-4211-84b2-aac1cfae43f5
+      date: Sat, 24 Oct 2026 15:50:51 GMT
+      content-length: 748
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "id": "b0000000-0000-0000-0000-000000000001",
+          "sku": "PRD-001",
+          "name": "Organic Japonica Rice 5kg",
+          "slug": "organic-japonica-rice-5kg",
+          "status": "active",
+          "is_available": true,
+          "price": 75000,
+          "stock": 150,
+          "average_rating": 0,
+          "review_count": 0,
+          "banner": {
+            "thumbnail": null,
+            "preview": null,
+            "detail": null
+          },
+          "description": "Premium certified organic short-grain Japonica rice, naturally sweet with superior sticky texture ideal for everyday meals, sushi, and donburi.",
+          "weight": 5000,
+          "updated_at": null,
+          "gallery": [],
+          "availability": [
+            {
+              "shop_id": "c0000000-0000-0000-0000-000000000001",
+              "slug": "kome-central-store",
+              "name": "Kome Central Store",
+              "stock": 100
+            },
+            {
+              "shop_id": "c0000000-0000-0000-0000-000000000002",
+              "slug": "kome-farm-organics",
+              "name": "Kome Farm Organics",
+              "stock": 50
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

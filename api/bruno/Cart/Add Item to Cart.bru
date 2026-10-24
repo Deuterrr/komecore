@@ -25,3 +25,47 @@ body:json {
     }
   }
 }
+
+example {
+  name: v1.1.0-pre
+  
+  request: {
+    url: {{baseUrl}}/api/v1/carts/items
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "shop_id": "c0000000-0000-0000-0000-000000000001",
+        "product_id": "b0000000-0000-0000-0000-000000000001",
+        "quantity": 2,
+        "item_options": {
+          "variant": "5kg",
+          "packaging": "vacuum"
+        }
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      content-type: application/json
+      x-request-id: 42ef0ee4-59d9-44fa-b9df-b422f13a47d1
+      date: Sat, 24 Oct 2026 16:14:39 GMT
+      content-length: 25
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "message": "item added"
+        }
+      '''
+    }
+  }
+}

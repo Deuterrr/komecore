@@ -16,3 +16,174 @@ params:query {
   status: active
   sort: price_asc
 }
+
+example {
+  name: v1.1.0-pre
+  
+  request: {
+    url: {{baseUrl}}/api/v1/products?page=1&limit=10&status=active&sort=price_asc
+    method: GET
+    mode: none
+    params:query: {
+      page: 1
+      limit: 10
+      status: active
+      sort: price_asc
+    }
+  }
+  
+  response: {
+    headers: {
+      content-type: application/json
+      x-request-id: f821d6af-1d3d-4f67-973a-3e22869afaa5
+      date: Sat, 24 Oct 2026 15:49:46 GMT
+      transfer-encoding: chunked
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "items": [
+            {
+              "id": "b0000000-0000-0000-0000-000000000001",
+              "sku": "PRD-001",
+              "name": "Organic Japonica Rice 5kg",
+              "slug": "organic-japonica-rice-5kg",
+              "status": "active",
+              "is_available": true,
+              "price": 75000,
+              "stock": 150,
+              "average_rating": 0,
+              "review_count": 0,
+              "banner": {
+                "thumbnail": null,
+                "preview": null,
+                "detail": null
+              },
+              "availability": [
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000001",
+                  "slug": "kome-central-store",
+                  "name": "Kome Central Store",
+                  "stock": 100
+                },
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000002",
+                  "slug": "kome-farm-organics",
+                  "name": "Kome Farm Organics",
+                  "stock": 50
+                }
+              ]
+            },
+            {
+              "id": "b0000000-0000-0000-0000-000000000002",
+              "sku": "PRD-002",
+              "name": "Premium Pandan Wangi Rice 5kg",
+              "slug": "premium-pandan-wangi-rice-5kg",
+              "status": "active",
+              "is_available": true,
+              "price": 85000,
+              "stock": 150,
+              "average_rating": 0,
+              "review_count": 0,
+              "banner": {
+                "thumbnail": null,
+                "preview": null,
+                "detail": null
+              },
+              "availability": [
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000001",
+                  "slug": "kome-central-store",
+                  "name": "Kome Central Store",
+                  "stock": 100
+                },
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000002",
+                  "slug": "kome-farm-organics",
+                  "name": "Kome Farm Organics",
+                  "stock": 50
+                }
+              ]
+            },
+            {
+              "id": "b0000000-0000-0000-0000-000000000003",
+              "sku": "PRD-003",
+              "name": "Organic Red Brown Rice 2kg",
+              "slug": "organic-red-brown-rice-2kg",
+              "status": "active",
+              "is_available": true,
+              "price": 48000,
+              "stock": 150,
+              "average_rating": 0,
+              "review_count": 0,
+              "banner": {
+                "thumbnail": null,
+                "preview": null,
+                "detail": null
+              },
+              "availability": [
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000001",
+                  "slug": "kome-central-store",
+                  "name": "Kome Central Store",
+                  "stock": 100
+                },
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000002",
+                  "slug": "kome-farm-organics",
+                  "name": "Kome Farm Organics",
+                  "stock": 50
+                }
+              ]
+            },
+            {
+              "id": "b0000000-0000-0000-0000-000000000004",
+              "sku": "PRD-004",
+              "name": "Koshihikari Grain Rice 1kg",
+              "slug": "koshihikari-grain-rice-1kg",
+              "status": "active",
+              "is_available": true,
+              "price": 65000,
+              "stock": 150,
+              "average_rating": 0,
+              "review_count": 0,
+              "banner": {
+                "thumbnail": null,
+                "preview": null,
+                "detail": null
+              },
+              "availability": [
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000001",
+                  "slug": "kome-central-store",
+                  "name": "Kome Central Store",
+                  "stock": 100
+                },
+                {
+                  "shop_id": "c0000000-0000-0000-0000-000000000002",
+                  "slug": "kome-farm-organics",
+                  "name": "Kome Farm Organics",
+                  "stock": 50
+                }
+              ]
+            }
+          ],
+          "pagination": {
+            "page": 1,
+            "limit": 10,
+            "total_items": 4,
+            "total_pages": 1,
+            "next_cursor": null
+          }
+        }
+      '''
+    }
+  }
+}
