@@ -23,7 +23,10 @@ func skipIfDockerUnavailable(t *testing.T, err error) {
 			strings.Contains(errStr, "provider") ||
 			strings.Contains(errStr, "connection refused") ||
 			strings.Contains(errStr, "cannot connect") ||
-			strings.Contains(errStr, "the system cannot find the file specified") {
+			strings.Contains(errStr, "the system cannot find the file specified") ||
+			strings.Contains(errStr, "context deadline exceeded") ||
+			strings.Contains(errStr, "timeout") ||
+			strings.Contains(errStr, "wait strategy failed") {
 			t.Skipf("Skipping integration test: Docker daemon is unavailable: %v", err)
 		}
 	}

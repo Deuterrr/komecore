@@ -13,16 +13,17 @@ func TruncateTables(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
 		DO $$
 		DECLARE
-			r RECORD;
+			stmt TEXT;
 		BEGIN
-			FOR r IN (
-				SELECT tablename
-				FROM pg_tables
-				WHERE schemaname = 'public'
-				  AND tablename NOT IN ('schema_migrations')
-			) LOOP
-				EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' RESTART IDENTITY CASCADE';
-			END LOOP;
+			SELECT 'TRUNCATE TABLE ' || string_agg(quote_ident(tablename), ', ') || ' RESTART IDENTITY CASCADE'
+			INTO stmt
+			FROM pg_tables
+			WHERE schemaname = 'public'
+			  AND tablename NOT IN ('schema_migrations');
+
+			IF stmt IS NOT NULL THEN
+				EXECUTE stmt;
+			END IF;
 		END $$;
 	`
 	_, err := pool.Exec(ctx, query)

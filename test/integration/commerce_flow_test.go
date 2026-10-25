@@ -193,7 +193,17 @@ func TestIntegration_CommerceFlow_OrderCreationWithCouponAndInventory(t *testing
 
 	// 6. Test Rollback: Insufficient Stock
 	failedOrderID := uuid.New()
+	failedOrderNumber := "ORD-FAIL-001"
 	err = tdb.Transactor.WithinTransaction(ctx, func(exec transactor.Executor) error {
+		// Persist order inside transaction before failure
+		_, err := exec.Exec(ctx, `
+			INSERT INTO orders (id, customer_id, address_id, number, status, subtotal, shipping_fee, total, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, 'pending', 3000000, 0, 3000000, $5, $5);
+		`, failedOrderID, customerID, addressID, failedOrderNumber, now)
+		if err != nil {
+			return err
+		}
+
 		// Attempt to buy 20 units when only 8 remain
 		tag, err := exec.Exec(ctx, `
 			UPDATE inventory

@@ -5,6 +5,7 @@ package integration_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"komecore/internal/infra/cache"
 	"komecore/test/testutil/testredis"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -101,11 +103,12 @@ func TestIntegration_Redis_Concurrent_IdempotencyLock(t *testing.T) {
 	}()
 
 	client := rctr.Client()
+	_ = rctr.FlushDB(ctx)
 	defer func() {
 		_ = rctr.FlushDB(ctx)
 	}()
 
-	idempotencyKey := "idemp-order-key-9988"
+	idempotencyKey := fmt.Sprintf("idemp-order-key-%s", uuid.New().String()[:8])
 	lockKey := "idemp:lock:" + idempotencyKey
 	respKey := "idemp:resp:" + idempotencyKey
 
@@ -126,12 +129,10 @@ func TestIntegration_Redis_Concurrent_IdempotencyLock(t *testing.T) {
 
 			// Try to acquire distributed lock via SETNX
 			acquired, err := client.SetNX(ctx, lockKey, "in_flight", 10*time.Second).Result()
-			if err != nil {
-				return
-			}
-
 			mu.Lock()
-			if acquired {
+			if err != nil {
+				assert.NoError(t, err, "SETNX should not return unexpected error")
+			} else if acquired {
 				acquiredCount++
 			} else {
 				rejectedCount++

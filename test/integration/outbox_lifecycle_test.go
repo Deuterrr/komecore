@@ -132,12 +132,17 @@ func TestIntegration_Outbox_WorkerLifecycle_And_Backoff(t *testing.T) {
 	expectedMinScheduled := now.Add(18 * time.Second) // allow slight clock tolerance
 	assert.True(t, scheduledAt.After(expectedMinScheduled), "scheduled_at (%v) must be >= 20s backoff", scheduledAt)
 
+	// Clean up failEventID so its 20-second backoff doesn't re-enter pending queue during subsequent steps
+	_, err = tdb.Pool.Exec(ctx, "DELETE FROM outbox_events WHERE id = $1;", failEventID)
+	require.NoError(t, err)
+
 	// 3. Max Retries Exhaustion: simulate retry_count = 4 reaching limit
 	maxEventID := uuid.New()
+	step3Now := time.Now().UTC()
 	_, err = tdb.Pool.Exec(ctx, `
 		INSERT INTO outbox_events (id, event_type, payload, status, retry_count, max_retries, scheduled_at, created_at)
 		VALUES ($1, $2, $3, 'pending', 4, 5, $4, $4);
-	`, maxEventID, outbox.EventOrderCreated, payloadBytes, now)
+	`, maxEventID, outbox.EventOrderCreated, payloadBytes, step3Now)
 	require.NoError(t, err)
 
 	_, err = worker.ProcessBatch(ctx)
@@ -150,12 +155,17 @@ func TestIntegration_Outbox_WorkerLifecycle_And_Backoff(t *testing.T) {
 	assert.Equal(t, "failed", maxStatus, "event must transition to failed after reaching max retries")
 	assert.Equal(t, 5, maxRetriesRecorded)
 
+	// Clean up maxEventID after verification
+	_, err = tdb.Pool.Exec(ctx, "DELETE FROM outbox_events WHERE id = $1;", maxEventID)
+	require.NoError(t, err)
+
 	// 4. Atomic Claim Verification (MC-C2): FetchPending transitions status to 'processing'
 	claimEventID := uuid.New()
+	claimNow := time.Now().UTC()
 	_, err = tdb.Pool.Exec(ctx, `
 		INSERT INTO outbox_events (id, event_type, payload, status, retry_count, max_retries, scheduled_at, created_at)
 		VALUES ($1, $2, $3, 'pending', 0, 5, $4, $4);
-	`, claimEventID, outbox.EventOrderCreated, payloadBytes, now)
+	`, claimEventID, outbox.EventOrderCreated, payloadBytes, claimNow)
 	require.NoError(t, err)
 
 	claimedEvents, err := repo.FetchPending(ctx, tdb.Executor, 10)
