@@ -9,7 +9,7 @@ Clean, scalable backend service engineered for modern e-commerce platforms in Go
 [![Database](https://img.shields.io/badge/Databases-PostgreSQL%20|%20SQL%20Server-4169E1?logo=postgresql)](https://www.postgresql.org)
 [![Payments](https://img.shields.io/badge/Payments-Midtrans%20Core%20API-002f6c)](https://midtrans.com)
 
-Discover the engineering behind KomeCore in the **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)**
+Discover the engineering behind KomeCore in the **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)** and the **[Commerce System Design Matrix](docs/ARCHITECTURE.md)**
 
 ### License
 
@@ -138,4 +138,5 @@ We warmly welcome contributions from the community! Whether you are fixing a bug
 ### More Documentation
 
 * **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)**: Deep walkthrough explaining module architecture, the full request journey, and complex distributed lifecycles.
+* **[Commerce System Design Matrix](docs/ARCHITECTURE.md)**: Comprehensive system design landscape for modern commerce platforms, detailing implemented patterns vs future evolution gaps.
 * **[API Documentation & Collections](api/README.md)**: Complete guide to all endpoints with ready-to-use Postman collections, Bruno workspace, VS Code REST Client files, and frozen OpenAPI 3.0 specifications.
