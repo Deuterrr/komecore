@@ -27,6 +27,7 @@ const (
 // has been successfully validated.
 type TokenClaims struct {
 	UserID     uuid.UUID
+	AccountID  uuid.UUID
 	SessionID  uuid.UUID
 	StaffID    *uuid.UUID
 	CustomerID *uuid.UUID

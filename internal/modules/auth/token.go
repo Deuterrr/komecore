@@ -8,6 +8,7 @@ import (
 
 type GenerateTokenParams struct {
 	UserID     uuid.UUID
+	AccountID  uuid.UUID
 	SessionID  uuid.UUID
 	StaffID    *uuid.UUID
 	CustomerID *uuid.UUID

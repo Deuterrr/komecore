@@ -78,11 +78,25 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) error {
 		})
 	}
 
-	permissions := make([]permissionResponse, 0, len(me.Actor.Roles))
-	for _, role := range me.Actor.Roles {
-		permissions = append(permissions, permissionResponse{
-			Code: string(role.Code),
-		})
+	permissions := make([]permissionResponse, 0)
+	if me.Account.Type == auth.AccountTypeStaff {
+		allPermissions := []string{
+			auth.PermissionShopView,
+			auth.PermissionShopUpdate,
+			auth.PermissionProductCreate,
+			auth.PermissionProductUpdate,
+			auth.PermissionProductDelete,
+			auth.PermissionInventoryManage,
+			auth.PermissionOrderRead,
+			auth.PermissionOrderUpdateStatus,
+			auth.PermissionCourierManage,
+			auth.PermissionAddressManage,
+		}
+		for _, perm := range allPermissions {
+			if me.Actor.HasPermission(uuid.Nil, perm) {
+				permissions = append(permissions, permissionResponse{Code: perm})
+			}
+		}
 	}
 
 	var avatarURL *string
@@ -227,11 +241,18 @@ func (h *AuthHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 
+	accessCookie := appcookie.CookieCustomer
+	refreshCookie := appcookie.CookieCustomerRefresh
+	if tokens.AccountType == auth.AccountTypeStaff {
+		accessCookie = appcookie.CookieStaff
+		refreshCookie = appcookie.CookieStaffRefresh
+	}
+
 	// Access token is bound to the response cookie
 	// so it can be used for authenticated API requests
 	appcookie.Bind(
 		w,
-		appcookie.CookieCustomer,
+		accessCookie,
 		tokens.AccessToken.Token,
 		tokens.AccessToken.ExpiresAt,
 	)
@@ -239,7 +260,7 @@ func (h *AuthHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) erro
 	// so it can be used to obtain a new access token
 	appcookie.Bind(
 		w,
-		appcookie.CookieCustomerRefresh,
+		refreshCookie,
 		tokens.RefreshToken.Token,
 		tokens.RefreshToken.ExpiresAt,
 	)
@@ -463,11 +484,18 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
+	accessCookie := appcookie.CookieCustomer
+	refreshCookie := appcookie.CookieCustomerRefresh
+	if result.AccountType == auth.AccountTypeStaff {
+		accessCookie = appcookie.CookieStaff
+		refreshCookie = appcookie.CookieStaffRefresh
+	}
+
 	// Access token is bound to the response cookie
 	// so it can be used for authenticated API requests
 	appcookie.Bind(
 		w,
-		appcookie.CookieCustomer,
+		accessCookie,
 		result.AccessToken.Token,
 		result.AccessToken.ExpiresAt,
 	)
@@ -475,7 +503,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 	// so it can be used to obtain a new access token
 	appcookie.Bind(
 		w,
-		appcookie.CookieCustomerRefresh,
+		refreshCookie,
 		result.RefreshToken.Token,
 		result.RefreshToken.ExpiresAt,
 	)

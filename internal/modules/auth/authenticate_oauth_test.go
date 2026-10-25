@@ -120,6 +120,7 @@ func (m *mockUserRepo) Delete(_ context.Context, _ transaction.Executor, _ uuid.
 type mockAccountRepo struct {
 	account                *Account
 	activateCalls          int
+	setPendingCalls        int
 	updatePasswordCalls    int
 	lastPasswordUpdateHash string
 	updateLastLoginAtCalls int
@@ -137,6 +138,10 @@ func (m *mockAccountRepo) GetByUserID(_ context.Context, _ transaction.Executor,
 }
 func (m *mockAccountRepo) ActivateByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
 	m.activateCalls++
+	return nil
+}
+func (m *mockAccountRepo) SetPendingByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
+	m.setPendingCalls++
 	return nil
 }
 func (m *mockAccountRepo) Create(_ context.Context, _ transaction.Executor, _ Account) error {

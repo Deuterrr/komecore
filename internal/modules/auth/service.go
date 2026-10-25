@@ -187,6 +187,7 @@ func (s *defaultSessionIssuer) Issue(ctx context.Context, params IssueSessionPar
 
 	accessTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
 		UserID:     params.UserID,
+		AccountID:  params.AccountID,
 		SessionID:  session.ID,
 		StaffID:    params.StaffID,
 		CustomerID: params.CustomerID,
@@ -200,6 +201,7 @@ func (s *defaultSessionIssuer) Issue(ctx context.Context, params IssueSessionPar
 
 	refreshTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
 		UserID:     params.UserID,
+		AccountID:  params.AccountID,
 		SessionID:  session.ID,
 		StaffID:    params.StaffID,
 		CustomerID: params.CustomerID,
@@ -385,6 +387,10 @@ type LogoutInput struct {
 }
 
 func (s *Service) Logout(ctx context.Context, input LogoutInput) error {
+	s.graceMu.Lock()
+	delete(s.graceStore, input.SessionID)
+	s.graceMu.Unlock()
+
 	err := s.transactor.WithinTransaction(
 		ctx,
 		func(exec transaction.Executor) error {
@@ -401,7 +407,7 @@ func (s *Service) Logout(ctx context.Context, input LogoutInput) error {
 				exec,
 				input.SessionID,
 			); err != nil {
-				return fmt.Errorf("failed to revoke refresh token %w", err)
+				return fmt.Errorf("failed to revoke session %w", err)
 			}
 
 			return nil
@@ -585,7 +591,7 @@ func (s *Service) RegisterCustomer(ctx context.Context, input RegisterCustomerIn
 		}
 	}
 
-	if existUsr != nil {
+	if existUsr != nil && (existAcc == nil || existUsr.ID != existAcc.UserID) {
 		return nil, apperror.NewConflict("username already exists")
 	}
 
@@ -658,6 +664,9 @@ func (s *Service) RegisterCustomer(ctx context.Context, input RegisterCustomerIn
 			if err := s.accountRepo.UpdatePasswordByUserID(ctx, exec, userID, hashedPassword); err != nil {
 				return fmt.Errorf("failed to update account password: %w", err)
 			}
+			if err := s.accountRepo.SetPendingByUserID(ctx, exec, userID); err != nil {
+				return fmt.Errorf("failed to set account pending: %w", err)
+			}
 
 			userProps := user.SaveProfileProps{
 				UserID:    userID,
@@ -705,6 +714,7 @@ type VerifyAccountInput struct {
 type VerifyAccountOutput struct {
 	AccessToken  GeneratedToken
 	RefreshToken GeneratedToken
+	AccountType  AccountType
 }
 
 func (s *Service) VerifyAccount(ctx context.Context, input VerifyAccountInput) (*VerifyAccountOutput, error) {
@@ -715,6 +725,9 @@ func (s *Service) VerifyAccount(ctx context.Context, input VerifyAccountInput) (
 		return nil, fmt.Errorf("failed to get challenge: %w", err)
 	}
 	if challenge == nil {
+		return nil, apperror.NewNotFound(ErrNotFoundChallenge.Error())
+	}
+	if challenge.Purpose != OTPPurposeRegister && challenge.Purpose != OTPPurposeEmailVerification {
 		return nil, apperror.NewNotFound(ErrNotFoundChallenge.Error())
 	}
 	if challenge.ConsumedAt != nil {
@@ -728,6 +741,9 @@ func (s *Service) VerifyAccount(ctx context.Context, input VerifyAccountInput) (
 	}
 	if challenge.AttemptCount >= 5 {
 		return nil, apperror.NewConflict(ErrMaxAttemptReached.Error())
+	}
+	if challenge.UserID == nil {
+		return nil, apperror.NewInternal(fmt.Errorf("challenge has no user_id bound"))
 	}
 
 	if err := s.pwHasher.Compare(challenge.CodeHash, input.OTP); err != nil {
@@ -812,9 +828,15 @@ func (s *Service) VerifyAccount(ctx context.Context, input VerifyAccountInput) (
 		return nil, err
 	}
 
+	var accType AccountType = AccountTypeCustomer
+	if account != nil {
+		accType = account.Type
+	}
+
 	return &VerifyAccountOutput{
 		AccessToken:  sessionRes.AccessToken,
 		RefreshToken: sessionRes.RefreshToken,
+		AccountType:  accType,
 	}, nil
 }
 
@@ -840,6 +862,7 @@ type AuthenticateOAuthInput struct {
 type AuthenticateOAuthOutput struct {
 	AccessToken  GeneratedToken
 	RefreshToken GeneratedToken
+	AccountType  AccountType
 }
 
 func (s *Service) AuthenticateOAuth(ctx context.Context, input AuthenticateOAuthInput) (*AuthenticateOAuthOutput, error) {
@@ -1014,13 +1037,40 @@ func (s *Service) AuthenticateOAuth(ctx context.Context, input AuthenticateOAuth
 		account = &newAcc
 	}
 
-	var customerID *uuid.UUID
-	custProfile, err := s.customerRepo.GetByUserID(ctx, s.executor, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve customer profile: %w", err)
+	var (
+		customerID *uuid.UUID
+		staffID    *uuid.UUID
+		roleCodes  []RoleCode
+	)
+
+	if account != nil && account.Type == AccountTypeStaff && s.membershipRepo != nil {
+		memberStaff, err := s.membershipRepo.GetByAccountID(ctx, s.executor, account.ID)
+		if err == nil && memberStaff != nil {
+			staffID = &memberStaff.StaffID
+			roles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(ctx, s.executor,
+				account.ID,
+				memberStaff.StaffID,
+			)
+			if err == nil && roles != nil {
+				roleCodes = make([]RoleCode, len(roles))
+				for i, r := range roles {
+					roleCodes[i] = RoleCode(r.Code)
+				}
+			}
+		}
+	} else if s.customerRepo != nil {
+		custProfile, err := s.customerRepo.GetByUserID(ctx, s.executor, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve customer profile: %w", err)
+		}
+		if custProfile != nil {
+			customerID = &custProfile.ID
+		}
 	}
-	if custProfile != nil {
-		customerID = &custProfile.ID
+
+	accType := AccountTypeCustomer
+	if account != nil {
+		accType = account.Type
 	}
 
 	sessionRes, err := s.sessionIssuer.Issue(ctx, IssueSessionParams{
@@ -1028,7 +1078,9 @@ func (s *Service) AuthenticateOAuth(ctx context.Context, input AuthenticateOAuth
 		AccountID:  account.ID,
 		UserAgent:  input.UserAgent,
 		IPAddress:  input.IPAddress,
+		StaffID:    staffID,
 		CustomerID: customerID,
+		Roles:      roleCodes,
 	})
 	if err != nil {
 		return nil, err
@@ -1037,6 +1089,7 @@ func (s *Service) AuthenticateOAuth(ctx context.Context, input AuthenticateOAuth
 	return &AuthenticateOAuthOutput{
 		AccessToken:  sessionRes.AccessToken,
 		RefreshToken: sessionRes.RefreshToken,
+		AccountType:  accType,
 	}, nil
 }
 
@@ -1054,15 +1107,9 @@ func (s *Service) RequestPasswordReset(ctx context.Context, input RequestPasswor
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}
-	if account == nil {
-		// Silent success for non-existent accounts to prevent email enumeration
+	if account == nil || account.Type != input.AccountType || account.Status != AccountActive {
+		// Silent success for non-existent, mismatched, or unverified accounts to prevent email enumeration
 		return &RequestPasswordResetOutput{ChallengeID: nil}, nil
-	}
-	if account.Type != input.AccountType {
-		return nil, apperror.NewForbidden("account type mismatch")
-	}
-	if account.Status != AccountActive {
-		return nil, apperror.NewForbidden(ErrEmailNotVerified.Error())
 	}
 
 	chID, err := s.challengeSvc.CreateAndSend(ctx, CreateChallengeParams{
@@ -1188,6 +1235,10 @@ func (s *Service) ResetPassword(ctx context.Context, input ResetPasswordInput) e
 		return err
 	}
 
+	s.graceMu.Lock()
+	s.graceStore = make(map[uuid.UUID]tokenRotationGraceEntry)
+	s.graceMu.Unlock()
+
 	return nil
 }
 
@@ -1281,8 +1332,35 @@ func (s *Service) RefreshToken(ctx context.Context, input RefreshTokenInput) (*R
 			roleCodes[i] = RoleCode(rCode)
 		}
 
+		if claims.StaffID != nil && s.membershipRepo != nil {
+			account, err := s.accountRepo.GetByUserID(execCtx, s.executor, claims.UserID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to retrieve account: %w", err)
+			}
+			if account == nil {
+				return nil, apperror.NewNotFound("account not found")
+			}
+
+			dbRoles, err := s.membershipRepo.ListRolesByAccountIDAndStaffID(execCtx, s.executor,
+				account.ID,
+				*claims.StaffID,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("failed to retrieve roles: %w", err)
+			}
+			if dbRoles == nil {
+				return nil, apperror.NewForbidden("no role associated with this account")
+			}
+
+			roleCodes = make([]RoleCode, len(dbRoles))
+			for i, r := range dbRoles {
+				roleCodes[i] = RoleCode(r.Code)
+			}
+		}
+
 		newAccessTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
 			UserID:     claims.UserID,
+			AccountID:  claims.AccountID,
 			SessionID:  claims.SessionID,
 			StaffID:    claims.StaffID,
 			CustomerID: claims.CustomerID,
@@ -1296,6 +1374,7 @@ func (s *Service) RefreshToken(ctx context.Context, input RefreshTokenInput) (*R
 
 		newRefreshTkn, err := s.tokenSvc.Generate(GenerateTokenParams{
 			UserID:     claims.UserID,
+			AccountID:  claims.AccountID,
 			SessionID:  claims.SessionID,
 			StaffID:    claims.StaffID,
 			CustomerID: claims.CustomerID,
@@ -1366,6 +1445,10 @@ func (s *Service) RefreshToken(ctx context.Context, input RefreshTokenInput) (*R
 }
 
 func (s *Service) DeleteAccount(ctx context.Context, authCtx AuthContext) error {
+	s.graceMu.Lock()
+	delete(s.graceStore, authCtx.SessionID)
+	s.graceMu.Unlock()
+
 	userID := authCtx.UserID
 
 	if err := s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {

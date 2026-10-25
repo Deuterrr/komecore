@@ -185,11 +185,72 @@ func TestRegisterCustomer_LinkLocalToGoogleAccount_Success(t *testing.T) {
 	if accountRepoMock.updatePasswordCalls != 1 {
 		t.Errorf("expected UpdatePasswordByUserID to be called once, got %d", accountRepoMock.updatePasswordCalls)
 	}
+	if accountRepoMock.setPendingCalls != 1 {
+		t.Errorf("expected SetPendingByUserID to be called once, got %d", accountRepoMock.setPendingCalls)
+	}
 	if accountRepoMock.lastPasswordUpdateHash != "hashed-newlocalpassword" {
 		t.Errorf("expected password hash update to match, got %s", accountRepoMock.lastPasswordUpdateHash)
 	}
 	if savedUsername != "newusername" {
 		t.Errorf("expected username in user profile update to be set to 'newusername', got '%s'", savedUsername)
+	}
+}
+
+func TestRegisterCustomer_LinkLocalToGoogleAccount_SameUsername_Success(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+
+	existingAcc := &Account{
+		ID:       uuid.New(),
+		UserID:   userID,
+		Email:    "googleuser@gmail.com",
+		Password: "", // Empty means Google-first / OAuth-only
+		Status:   AccountActive,
+	}
+
+	accountRepoMock := &mockAccountRepo{account: existingAcc}
+	// The username "my_oauth_username" is owned by THIS user
+	userRepoMock := &mockUserRepo{
+		user: &user.User{ID: userID, Username: "my_oauth_username"},
+	}
+	challengeRepoMock := &mockChallengeRepo{}
+	mailerMock := &mockMailer{}
+	otpGenMock := &mockOTPGen{otp: "654321"}
+
+	svc := NewService(
+		&mockExecutor{},
+		&mockTransactor{},
+		accountRepoMock,
+		&mockSessionRepo{},
+		&mockRefreshTokenRepo{},
+		challengeRepoMock,
+		&mockOAuthRepo{},
+		&mockCustomerRepo{},
+		userRepoMock,
+		nil,
+		nil,
+		&mockHasher{},
+		&mockTokenHasher{},
+		&mockTokenService{},
+		nil,
+		otpGenMock,
+		mailerMock,
+		&mockAuditLogger{},
+	)
+
+	params := RegisterCustomerInput{
+		Name:     "Linked Name",
+		Username: "my_oauth_username",
+		Email:    "googleuser@gmail.com",
+		Password: "newlocalpassword",
+	}
+
+	out, err := svc.RegisterCustomer(ctx, params)
+	if err != nil {
+		t.Fatalf("unexpected error when keeping existing username: %v", err)
+	}
+	if out == nil || out.ChallengeID == uuid.Nil {
+		t.Fatal("expected challenge ID to be returned")
 	}
 }
 

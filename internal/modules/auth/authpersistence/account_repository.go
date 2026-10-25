@@ -184,6 +184,36 @@ func (r *AccountRepository) ActivateByUserID(
 	return nil
 }
 
+func (r *AccountRepository) SetPendingByUserID(
+	ctx context.Context,
+	exec transaction.Executor,
+	id uuid.UUID,
+) error {
+	query := `
+		UPDATE accounts
+		SET
+			status = 'pending',
+			updated_at = NOW()
+		WHERE user_id = $1
+	`
+
+	result, err := exec.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf(
+			"query to set account pending: %w",
+			err,
+		)
+	}
+
+	if result.RowsAffected() == 0 {
+		return apperror.NewNotFound(
+			auth.ErrNotFoundAccount.Error(),
+		)
+	}
+
+	return nil
+}
+
 func (r *AccountRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,

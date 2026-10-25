@@ -56,6 +56,7 @@ func (s *sessionIssuerImpl) Issue(
 
 	accessTkn, err := s.tokenSvc.Generate(auth.GenerateTokenParams{
 		UserID:     params.UserID,
+		AccountID:  params.AccountID,
 		SessionID:  session.ID,
 		StaffID:    params.StaffID,
 		CustomerID: params.CustomerID,
@@ -69,6 +70,7 @@ func (s *sessionIssuerImpl) Issue(
 
 	refreshTkn, err := s.tokenSvc.Generate(auth.GenerateTokenParams{
 		UserID:     params.UserID,
+		AccountID:  params.AccountID,
 		SessionID:  session.ID,
 		StaffID:    params.StaffID,
 		CustomerID: params.CustomerID,

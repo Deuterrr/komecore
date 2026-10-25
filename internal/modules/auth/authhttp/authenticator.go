@@ -195,6 +195,7 @@ func (aM *jwtAuthenticator) authenticate(ctx context.Context, exec transaction.E
 
 	return &auth.AuthContext{
 		UserID:          claims.UserID,
+		AccountID:       claims.AccountID,
 		SessionID:       claims.SessionID,
 		TokenType:       claims.Type,
 		AccountType:     accType,

@@ -104,6 +104,7 @@ func (a *Actor) GetAssignedShopIDs() []uuid.UUID {
 // AuthContext represents the authenticated identity during a request lifecycle.
 type AuthContext struct {
 	UserID    uuid.UUID
+	AccountID uuid.UUID
 	SessionID uuid.UUID
 
 	StaffID    *uuid.UUID
@@ -166,8 +167,13 @@ func ActorFromAuthContext(authCtx *AuthContext) *Actor {
 		})
 	}
 
+	accountID := authCtx.AccountID
+	if accountID == uuid.Nil {
+		accountID = authCtx.UserID
+	}
+
 	return &Actor{
-		AccountID:  authCtx.UserID,
+		AccountID:  accountID,
 		Type:       accType,
 		StaffID:    authCtx.StaffID,
 		CustomerID: authCtx.CustomerID,

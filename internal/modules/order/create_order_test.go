@@ -98,6 +98,9 @@ func (m *coMockAccountRepo) GetByUserID(_ context.Context, _ transaction.Executo
 func (m *coMockAccountRepo) ActivateByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
 	return nil
 }
+func (m *coMockAccountRepo) SetPendingByUserID(_ context.Context, _ transaction.Executor, _ uuid.UUID) error {
+	return nil
+}
 func (m *coMockAccountRepo) Create(_ context.Context, _ transaction.Executor, _ auth.Account) error {
 	return nil
 }

@@ -3,6 +3,7 @@ package authcrypto
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"komecore/internal/modules/auth"
 	appclock "komecore/pkg/clock"
@@ -23,6 +24,7 @@ func NewJWTService(secret string) auth.TokenService {
 
 type jwtClaims struct {
 	UserID     string `json:"user_id"`
+	AccountID  string `json:"account_id,omitempty"`
 	SessionID  string `json:"session_id"`
 	Type       string `json:"type"`
 	StaffID    string `json:"staff_id,omitempty"`
@@ -35,6 +37,11 @@ type jwtClaims struct {
 func (j *JWTService) Generate(params auth.GenerateTokenParams) (auth.GeneratedToken, error) {
 	now := appclock.Now()
 	exp := now.Add(params.Duration)
+
+	accountIDStr := ""
+	if params.AccountID != uuid.Nil {
+		accountIDStr = params.AccountID.String()
+	}
 
 	staffIDStr := ""
 	if params.StaffID != nil {
@@ -54,6 +61,7 @@ func (j *JWTService) Generate(params auth.GenerateTokenParams) (auth.GeneratedTo
 
 	claims := jwtClaims{
 		UserID:     params.UserID.String(),
+		AccountID:  accountIDStr,
 		SessionID:  params.SessionID.String(),
 		Type:       string(params.Type),
 		StaffID:    staffIDStr,
@@ -118,12 +126,30 @@ func (j *JWTService) Validate(tokenStr string) (*auth.TokenClaims, error) {
 		return nil, fmt.Errorf("invalid session id claim: %w", err)
 	}
 
+	var accountID uuid.UUID
+	if claims.AccountID != "" {
+		if parsed, err := uuid.Parse(claims.AccountID); err == nil {
+			accountID = parsed
+		}
+	}
+
+	var issuedAt time.Time
+	if claims.IssuedAt != nil {
+		issuedAt = claims.IssuedAt.Time
+	}
+
+	var expiresAt time.Time
+	if claims.ExpiresAt != nil {
+		expiresAt = claims.ExpiresAt.Time
+	}
+
 	tknClaim := &auth.TokenClaims{
 		UserID:    userID,
+		AccountID: accountID,
 		SessionID: sessionID,
 		Type:      auth.TokenType(claims.Type),
-		IssuedAt:  claims.IssuedAt.Time,
-		ExpiresAt: claims.ExpiresAt.Time,
+		IssuedAt:  issuedAt,
+		ExpiresAt: expiresAt,
 	}
 
 	if claims.StaffID != "" {
