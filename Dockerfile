@@ -10,7 +10,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -mod=readonly -ldflags="-w -s" \
     -o /out/komecore \
-    ./cmd/komecore/main.go
+    ./cmd/komecore
 
 # --- Runtime --- #
 FROM alpine:3.21 AS runtime
