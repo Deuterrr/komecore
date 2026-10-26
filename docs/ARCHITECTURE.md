@@ -1,5 +1,7 @@
 # Commerce System Design Matrix
 
+![KomeCore Architecture Pattern](../assets/architecture.jpg)
+
 > **Status**: `[x]` Implemented in KomeCore · `[ ]` Planned / Future Opportunity  
 > **Jump**: [Write](#write) · [Read](#read) · [Consistency](#consistency) · [Async & Events](#async--events) · [Resilience](#resilience) · [Storage & Scaling](#storage--scaling) · [Observability](#observability) · [Security & Auth](#security--auth)
 

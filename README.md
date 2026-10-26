@@ -11,38 +11,30 @@ Clean, scalable backend service engineered for modern e-commerce platforms in Go
 
 Discover the engineering behind KomeCore in the **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)** and the **[Commerce System Design Matrix](docs/ARCHITECTURE.md)**
 
-### License
-
-This project is open-source software licensed under the [MIT License](LICENSE).
-
 ---
 
-### Repository Architecture Layout
+### Architecture Diagram
 
-```text
-komecore/
-├── cmd/komecore/         # App entry point
-├── internal/
-│   ├── apperror/         # Error types and codes
-│   ├── authctx/          # Authenticated actor context
-│   ├── bootstrap/        # Dependency wiring and lifecycle
-│   ├── config/           # Environment configuration
-│   ├── httpx/            # HTTP utilities and middleware
-│   ├── infra/            # External infrastructure adapters
-│   └── modules/          # Business domains
-│       └── <module>/
-│              ├── <module>http/            # HTTP handlers and DTOs
-│              └── <module>persistence/     # Database operations
-├── api/                  # API specs and collections
-├── docs/                 # Architecture and guides
-├── migrations/           # Database migrations
-├── pkg/                  # Reusable utilities
-└── test/                 # Architecture and integration tests
-```
+Below is a high-level overview of the system architecture:
+
+![KomeCore Architecture Pattern](assets/architecture.jpg)
+
+Patterns implemented in KomeCore:
+
+* **Modular Monolith Architecture**
+* **Hexagonal Architecture (Ports & Adapters)**
+* **Pragmatic CQRS (Command-Query Separation)**
+* **Compensating Transactions (Saga-Lite)**
+* **Transactional Outbox Pattern**
+* **Dual-Dialect Transactor Pattern**
+* **Distributed Idempotency Key Pattern**
+* **Atomic Conditional Updates (Zero-Lock Concurrency)**
+* **Multi-Tier Cache-Aside Pattern**
+* **Role-Based Access Control (RBAC)**
+
+> See more in the **[Commerce System Design Matrix](docs/ARCHITECTURE.md)**.
 
 ### Features & System Capabilities
-
-#### E-Commerce Domain Features
 
 | Feature | Description |
 | :--- | :--- |
@@ -54,17 +46,7 @@ komecore/
 | **Product Reviews & Customer Wishlists** | Verified buyer reviews and star ratings to build shopper trust, plus saved favorites and wishlist collections. |
 | **Staff Administration & Analytics** | Management portal for merchant staff with role permissions, sales reports, and insights into top-performing products. |
 
-#### System & Architectural Features
-
-| Capability | Description |
-| :--- | :--- |
-| **Dual-Dialect Database Support** | Works seamlessly on both PostgreSQL and Microsoft SQL Server without changing any business logic. |
-| **Flash-Sale Inventory Protection** | Prevents overselling during high-traffic sales by holding stock during checkout and automatically restoring it if payment fails. |
-| **Double-Charge Protection (Idempotency)** | Shields customers from duplicate orders and accidental double-charges caused by double-clicks or dropped internet connections. |
-| **Guaranteed Event Delivery (Outbox)** | Ensures background tasks (like order confirmation emails and notifications) are never lost, even if a service temporarily restarts. |
-| **Smart Catalog Search** | Fast product discovery that understands word variations and ranks the most relevant products first. |
-| **Customer & Staff Security** | Safe authentication for shoppers and store admins, featuring Google one-click login, email verification codes, and secure sessions. |
-| **Built-In Reliability & Safety** | Protects the API from traffic abuse, hides sensitive internal errors from clients, and includes automated contract testing. |
+> See more in the **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)**.
 
 ### Dependencies & Tech Stack
 
@@ -127,16 +109,22 @@ make test               # run full test suite
 
 For detailed steps on setting up environment variables, auth tokens, and testing order flows, see the [API README](api/README.md).
 
-### Community & Contributing
+---
 
-We warmly welcome contributions from the community! Whether you are fixing a bug, writing documentation, or building new features, please review our contribution and behavioral standards:
-
-* **[Contributing Guidelines](CONTRIBUTING.md)**: Complete local setup instructions, Docker workflows, testing conventions, and pull request requirements.
-* **[Code of Conduct](CODE_OF_CONDUCT.md)**: Community standards, behavioral pledges, and reporting channels to ensure a welcoming and inclusive environment.
-* **Good First Issues**: Looking for an easy task to get started? Explore issues tagged with [`good first issue`](https://github.com/deuterrr/komecore/issues?q=is%3Aissue+is%3Aopen+label%3A%22.contrib%3Agood+first+issue%22).
-
-### More Documentation
+### Documentation
 
 * **[Developer Architecture Tutorial](docs/DEVELOPER_TUTORIAL.md)**: Deep walkthrough explaining module architecture, the full request journey, and complex distributed lifecycles.
 * **[Commerce System Design Matrix](docs/ARCHITECTURE.md)**: Comprehensive system design landscape for modern commerce platforms, detailing implemented patterns vs future evolution gaps.
 * **[API Documentation & Collections](api/README.md)**: Complete guide to all endpoints with ready-to-use Postman collections, Bruno workspace, VS Code REST Client files, and frozen OpenAPI 3.0 specifications.
+
+---
+
+### Contributing
+
+We encourage and support an active, healthy community of contributors, whether you are fixing a bug, writing documentation, or building new features! Details are in the **[Contributing Guidelines](CONTRIBUTING.md)** and **[Code of Conduct](CODE_OF_CONDUCT.md)**.
+
+Looking for an easy task to get started? Explore issues tagged with [`good first issue`](https://github.com/deuterrr/komecore/issues?q=is%3Aissue+is%3Aopen+label%3A%22.contrib%3Agood+first+issue%22).
+
+---
+
+Released under the [MIT License](LICENSE).
