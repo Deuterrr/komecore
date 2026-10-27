@@ -259,3 +259,76 @@ func TestUpdateOrderStatus_CustomerActor_ReturnsForbidden(t *testing.T) {
 		t.Errorf("expected status 403 Forbidden, got %v", err)
 	}
 }
+
+func TestUpdateOrderStatus_MultiShop_PartialPermission_Forbidden(t *testing.T) {
+	staffID := uuid.New()
+	orderID := uuid.New()
+	shop1 := uuid.New()
+	shop2 := uuid.New()
+
+	ord := &order.Order{
+		ID:     orderID,
+		Status: order.OrderStatusProcessing,
+	}
+	items := []order.OrderItem{
+		{ID: uuid.New(), OrderID: orderID, ShopID: shop1},
+		{ID: uuid.New(), OrderID: orderID, ShopID: shop2},
+	}
+
+	orderRepoMock := &hMockOrderRepo{order: ord}
+	orderItemRepoMock := &hMockOrderItemRepo{items: items}
+
+	orderSvc := order.NewService(
+		&hMockExecutor{},
+		nil,
+		orderRepoMock,
+		orderItemRepoMock,
+		nil,
+		&hMockPaymentRepo{},
+		&hMockPaymentChannelDataRepo{},
+		nil,
+		&hMockShipmentRepo{},
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+
+	handler := &OrderHandler{
+		service: orderSvc,
+	}
+
+	actor := &authctx.Actor{
+		Type:    authctx.AccountTypeStaff,
+		StaffID: &staffID,
+		ShopPermissions: map[uuid.UUID][]string{
+			shop1: {authctx.PermissionOrderUpdateStatus},
+			// Missing permission for shop2!
+		},
+	}
+
+	body, _ := json.Marshal(map[string]any{
+		"status": "cancelled",
+	})
+	req := httptest.NewRequest(http.MethodPatch, "/orders/"+orderID.String()+"/status", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := authctx.WithActor(req.Context(), actor)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("orderID", orderID.String())
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, rctx)
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+	err := handler.UpdateOrderStatus(w, req)
+
+	if err == nil {
+		t.Fatalf("expected forbidden error for staff missing permission on shop2, got nil")
+	}
+	appErr, ok := err.(*apperror.AppError)
+	if !ok || appErr.StatusCode != http.StatusForbidden {
+		t.Errorf("expected status 403 Forbidden, got %v", err)
+	}
+}

@@ -3,6 +3,7 @@ package authctx
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -61,11 +62,12 @@ type Role struct {
 
 // Actor represents the active authenticated identity with its resolved permissions and roles.
 type Actor struct {
-	AccountID  uuid.UUID
-	Type       AccountType
-	StaffID    *uuid.UUID
-	CustomerID *uuid.UUID
-	Roles      []Role
+	AccountID       uuid.UUID
+	Type            AccountType
+	StaffID         *uuid.UUID
+	CustomerID      *uuid.UUID
+	Roles           []Role
+	ShopPermissions map[uuid.UUID][]string
 }
 
 func (a *Actor) HasRole(role RoleCode) bool {
@@ -91,6 +93,13 @@ func (a *Actor) HasPermission(shopID uuid.UUID, permission string) bool {
 	if a.IsSuperAdmin() {
 		return true
 	}
+	if len(a.ShopPermissions) > 0 {
+		perms, ok := a.ShopPermissions[shopID]
+		if !ok {
+			return false
+		}
+		return slices.Contains(perms, permission)
+	}
 	if a.Type == AccountTypeStaff {
 		return true
 	}
@@ -98,7 +107,14 @@ func (a *Actor) HasPermission(shopID uuid.UUID, permission string) bool {
 }
 
 func (a *Actor) GetAssignedShopIDs() []uuid.UUID {
-	return nil
+	if a == nil || len(a.ShopPermissions) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, 0, len(a.ShopPermissions))
+	for id := range a.ShopPermissions {
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 // AuthContext represents the authenticated identity during a request lifecycle.

@@ -29,7 +29,6 @@ import (
 )
 
 const (
-	PAYMENT_PROVIDER   = "midtrans"
 	PAYMENT_EXPIRATION = time.Hour * 24
 )
 
@@ -41,6 +40,8 @@ type OutboxRecorder interface {
 	Enqueue(ctx context.Context, exec transaction.Executor, eventType string, payload any) error
 }
 
+// CreateOrderWorkflow coordinates checkout pricing, payment gateway charging,
+// and transactional persistence with compensating cancellation on failure.
 type CreateOrderWorkflow struct {
 	executor               transaction.Executor
 	transactor             transaction.Transactor
@@ -131,6 +132,7 @@ type CheckoutShopInput struct {
 	Courier *SelectedCourierInput
 }
 
+// CheckoutInput specifies customer checkout parameters for pre-purchase preview.
 type CheckoutInput struct {
 	CustomerID      uuid.UUID
 	PaymentMethodID *uuid.UUID
@@ -139,6 +141,8 @@ type CheckoutInput struct {
 	ShopInput       []CheckoutShopInput
 }
 
+// Checkout evaluates pricing totals and courier options for checkout preview
+// without creating database records or holding inventory locks.
 func (u *CreateOrderWorkflow) Checkout(ctx context.Context, input CheckoutInput) (*PricingResult, error) {
 	customerID := input.CustomerID
 	if customerID == uuid.Nil {
@@ -176,7 +180,6 @@ func (u *CreateOrderWorkflow) Checkout(ctx context.Context, input CheckoutInput)
 				len(shop.Items),
 			),
 		}
-
 		for _, item := range shop.Items {
 			shopInput.Items = append(
 				shopInput.Items,
@@ -214,6 +217,7 @@ type OrderShopInput struct {
 	Items    []OrderItemInput
 }
 
+// CreateOrderInput captures verified parameters required to charge payment and persist orders.
 type CreateOrderInput struct {
 	UserID          uuid.UUID
 	CustomerID      uuid.UUID
@@ -230,6 +234,8 @@ type PaymentAccountResult struct {
 	QRString      *string
 }
 
+// CreateOrderResult contains order identifiers and payment channel guidance
+// (virtual account numbers, QR codes, or redirect URLs) for customer presentation.
 type CreateOrderResult struct {
 	OrderID        uuid.UUID
 	PaymentAccount *PaymentAccountResult
@@ -242,16 +248,8 @@ func (u *CreateOrderWorkflow) Execute(ctx context.Context, input CreateOrderInpu
 	return u.CreateOrder(ctx, input)
 }
 
-// CreateOrder orchestrates the checkout workflow across cart validation, inventory,
-// pricing, payment processing, and order persistence.
-//
-// The checkout must maintain consistency between the local order state and the
-// external payment gateway. If persistence fails after a successful gateway
-// charge, the charge MUST be compensated through CancelTransaction to prevent
-// an orphaned payment.
-//
-// All checkout records are persisted atomically within a database transaction,
-// including order, invoice, payment, item, and payment channel data.
+// CreateOrder orchestrates order placement: it charges the payment gateway before
+// persisting to DB, and cancels the charge if local transaction rollback occurs.
 func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrderInput) (*CreateOrderResult, error) {
 	now := appclock.Now()
 
@@ -263,8 +261,8 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		customerPhone string
 	)
 
-	// Concurrently fetch & validate payment method/pricing
-	// and customer details
+	// Concurrently validate pricing/method availability and retrieve customer identity
+	// using errgroup to minimize checkout latency prior to initiating payment charge.
 	g, gCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
@@ -307,10 +305,10 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		expiresAt = now.Add(PAYMENT_EXPIRATION)
 	)
 
-	// Generate order and invoice items from the pricing result to
-	// preserve product, pricing, and shipping details at checkout time
+	// Snapshot product, pricing, and courier details into immutable order and invoice line items.
 	for _, shopRes := range pricingResult.Shops {
 		var courierCode, courierService *string
+
 		if shopRes.SelectedCourier.Code != "" {
 			courierCode = &shopRes.SelectedCourier.Code
 			courierService = &shopRes.SelectedCourier.Service
@@ -339,6 +337,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		}
 	}
 
+	// Format gateway charge items: product line items plus positive shipping fees and negative voucher discounts.
 	for _, item := range orderItems {
 		cItem := paymentgateway.ChargeItem{
 			ID:       item.ProductID.String(),
@@ -346,10 +345,8 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 			Quantity: item.Quantity,
 			Price:    item.UnitPrice,
 		}
-
 		chargeItems = append(chargeItems, cItem)
 	}
-
 	if pricingResult.TotalShippingFee > 0 {
 		chargeItems = append(chargeItems, paymentgateway.ChargeItem{
 			ID:       "shipping_fee",
@@ -358,7 +355,6 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 			Price:    pricingResult.TotalShippingFee,
 		})
 	}
-
 	if pricingResult.DiscountAmount > 0 {
 		chargeItems = append(chargeItems, paymentgateway.ChargeItem{
 			ID:       "discount",
@@ -368,6 +364,8 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		})
 	}
 
+	// Align line-item sums with grand total using an adjustment line to prevent
+	// gateway rejection caused by rounding discrepancies or fractional fees.
 	var itemSum int64
 	for _, ci := range chargeItems {
 		itemSum += ci.Price * int64(ci.Quantity)
@@ -487,9 +485,8 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 			}
 		}
 
-		// Persist gateway channel data (QR string, VA number, deep link)
-		// so it survives the initial checkout response and can be
-		// retrieved on any subsequent request.
+		// Normalize gateway-specific payment instructions (direct VA fields vs instruction slices,
+		// and QR codes vs deep links) into persistent channel data retrievable across customer sessions.
 		if chargeResp != nil && len(chargeResp.Instructions) > 0 {
 			var (
 				actionURL     *string
@@ -553,8 +550,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		}
 
 		// Deterministically sort order items by (ShopID, ProductID) prior to inventory reservation
-		// to guarantee monotonic lock acquisition order across concurrent transactions and prevent
-		// relational database deadlocks (SQLSTATE 40P01).
+		// to enforce a strict monotonic lock hierarchy and prevent relational database deadlocks.
 		slices.SortStableFunc(orderItems, func(a, b OrderItem) int {
 			if c := cmp.Compare(a.ShopID.String(), b.ShopID.String()); c != 0 {
 				return c
@@ -572,6 +568,8 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 			}
 		}
 
+		// Remove purchased items from persistent cart: match by CartItemID first,
+		// then fall back to (ProductID, ShopID, ItemOptions), and finally ProductID.
 		crt, err := u.cartRepo.GetWithItemsByCustomerID(ctx, exec, input.CustomerID)
 		if err != nil {
 			return fmt.Errorf("failed to load cart with items: %w", err)
@@ -584,7 +582,16 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 							continue
 						}
 					}
-					if !crt.RemoveItem(item.ProductID, shop.ShopID) {
+					if item.CartItemID != nil {
+						if crt.RemoveItemByID(*item.CartItemID) {
+							continue
+						}
+					}
+					var removed bool
+					if len(item.ItemOptions) > 0 {
+						removed = crt.RemoveItem(item.ProductID, shop.ShopID, item.ItemOptions)
+					}
+					if !removed && !crt.RemoveItem(item.ProductID, shop.ShopID) {
 						crt.RemoveProduct(item.ProductID)
 					}
 				}
@@ -594,9 +601,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 			}
 		}
 
-		ins, err := u.paymentInstructionRepo.GetByPaymentMethodID(ctx, u.executor,
-			input.PaymentMethodID,
-		)
+		ins, err := u.paymentInstructionRepo.GetByPaymentMethodID(ctx, exec, input.PaymentMethodID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve payment instruction: %w", err)
 		}
@@ -630,21 +635,15 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 	})
 	if err != nil {
 		if pmt.ProviderOrderID != nil {
-			// Best-effort rollback:
-			// the payment transaction has already been created
-			// at the gateway, but persisting the order/payment
-			// in the system database failed.
-			//
-			// Attempt to cancel the gateway transaction to avoid
-			// leaving an orphaned payable transaction.
+			// Compensate external gateway charge on transaction failure to prevent orphaned
+			// payments when the local database rollback occurs.
 			_ = u.paymentGateway.CancelTransaction(ctx, *pmt.ProviderOrderID)
 		}
 
 		return nil, err
 	}
 
-	// Render payment instructions with transaction-specific values
-	// such as invoice number, amount, expiration time, and account details
+	// Render dynamic payment instructions (substituting invoice number, VA/QR, amounts, and expiration).
 	if instruction != nil {
 		var vaNumber string
 		if channelData != nil && channelData.AccountNumber != nil {
@@ -690,12 +689,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 	return &result, nil
 }
 
-func (u *CreateOrderWorkflow) validateAndCalculatePricing(
-	ctx context.Context,
-	input CreateOrderInput,
-) (*payment.PaymentMethod, *PricingResult, error) {
-	// Ensure the selected payment method exists and can be used
-	// before creating any order-related records
+func (u *CreateOrderWorkflow) validateAndCalculatePricing(ctx context.Context, input CreateOrderInput) (*payment.PaymentMethod, *PricingResult, error) {
 	method, err := u.paymentMethodRepo.GetByID(ctx, u.executor, input.PaymentMethodID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to retrieve payment method: %w", err)
@@ -728,7 +722,6 @@ func (u *CreateOrderWorkflow) validateAndCalculatePricing(
 			CourierService: courierService,
 			Items:          make([]PricingItemInput, 0, len(shop.Items)),
 		}
-
 		for _, item := range shop.Items {
 			if item.ProductID == uuid.Nil {
 				return nil, nil, apperror.NewInvalidInput("product_id is required")
@@ -746,8 +739,6 @@ func (u *CreateOrderWorkflow) validateAndCalculatePricing(
 		pricingInput.Shops = append(pricingInput.Shops, shopInput)
 	}
 
-	// Calculate the final order pricing, including item subtotals,
-	// shipping fees, payment fees, and the grand total
 	pricingResult, err := u.pricingService.Calculate(ctx, u.executor, pricingInput)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to calculate order prices: %w", err)

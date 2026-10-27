@@ -179,7 +179,7 @@ func (h *OrderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-// GetOrder handles GET /orders/{orderID} â€” staff-only, returns a single order with full detail.
+// GetOrder handles GET /orders/{orderID} — staff-only, returns a single order with full detail.
 func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
@@ -374,7 +374,7 @@ func (h *OrderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-// CreateOrder handles POST /order â€” customer-only.
+// CreateOrder handles POST /order — customer-only.
 func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error {
 	authCtx, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
@@ -495,12 +495,12 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-// UpdateOrderStatus handles PATCH /orders/{orderID}/status â€” staff-only.
+// UpdateOrderStatus handles PATCH /orders/{orderID}/status — staff-only.
 // Transitions the order to the requested status. When the target status is
 // "shipped", the configured LogisticsProvider creates a shipment record.
 // In Komerce mode the provider calls the external API and returns a tracking
 // number automatically. In manual mode the optional "tracking_number" field
-// in the request body is used instead â€” no external call is made.
+// in the request body is used instead — no external call is made.
 func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
@@ -532,14 +532,14 @@ func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 			return apperror.NewNotFoundWithCode(apperror.CodeOrderNotFound, "order not found")
 		}
 
-		uniqueShops := make(map[uuid.UUID]bool)
+		orderShops := make(map[uuid.UUID]bool)
 		for _, item := range existingOrder.Items {
-			if actor.HasPermission(item.ShopID, authctx.PermissionOrderUpdateStatus) {
-				uniqueShops[item.ShopID] = true
-			}
+			orderShops[item.ShopID] = true
 		}
-		if len(uniqueShops) == 0 {
-			return apperror.NewForbidden("forbidden: missing order:update_status permission for this shop's order")
+		for sID := range orderShops {
+			if !actor.HasPermission(sID, authctx.PermissionOrderUpdateStatus) {
+				return apperror.NewForbidden("forbidden: missing order:update_status permission for one or more shops in this order")
+			}
 		}
 	}
 
@@ -585,7 +585,7 @@ func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
-// DispatchOrderShipment handles POST /orders/{orderID}/shipments â€” staff-only.
+// DispatchOrderShipment handles POST /orders/{orderID}/shipments — staff-only.
 // Creates a shipment for a specific shop's order items.
 func (h *OrderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())

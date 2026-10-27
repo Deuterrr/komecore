@@ -280,4 +280,18 @@ func TestDispatchShopShipmentUsecase_ValidationErrors(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error when dispatching item belonging to another shop, got nil")
 	}
+
+	// Test 4: Duplicate item IDs in input
+	_, err = svc.DispatchShopShipment(ctx, DispatchShopShipmentInput{
+		OrderID:           orderID,
+		ShopID:            shopB,
+		FulfillmentMethod: string(shipment.FulfillmentMethodCourier),
+		Courier:           "JNE",
+		Service:           "REG",
+		TrackingNumber:    &trackNo,
+		ItemIDs:           []uuid.UUID{itemB.ID, itemB.ID},
+	})
+	if err == nil {
+		t.Errorf("expected error when dispatching duplicate item IDs, got nil")
+	}
 }

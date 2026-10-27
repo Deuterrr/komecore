@@ -108,9 +108,7 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 		PaymentMethods: paymentMethods,
 	}
 
-	if result.GrandTotal > 0 {
-		resp.TotalAll = &result.GrandTotal
-	}
+	resp.TotalAll = &result.GrandTotal
 
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
@@ -230,9 +228,7 @@ func (h *OrderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 		resp.SelectedPaymentMethods = *selectedPayment
 	}
 
-	if result.GrandTotal > 0 {
-		resp.TotalAll = &result.GrandTotal
-	}
+	resp.TotalAll = &result.GrandTotal
 
 	httpx.WriteJSON(w, http.StatusOK, resp)
 	return nil
@@ -245,7 +241,7 @@ func (h *OrderHandler) parseCheckoutInput(
 	if req.PaymentMethodID != nil {
 		parsed, err := uuid.Parse(*req.PaymentMethodID)
 		if err != nil {
-			return order.CheckoutInput{}, apperror.NewBadRequest("invalid address id")
+			return order.CheckoutInput{}, apperror.NewBadRequest("invalid payment method id")
 		}
 		paymentMethodID = &parsed
 	}

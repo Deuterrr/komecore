@@ -21,6 +21,33 @@ import (
 	appclock "komecore/pkg/clock"
 )
 
+// customerEmailAdapter implements order.CustomerEmailResolver.
+type customerEmailAdapter struct {
+	executor transaction.Executor
+}
+
+func newCustomerEmailAdapter(executor transaction.Executor) *customerEmailAdapter {
+	return &customerEmailAdapter{executor: executor}
+}
+
+func (a *customerEmailAdapter) GetEmailByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (string, error) {
+	if exec == nil {
+		exec = a.executor
+	}
+	if exec == nil {
+		return "", nil
+	}
+	var email string
+	err := exec.QueryRow(ctx, `
+		SELECT COALESCE(a.email, '')
+		FROM customers c
+		JOIN users u ON u.id = c.user_id
+		JOIN accounts a ON a.user_id = u.id
+		WHERE c.id = $1
+	`, customerID).Scan(&email)
+	return email, err
+}
+
 // orderPaymentAdapter implements payment.OrderPaymentManager.
 type orderPaymentAdapter struct {
 	orderRepo     order.Repository

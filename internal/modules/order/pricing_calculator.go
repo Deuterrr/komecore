@@ -20,6 +20,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// CouponValidator verifies promotional coupon applicability and calculates discounts
+// against basket subtotals and shipping costs prior to order creation.
 type CouponValidator interface {
 	ValidateCoupon(ctx context.Context, input discount.ValidateCouponInput) (*discount.ValidateCouponResult, error)
 }
@@ -68,13 +70,9 @@ func (s *pricingServiceImpl) WithCouponService(cs CouponValidator) *pricingServi
 
 const defaultShippingWeightGrams = 1000
 
-func (s *pricingServiceImpl) Calculate(
-	ctx context.Context,
-	exec transaction.Executor,
-	input PricingInput,
-) (*PricingResult, error) {
-	// Checkout shipping destination defaults to the user's
-	// primary address unless a specific address is requested
+// Calculate evaluates multi-shop basket totals, resolving destination addresses,
+// live courier rates, stock availability, coupons, and payment method fees.
+func (s *pricingServiceImpl) Calculate(ctx context.Context, exec transaction.Executor, input PricingInput) (*PricingResult, error) {
 	var destAddress *address.CustomerAddress
 	if input.AddressID != nil {
 		addr, err := s.addressRepo.GetByID(ctx, exec, *input.AddressID)
@@ -96,8 +94,7 @@ func (s *pricingServiceImpl) Calculate(
 		destAddress = addr
 	}
 
-	// Hydrate stored cart item metadata (product_id, item_options)
-	// from the user's cart in PostgreSQL when cart_item_id is provided.
+	// Hydrate product IDs and options from stored cart items when only cart_item_id is provided.
 	var cartItemMap map[uuid.UUID]cart.CartItem
 	if input.CustomerID != uuid.Nil && s.cartRepo != nil {
 		if userCart, err := s.cartRepo.GetWithItemsByCustomerID(ctx, exec, input.CustomerID); err == nil && userCart != nil {
@@ -107,7 +104,6 @@ func (s *pricingServiceImpl) Calculate(
 			}
 		}
 	}
-
 	if cartItemMap != nil {
 		for i := range input.Shops {
 			for j := range input.Shops[i].Items {
@@ -122,17 +118,17 @@ func (s *pricingServiceImpl) Calculate(
 		}
 	}
 
-	// Collect IDs upfront to avoid per-item database queries
+	// Batch load products, inventory balances, and merchant shop records upfront
+	// to prevent N+1 database queries across multi-shop baskets.
 	var productIDs []uuid.UUID
 	var shopIDs []uuid.UUID
+	var products []product.Product
 	for _, shopGroup := range input.Shops {
 		for _, item := range shopGroup.Items {
 			productIDs = append(productIDs, item.ProductID)
 		}
 		shopIDs = append(shopIDs, shopGroup.ShopID)
 	}
-
-	var products []product.Product
 	if len(productIDs) > 0 {
 		var err error
 		products, err = s.productRepo.FindByIDs(ctx, exec, productIDs)
@@ -140,7 +136,6 @@ func (s *pricingServiceImpl) Calculate(
 			return nil, fmt.Errorf("failed to load products: %w", err)
 		}
 	}
-
 	productMap := make(map[uuid.UUID]product.Product, len(products))
 	for _, p := range products {
 		productMap[p.ID] = p
@@ -159,12 +154,12 @@ func (s *pricingServiceImpl) Calculate(
 	if err != nil {
 		return nil, fmt.Errorf("failed to load shops: %w", err)
 	}
-
 	shopMap := make(map[uuid.UUID]shop.Shop, len(shops))
 	for _, sh := range shops {
 		shopMap[sh.ID] = sh
 	}
 
+	// Verify that each merchant shop is active and approved for transactions.
 	for _, shopID := range shopIDs {
 		sh, ok := shopMap[shopID]
 		if !ok || !sh.IsOperable() {
@@ -176,7 +171,6 @@ func (s *pricingServiceImpl) Calculate(
 		}
 	}
 
-	// Determine active couriers
 	var activeCouriers []string
 	if s.courierRepo != nil {
 		activeCouriers, _ = s.courierRepo.ListAll(ctx, exec)
@@ -198,6 +192,9 @@ func (s *pricingServiceImpl) Calculate(
 			pricingItems    []PricingItemResult
 		)
 
+		// Track remaining stock across items in the same shop to prevent multiple lines
+		// of the same product from exceeding total available inventory.
+		remainingStock := make(map[uuid.UUID]int)
 		for _, shopItem := range shopGroup.Items {
 			pid := shopItem.ProductID
 			prod, ok := productMap[pid]
@@ -208,17 +205,21 @@ func (s *pricingServiceImpl) Calculate(
 				return nil, apperror.NewConflict(fmt.Sprintf("product '%s' is currently not available for purchase", prod.Name))
 			}
 
-			shopInventories := inventoryMap[pid]
-			var totalAvailableStock int
-			for _, inv := range shopInventories {
-				if inv.ShopID == shopGroup.ShopID {
-					totalAvailableStock += inv.Available()
+			if _, tracked := remainingStock[pid]; !tracked {
+				shopInventories := inventoryMap[pid]
+				var totalAvailableStock int
+				for _, inv := range shopInventories {
+					if inv.ShopID == shopGroup.ShopID {
+						totalAvailableStock += inv.Available()
+					}
 				}
+				remainingStock[pid] = totalAvailableStock
 			}
 
-			if shopItem.Quantity > totalAvailableStock {
+			if shopItem.Quantity > remainingStock[pid] {
 				return nil, apperror.NewConflict(fmt.Sprintf("insufficient stock for product '%s'", prod.Name))
 			}
+			remainingStock[pid] -= shopItem.Quantity
 
 			itemSubtotal := prod.Price * int64(shopItem.Quantity)
 			var unitWeight int
@@ -227,8 +228,8 @@ func (s *pricingServiceImpl) Calculate(
 			} else {
 				unitWeight = defaultShippingWeightGrams
 			}
-			itemWeight := unitWeight * shopItem.Quantity
 
+			itemWeight := unitWeight * shopItem.Quantity
 			shopSubtotal += itemSubtotal
 			shopItemsWeight += itemWeight
 
@@ -246,7 +247,8 @@ func (s *pricingServiceImpl) Calculate(
 
 		totalSubtotal += shopSubtotal
 
-		// Determine courier codes to calculate
+		// Query shipping rates: validate explicitly requested courier code against active couriers,
+		// or query all active providers when courier selection is left open.
 		var codes []string
 		if shopGroup.CourierCode != nil && *shopGroup.CourierCode != "" {
 			var supported bool
@@ -307,6 +309,7 @@ func (s *pricingServiceImpl) Calculate(
 			}
 		}
 
+		// Fall back to the lowest-cost available courier option if no specific service was selected.
 		shippingFee := leastFee
 		resolvedCourierCode := leastFeeCode
 		resolvedCourierService := leastFeeService
@@ -348,6 +351,7 @@ func (s *pricingServiceImpl) Calculate(
 		shopsResult = append(shopsResult, shopResult)
 	}
 
+	// Validate coupon against subtotal and shipping; floor post-discount total at zero.
 	var discountAmount int64
 	if input.CouponCode != nil && strings.TrimSpace(*input.CouponCode) != "" && s.couponService != nil {
 		res, err := s.couponService.ValidateCoupon(ctx, discount.ValidateCouponInput{
@@ -372,6 +376,8 @@ func (s *pricingServiceImpl) Calculate(
 		totalAll              = totalAfterDiscount
 	)
 
+	// Calculate processing fees (flat, percentage, or mixed) for the selected payment method,
+	// or evaluate all active methods to populate checkout preview options.
 	if input.PaymentMethodID != nil {
 		pm, err := s.paymentMethodRepo.GetByID(ctx, exec, *input.PaymentMethodID)
 		if err != nil {

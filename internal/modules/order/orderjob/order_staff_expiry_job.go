@@ -30,9 +30,11 @@ func NewOrderStaffExpiryJob(
 }
 
 func (j *OrderStaffExpiryJob) Start(ctx context.Context) {
-	j.logger.Info(ctx, "order staff expiry job: started",
-		applogger.Field{Key: "interval", Value: j.interval.String()},
-	)
+	if j.logger != nil {
+		j.logger.Info(ctx, "order staff expiry job: started",
+			applogger.Field{Key: "interval", Value: j.interval.String()},
+		)
+	}
 
 	ticker := time.NewTicker(j.interval)
 	defer ticker.Stop()
@@ -40,10 +42,14 @@ func (j *OrderStaffExpiryJob) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			j.logger.Info(ctx, "order staff expiry job: stopped")
+			if j.logger != nil {
+				j.logger.Info(ctx, "order staff expiry job: stopped")
+			}
 			return
 		case <-ticker.C:
-			j.logger.Info(ctx, "order staff expiry job: tick — expiring unfulfilled orders exceeding 3 days SLA")
+			if j.logger != nil {
+				j.logger.Info(ctx, "order staff expiry job: tick — expiring unfulfilled orders exceeding 3 days SLA")
+			}
 			j.service.ExpireUnfulfilledOrders(ctx)
 		}
 	}

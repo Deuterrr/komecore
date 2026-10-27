@@ -110,6 +110,7 @@ func (m *uosMockOrderItemRepo) AssignShipment(_ context.Context, _ transaction.E
 type uosMockInventoryRepo struct {
 	committed map[uuid.UUID]int
 	released  map[uuid.UUID]int
+	restocked map[uuid.UUID]int
 	err       error
 }
 
@@ -145,8 +146,24 @@ func (m *uosMockInventoryRepo) Commit(_ context.Context, _ transaction.Executor,
 	m.committed[productID] += qty
 	return m.err
 }
-func (m *uosMockInventoryRepo) Restock(_ context.Context, _ transaction.Executor, _ uuid.UUID, _ uuid.UUID, _ int) error {
-	return nil
+func (m *uosMockInventoryRepo) Restock(_ context.Context, _ transaction.Executor, productID uuid.UUID, _ uuid.UUID, qty int) error {
+	if m.restocked == nil {
+		m.restocked = make(map[uuid.UUID]int)
+	}
+	m.restocked[productID] += qty
+	return m.err
+}
+
+type uosMockRefunder struct {
+	refundedOrderID uuid.UUID
+	refundReason    string
+	err             error
+}
+
+func (m *uosMockRefunder) ProcessOrderRefund(_ context.Context, orderID uuid.UUID, reason string) error {
+	m.refundedOrderID = orderID
+	m.refundReason = reason
+	return m.err
 }
 func (m *uosMockInventoryRepo) Update(_ context.Context, _ transaction.Executor, _ *inventory.Inventory) error {
 	return nil
@@ -1597,5 +1614,237 @@ func TestUpdateOrderStatus_Shipped_LogisticsRollbackOnDBFailure(t *testing.T) {
 
 	if logisticsMock.canceledOrderNo != "KOMERCE-ORDER-123" {
 		t.Errorf("expected canceled order number 'KOMERCE-ORDER-123', got %q", logisticsMock.canceledOrderNo)
+	}
+}
+
+func TestUpdateOrderStatus_Expired_Confirmed_RestocksAndRefunds(t *testing.T) {
+	orderID := uuid.New()
+	productID := uuid.New()
+	shopID := uuid.New()
+	now := time.Now().UTC()
+	expires := now.Add(72 * time.Hour)
+	ord := &Order{
+		ID:                orderID,
+		Status:            OrderStatusConfirmed,
+		ConfirmedAt:       &now,
+		HandlingExpiresAt: &expires,
+	}
+
+	items := []OrderItem{
+		{
+			ID:        uuid.New(),
+			OrderID:   orderID,
+			ShopID:    shopID,
+			ProductID: productID,
+			Quantity:  3,
+		},
+	}
+
+	inventoryRepo := &uosMockInventoryRepo{}
+	refunder := &uosMockRefunder{}
+	logisticsMock := &uosMockLogisticsProvider{}
+
+	svc := newUpdateStatusTestService(
+		&uosMockExecutor{},
+		&uosMockTransactor{},
+		&uosMockOrderRepo{order: ord},
+		&uosMockOrderItemRepo{items: items},
+		inventoryRepo,
+		&uosMockPaymentRepo{},
+		&uosMockProductRepo{},
+		&uosMockShipmentRepo{},
+		&uosMockAddressRepo{},
+		&uosMockShopAddressRepo{},
+		logisticsMock,
+		&uosMockAuditLogger{},
+	).WithRefunder(refunder)
+
+	res, err := svc.UpdateOrderStatus(context.Background(), UpdateOrderStatusInput{
+		OrderID: orderID,
+		Status:  OrderStatusExpired,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Order.Status != OrderStatusExpired {
+		t.Errorf("expected OrderStatusExpired, got %s", res.Order.Status)
+	}
+	if inventoryRepo.restocked[productID] != 3 {
+		t.Errorf("expected 3 restocked for product, got %d", inventoryRepo.restocked[productID])
+	}
+	if inventoryRepo.released[productID] != 0 {
+		t.Errorf("expected 0 released, got %d", inventoryRepo.released[productID])
+	}
+	if refunder.refundedOrderID != orderID {
+		t.Errorf("expected refunded order ID %s, got %s", orderID, refunder.refundedOrderID)
+	}
+	if logisticsMock.calledInput != nil {
+		t.Error("expected logistics.CreateOrder to NOT be called for expired order")
+	}
+}
+
+func TestUpdateOrderStatus_Cancelled_Confirmed_RestocksAndRefunds(t *testing.T) {
+	orderID := uuid.New()
+	productID := uuid.New()
+	shopID := uuid.New()
+	now := time.Now().UTC()
+	expires := now.Add(72 * time.Hour)
+	ord := &Order{
+		ID:                orderID,
+		Status:            OrderStatusConfirmed,
+		ConfirmedAt:       &now,
+		HandlingExpiresAt: &expires,
+	}
+
+	items := []OrderItem{
+		{
+			ID:        uuid.New(),
+			OrderID:   orderID,
+			ShopID:    shopID,
+			ProductID: productID,
+			Quantity:  5,
+		},
+	}
+
+	inventoryRepo := &uosMockInventoryRepo{}
+	refunder := &uosMockRefunder{}
+
+	svc := newUpdateStatusTestService(
+		&uosMockExecutor{},
+		&uosMockTransactor{},
+		&uosMockOrderRepo{order: ord},
+		&uosMockOrderItemRepo{items: items},
+		inventoryRepo,
+		&uosMockPaymentRepo{},
+		&uosMockProductRepo{},
+		&uosMockShipmentRepo{},
+		&uosMockAddressRepo{},
+		&uosMockShopAddressRepo{},
+		&uosMockLogisticsProvider{},
+		&uosMockAuditLogger{},
+	).WithRefunder(refunder)
+
+	res, err := svc.UpdateOrderStatus(context.Background(), UpdateOrderStatusInput{
+		OrderID: orderID,
+		Status:  OrderStatusCancelled,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Order.Status != OrderStatusCancelled {
+		t.Errorf("expected OrderStatusCancelled, got %s", res.Order.Status)
+	}
+	if inventoryRepo.restocked[productID] != 5 {
+		t.Errorf("expected 5 restocked for product, got %d", inventoryRepo.restocked[productID])
+	}
+	if inventoryRepo.released[productID] != 0 {
+		t.Errorf("expected 0 released, got %d", inventoryRepo.released[productID])
+	}
+	if refunder.refundedOrderID != orderID {
+		t.Errorf("expected refunded order ID %s, got %s", orderID, refunder.refundedOrderID)
+	}
+}
+
+func TestUpdateOrderStatus_ExplicitShipments_IncompleteItems_Fails(t *testing.T) {
+	orderID := uuid.New()
+	shopID := uuid.New()
+	item1 := uuid.New()
+	item2 := uuid.New()
+
+	ord := &Order{
+		ID:     orderID,
+		Status: OrderStatusProcessing,
+	}
+	items := []OrderItem{
+		{ID: item1, OrderID: orderID, ShopID: shopID, Quantity: 1},
+		{ID: item2, OrderID: orderID, ShopID: shopID, Quantity: 1},
+	}
+
+	svc := newUpdateStatusTestService(
+		&uosMockExecutor{},
+		&uosMockTransactor{},
+		&uosMockOrderRepo{order: ord},
+		&uosMockOrderItemRepo{items: items},
+		&uosMockInventoryRepo{},
+		&uosMockPaymentRepo{},
+		&uosMockProductRepo{},
+		&uosMockShipmentRepo{},
+		&uosMockAddressRepo{addr: &address.CustomerAddress{ID: uuid.New()}},
+		&uosMockShopAddressRepo{addr: &address.ShopAddress{ID: uuid.New()}},
+		&uosMockLogisticsProvider{},
+		&uosMockAuditLogger{},
+	)
+
+	track := "TRACK-1"
+	_, err := svc.UpdateOrderStatus(context.Background(), UpdateOrderStatusInput{
+		OrderID: orderID,
+		Status:  OrderStatusShipped,
+		Shipments: []ShipmentDispatchInput{
+			{
+				FulfillmentMethod: "courier",
+				Courier:           "jne",
+				Service:           "reg",
+				TrackingNumber:    &track,
+				ItemIDs:           []uuid.UUID{item1}, // item2 missing!
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error due to incomplete explicit shipment partition, got nil")
+	}
+}
+
+func TestUpdateOrderStatus_ExplicitShipments_DuplicateItem_Fails(t *testing.T) {
+	orderID := uuid.New()
+	shopID := uuid.New()
+	item1 := uuid.New()
+
+	ord := &Order{
+		ID:     orderID,
+		Status: OrderStatusProcessing,
+	}
+	items := []OrderItem{
+		{ID: item1, OrderID: orderID, ShopID: shopID, Quantity: 1},
+	}
+
+	svc := newUpdateStatusTestService(
+		&uosMockExecutor{},
+		&uosMockTransactor{},
+		&uosMockOrderRepo{order: ord},
+		&uosMockOrderItemRepo{items: items},
+		&uosMockInventoryRepo{},
+		&uosMockPaymentRepo{},
+		&uosMockProductRepo{},
+		&uosMockShipmentRepo{},
+		&uosMockAddressRepo{addr: &address.CustomerAddress{ID: uuid.New()}},
+		&uosMockShopAddressRepo{addr: &address.ShopAddress{ID: uuid.New()}},
+		&uosMockLogisticsProvider{},
+		&uosMockAuditLogger{},
+	)
+
+	track1 := "TRACK-1"
+	track2 := "TRACK-2"
+	_, err := svc.UpdateOrderStatus(context.Background(), UpdateOrderStatusInput{
+		OrderID: orderID,
+		Status:  OrderStatusShipped,
+		Shipments: []ShipmentDispatchInput{
+			{
+				FulfillmentMethod: "courier",
+				Courier:           "jne",
+				Service:           "reg",
+				TrackingNumber:    &track1,
+				ItemIDs:           []uuid.UUID{item1},
+			},
+			{
+				FulfillmentMethod: "courier",
+				Courier:           "sicepat",
+				Service:           "sunt",
+				TrackingNumber:    &track2,
+				ItemIDs:           []uuid.UUID{item1}, // item1 duplicated!
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected error due to duplicate item across shipments, got nil")
 	}
 }

@@ -493,7 +493,9 @@ func buildContainer(
 		paymentService,
 		log,
 		auditLogger,
-	).WithOutboxRecorder(repos.outbox)
+	).
+		WithOutboxRecorder(repos.outbox).
+		WithCustomerEmailResolver(newCustomerEmailAdapter(infra.TransactionExecutor))
 
 	createOrderWorkflow := order.NewCreateOrderWorkflow(
 		infra.TransactionExecutor,
@@ -513,7 +515,9 @@ func buildContainer(
 		userRepo,
 		infra.PaymentGateway,
 		pricingService,
-	).WithCouponService(discountService).WithOutboxRecorder(repos.outbox)
+	).
+		WithCouponService(discountService).
+		WithOutboxRecorder(repos.outbox)
 
 	wishlistService := wishlist.NewService(
 		wishlistRepo,
