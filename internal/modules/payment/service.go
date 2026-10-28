@@ -191,15 +191,17 @@ func (s *Service) CheckPaymentStatus(ctx context.Context, input CheckPaymentStat
 }
 
 // mapGatewayStatus converts a gateway NotificationStatus to the domain
-// PaymentStatus that the processWebhook usecase would have set.
+// PaymentStatus matching the WebhookProcessor state machine transitions.
 func mapGatewayStatus(s paymentgateway.NotificationStatus) PaymentStatus {
 	switch s {
 	case paymentgateway.NotificationStatusSettlement:
 		return PaymentStatusPaid
 	case paymentgateway.NotificationStatusExpire:
 		return PaymentStatusExpired
-	case paymentgateway.NotificationStatusCancel, paymentgateway.NotificationStatusDeny:
+	case paymentgateway.NotificationStatusCancel:
 		return PaymentStatusCancelled
+	case paymentgateway.NotificationStatusDeny:
+		return PaymentStatusFailed
 	default:
 		return PaymentStatusPending
 	}
@@ -269,11 +271,8 @@ func (s *Service) ExpirePastDuePayments(ctx context.Context) {
 }
 
 func (s *Service) expireSinglePayment(ctx context.Context, pmt Payment) error {
-	// Best-effort gateway cancellation
-	if pmt.Provider == "gateway" &&
-		pmt.ProviderOrderID != nil &&
-		*pmt.ProviderOrderID != "" {
-
+	// Invariant: Best-effort external cancellation runs prior to DB transaction to prevent orphan charges.
+	if pmt.ProviderOrderID != nil && *pmt.ProviderOrderID != "" {
 		if err := s.paymentGateway.CancelTransaction(ctx, *pmt.ProviderOrderID); err != nil {
 			s.logger.Warn(ctx, "failed to cancel transaction at gateway during expiry, proceeding locally",
 				applogger.Field{Key: "payment_id", Value: pmt.ID.String()},
@@ -284,6 +283,15 @@ func (s *Service) expireSinglePayment(ctx context.Context, pmt Payment) error {
 	}
 
 	return s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
+		// Acquire pessimistic row lock to guard against concurrent settlement webhooks.
+		current, err := s.paymentRepo.GetByOrderIDForUpdate(ctx, exec, pmt.OrderID)
+		if err != nil {
+			return fmt.Errorf("failed to lock payment for expiry: %w", err)
+		}
+		if current == nil || current.Status != PaymentStatusPending {
+			return nil
+		}
+
 		if err := s.paymentRepo.UpdateStatus(ctx, exec,
 			pmt.ID,
 			PaymentStatusExpired,
@@ -380,7 +388,7 @@ func (s *Service) GetPaymentDetail(ctx context.Context, input GetPaymentDetailIn
 		if cd.QRString != nil {
 			qrString = *cd.QRString
 		} else if cd.ChannelType == TypeQRCode && cd.ActionURL != nil {
-			vaNumber = *cd.ActionURL
+			qrString = *cd.ActionURL
 		}
 		if cd.RedirectURL != nil {
 			redirectURL = *cd.RedirectURL
@@ -515,9 +523,8 @@ func (s *Service) ProcessOrderRefund(ctx context.Context, orderID uuid.UUID, rea
 		return nil
 	}
 
-	// Determine if automated gateway refund can be attempted
-	canAutoRefund := pmt.Provider == "gateway" &&
-		pmt.ProviderOrderID != nil &&
+	// Invariant: Presence of provider_order_id confirms an active upstream charge eligible for automated gateway refund.
+	canAutoRefund := pmt.ProviderOrderID != nil &&
 		*pmt.ProviderOrderID != ""
 
 	if canAutoRefund {
@@ -858,6 +865,15 @@ func (s *Service) reconcileSinglePayment(ctx context.Context, pmt Payment) bool 
 
 func (s *Service) expirePaymentLocally(ctx context.Context, pmt Payment) error {
 	return s.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
+		// Acquire pessimistic row lock to guard against concurrent settlement webhooks.
+		current, err := s.paymentRepo.GetByOrderIDForUpdate(ctx, exec, pmt.OrderID)
+		if err != nil {
+			return fmt.Errorf("failed to lock payment for expiry: %w", err)
+		}
+		if current == nil || current.Status != PaymentStatusPending {
+			return nil
+		}
+
 		if err := s.paymentRepo.UpdateStatus(ctx, exec,
 			pmt.ID,
 			PaymentStatusExpired,

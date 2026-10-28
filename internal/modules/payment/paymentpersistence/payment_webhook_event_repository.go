@@ -19,15 +19,7 @@ func NewPaymentWebhookEventRepository() *PaymentWebhookEventRepository {
 	return &PaymentWebhookEventRepository{}
 }
 
-// Upsert inserts a new webhook event row.
-// On conflict (gateway_order_id, transaction_status) the existing row is returned
-// unchanged, allowing the caller to inspect its status before deciding
-// whether to re-process.
-func (r *PaymentWebhookEventRepository) Upsert(
-	ctx context.Context,
-	exec transaction.Executor,
-	event payment.PaymentWebhookEvent,
-) (*payment.PaymentWebhookEvent, error) {
+func (r *PaymentWebhookEventRepository) Upsert(ctx context.Context, exec transaction.Executor, event payment.PaymentWebhookEvent) (*payment.PaymentWebhookEvent, error) {
 	// INSERT ... ON CONFLICT DO NOTHING, then SELECT to return the
 	// authoritative row (either the newly inserted one or the pre-existing one).
 	insertQuery := `
@@ -78,12 +70,7 @@ func (r *PaymentWebhookEventRepository) Upsert(
 	)
 }
 
-// MarkProcessed sets status = 'processed' and stamps processed_at = NOW().
-func (r *PaymentWebhookEventRepository) MarkProcessed(
-	ctx context.Context,
-	exec transaction.Executor,
-	id uuid.UUID,
-) error {
+func (r *PaymentWebhookEventRepository) MarkProcessed(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
 	query := `
 		UPDATE payment_webhook_events
 		SET
@@ -100,13 +87,7 @@ func (r *PaymentWebhookEventRepository) MarkProcessed(
 	return nil
 }
 
-// MarkFailed sets status = 'failed' and records the error string.
-func (r *PaymentWebhookEventRepository) MarkFailed(
-	ctx context.Context,
-	exec transaction.Executor,
-	id uuid.UUID,
-	errMsg string,
-) error {
+func (r *PaymentWebhookEventRepository) MarkFailed(ctx context.Context, exec transaction.Executor, id uuid.UUID, errMsg string) error {
 	query := `
 		UPDATE payment_webhook_events
 		SET
@@ -123,9 +104,7 @@ func (r *PaymentWebhookEventRepository) MarkFailed(
 	return nil
 }
 
-func (r *PaymentWebhookEventRepository) scanWebhookEvent(
-	row transaction.Row,
-) (*payment.PaymentWebhookEvent, error) {
+func (r *PaymentWebhookEventRepository) scanWebhookEvent(row transaction.Row) (*payment.PaymentWebhookEvent, error) {
 	var e payment.PaymentWebhookEvent
 	err := row.Scan(
 		&e.ID,
@@ -143,5 +122,6 @@ func (r *PaymentWebhookEventRepository) scanWebhookEvent(
 		}
 		return nil, fmt.Errorf("scan payment webhook event failed: %w", err)
 	}
+
 	return &e, nil
 }

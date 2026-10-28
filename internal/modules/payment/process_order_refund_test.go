@@ -42,7 +42,9 @@ func (m *refundMockPaymentRepo) ListPastDuePending(_ context.Context, _ transact
 	return nil, nil
 }
 
-type refundMockGateway struct{}
+type refundMockGateway struct {
+	requestedOrder string
+}
 
 func (m *refundMockGateway) Name() string                                                 { return "mock" }
 func (m *refundMockGateway) AllowedPaymentMethods() []paymentgateway.AllowedPaymentMethod { return nil }
@@ -58,6 +60,7 @@ func (m *refundMockGateway) GetTransactionStatus(_ context.Context, _ string) (*
 }
 func (m *refundMockGateway) CancelTransaction(_ context.Context, _ string) error { return nil }
 func (m *refundMockGateway) RefundTransaction(_ context.Context, req paymentgateway.RefundRequest) (*paymentgateway.RefundResponse, error) {
+	m.requestedOrder = req.GatewayOrderID
 	return &paymentgateway.RefundResponse{
 		GatewayTransactionID: "tx-123",
 		GatewayOrderID:       req.GatewayOrderID,
@@ -117,5 +120,37 @@ func TestProcessOrderRefundUsecase_PaidPaymentAutomatedRefund(t *testing.T) {
 	}
 	if repo.status != PaymentStatusRefunded {
 		t.Fatalf("expected status to be refunded, got %s", repo.status)
+	}
+}
+
+func TestProcessOrderRefundUsecase_MidtransProvider_AutomatedRefund(t *testing.T) {
+	orderID := uuid.New()
+	providerOrderID := "midtrans-ord-999"
+	repo := &refundMockPaymentRepo{
+		payment: &Payment{
+			ID:              uuid.New(),
+			OrderID:         orderID,
+			Provider:        "midtrans",
+			ProviderOrderID: &providerOrderID,
+			Amount:          75000,
+			Status:          PaymentStatusPaid,
+		},
+	}
+	gw := &refundMockGateway{}
+	exec := &mockExecutor{}
+	trans := &mockTransactor{}
+	logger := &mockLogger{}
+
+	svc := NewService(repo, nil, nil, nil, nil, nil, gw, nil, exec, trans, logger, 24*time.Hour, 100, 5)
+
+	err := svc.ProcessOrderRefund(context.Background(), orderID, "staff SLA expired")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if repo.status != PaymentStatusRefunded {
+		t.Fatalf("expected status to be refunded for midtrans provider, got %s", repo.status)
+	}
+	if gw.requestedOrder != providerOrderID {
+		t.Errorf("expected gateway order %s to be refunded, got %s", providerOrderID, gw.requestedOrder)
 	}
 }

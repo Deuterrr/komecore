@@ -7,19 +7,31 @@ import (
 	"github.com/google/uuid"
 )
 
+// Integration rail classification (virtual accounts, digital wallets, or dynamic QR codes).
 type PaymentMethodType string
+
+// Pricing surcharge model applied during checkout total calculation.
 type PaymentFeeType string
 
 const (
+	// Virtual account banking rails with unique payment numbers (e.g. BCA, Mandiri, BRI).
 	TypeBankTransfer PaymentMethodType = "bank_transfer"
-	TypeEWallet      PaymentMethodType = "ewallet"
-	TypeQRCode       PaymentMethodType = "qr_code"
+	// Mobile wallet app redirects or deep links (e.g. GoPay, OVO, ShopeePay).
+	TypeEWallet PaymentMethodType = "ewallet"
+	// Dynamic EMVCo QRIS payment barcodes for mobile banking apps.
+	TypeQRCode PaymentMethodType = "qr_code"
 
-	FeeTypeFlat       PaymentFeeType = "flat"
+	// Fixed nominal fee added regardless of basket total.
+	FeeTypeFlat PaymentFeeType = "flat"
+	// Variable percentage surcharge calculated from total payable amount.
 	FeeTypePercentage PaymentFeeType = "percentage"
-	FeeTypeMixed      PaymentFeeType = "mixed"
+	// Both a fixed nominal base fee and a variable percentage surcharge.
+	FeeTypeMixed PaymentFeeType = "mixed"
 )
 
+// Active checkout channel configuration, pricing fee formulas, and customer guidance.
+//
+// Invariant: Conflict on (code, provider, type) revives soft-deleted records to preserve relational foreign keys.
 type PaymentMethod struct {
 	ID uuid.UUID
 
@@ -33,7 +45,7 @@ type PaymentMethod struct {
 	FeeType       PaymentFeeType
 	FeeFixed      int64
 	FeePercentage float64
-	FeeBps        int64 // Fee in basis points (100 bps = 1.00%)
+	FeeBps        int64 // Surcharge in basis points (100 bps = 1.00%) for exact integer arithmetic.
 	FeeMax        *int64
 
 	CreatedAt time.Time
@@ -43,27 +55,23 @@ type PaymentMethod struct {
 	Instruction *PaymentInstruction
 }
 
+// Asserts integrity of channel configuration and fee surcharge bounds.
 func (pM *PaymentMethod) Validate() error {
 	if pM.Name == "" {
 		return ErrInvalidName
 	}
-
 	if pM.Code == "" {
 		return ErrInvalidCode
 	}
-
 	if pM.Provider == "" {
 		return ErrInvalidProvider
 	}
-
 	if !pM.Type.IsValid() {
 		return ErrInvalidType
 	}
-
 	if !pM.FeeType.IsValid() {
 		return ErrInvalidFeeType
 	}
-
 	if pM.FeeMax != nil && *pM.FeeMax < 0 {
 		return ErrInvalidFeeMax
 	}
@@ -75,26 +83,25 @@ func (pM *PaymentMethod) Validate() error {
 		}
 
 	case FeeTypePercentage:
-		if pM.FeeBps < 0 || pM.FeeBps > 10000 {
-			if pM.FeePercentage < 0 || pM.FeePercentage > 1 {
-				return ErrInvalidFeePercentage
-			}
+		if pM.FeeBps < 0 || pM.FeeBps > 10000 || pM.FeePercentage < 0 || pM.FeePercentage > 1 {
+			return ErrInvalidFeePercentage
 		}
 
 	case FeeTypeMixed:
 		if pM.FeeFixed < 0 {
 			return ErrInvalidFeeFixed
 		}
-		if pM.FeeBps < 0 || pM.FeeBps > 10000 {
-			if pM.FeePercentage < 0 || pM.FeePercentage > 1 {
-				return ErrInvalidFeePercentage
-			}
+		if pM.FeeBps < 0 || pM.FeeBps > 10000 || pM.FeePercentage < 0 || pM.FeePercentage > 1 {
+			return ErrInvalidFeePercentage
 		}
 	}
 
 	return nil
 }
 
+// Computes customer surcharge for a basket total using fixed-point integer math.
+//
+// Invariant: Capped by FeeMax when specified to prevent excessive percentage surcharges on large orders.
 func (pM PaymentMethod) CalculateFee(amount int64) int64 {
 	feeBps := pM.FeeBps
 	if feeBps == 0 && pM.FeePercentage > 0 {
@@ -128,6 +135,7 @@ func (pM PaymentMethod) CalculateFee(amount int64) int64 {
 	}
 }
 
+// Reports whether the rail is supported by domain channels.
 func (t PaymentMethodType) IsValid() bool {
 	switch t {
 	case TypeBankTransfer, TypeEWallet, TypeQRCode:
@@ -137,6 +145,7 @@ func (t PaymentMethodType) IsValid() bool {
 	}
 }
 
+// Reports whether the fee calculation model is recognized.
 func (t PaymentFeeType) IsValid() bool {
 	switch t {
 	case FeeTypeFlat, FeeTypePercentage, FeeTypeMixed:

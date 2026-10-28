@@ -7,49 +7,33 @@ import (
 	"github.com/google/uuid"
 )
 
-// WebhookEventStatus tracks the processing lifecycle of an inbound webhook.
+// Processing lifecycle states for an inbound gateway notification.
 type WebhookEventStatus string
 
 const (
-	// WebhookEventStatusReceived means the payload has been persisted
-	// but not yet processed.
+	// Raw payload stored in DB, queued for domain transition processing.
 	WebhookEventStatusReceived WebhookEventStatus = "received"
-
-	// WebhookEventStatusProcessed means the webhook was applied to
-	// the payment domain successfully.
+	// Successfully reconciled and applied to the payment domain aggregate.
 	WebhookEventStatusProcessed WebhookEventStatus = "processed"
-
-	// WebhookEventStatusFailed means processing failed.
-	// The event will be re-attempted on the next webhook delivery
-	// from the gateway for the same (order_id, transaction_status).
+	// Domain processing failed; retained with error message for diagnostics and retry on redelivery.
 	WebhookEventStatusFailed WebhookEventStatus = "failed"
 )
 
-// PaymentWebhookEvent is a persisted record of a single inbound
-// gateway webhook notification.
+// Inbound webhook notification persisted prior to domain execution.
 //
-// The pair (OrderID, TransactionStatus) acts as the idempotency key,
-// enforced by a UNIQUE constraint in the database.
-// Each unique status transition from the gateway is stored and
-// processed exactly once.
+// Invariant: (OrderID, TransactionStatus) is the unique idempotency barrier preventing duplicate transitions.
 type PaymentWebhookEvent struct {
 	ID uuid.UUID
-
-	// OrderID is the gateway-side order identifier extracted from
-	// the raw webhook payload (not the internal UUID).
+	// Merchant or gateway order reference parsed from the webhook body.
 	OrderID string
 
-	// TransactionStatus is the raw transaction_status field from
-	// the gateway payload, used together with OrderID as the
-	// idempotency key.
+	// Gateway status field forming the unique idempotency key with OrderID.
 	TransactionStatus string
+	Status            WebhookEventStatus
 
-	// Payload is the full raw webhook body as received from the gateway.
+	// Full raw JSON payload as delivered by the upstream gateway.
 	Payload json.RawMessage
-
-	Status WebhookEventStatus
-
-	// Error is populated when Status == WebhookEventStatusFailed.
+	// Error details recorded when Status == failed for diagnostic analysis.
 	Error *string
 
 	ReceivedAt  time.Time

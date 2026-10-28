@@ -20,11 +20,7 @@ func NewPaymentChannelDataRepository() *PaymentChannelDataRepository {
 	return &PaymentChannelDataRepository{}
 }
 
-func (r *PaymentChannelDataRepository) Save(
-	ctx context.Context,
-	exec transaction.Executor,
-	data payment.PaymentChannelData,
-) error {
+func (r *PaymentChannelDataRepository) Save(ctx context.Context, exec transaction.Executor, data payment.PaymentChannelData) error {
 	metadataJSON := "{}"
 	if len(data.Metadata) > 0 {
 		if b, err := json.Marshal(data.Metadata); err == nil {
@@ -90,11 +86,7 @@ func (r *PaymentChannelDataRepository) Save(
 	return nil
 }
 
-func (r *PaymentChannelDataRepository) GetByPaymentID(
-	ctx context.Context,
-	exec transaction.Executor,
-	paymentID uuid.UUID,
-) (*payment.PaymentChannelData, error) {
+func (r *PaymentChannelDataRepository) GetByPaymentID(ctx context.Context, exec transaction.Executor, paymentID uuid.UUID) (*payment.PaymentChannelData, error) {
 	query := `
 		SELECT
 			id,
@@ -141,11 +133,7 @@ func (r *PaymentChannelDataRepository) GetByPaymentID(
 	return &d, nil
 }
 
-func (r *PaymentChannelDataRepository) ListByPaymentIDs(
-	ctx context.Context,
-	exec transaction.Executor,
-	paymentIDs []uuid.UUID,
-) (map[uuid.UUID]*payment.PaymentChannelData, error) {
+func (r *PaymentChannelDataRepository) ListByPaymentIDs(ctx context.Context, exec transaction.Executor, paymentIDs []uuid.UUID) (map[uuid.UUID]*payment.PaymentChannelData, error) {
 	if len(paymentIDs) == 0 {
 		return map[uuid.UUID]*payment.PaymentChannelData{}, nil
 	}

@@ -9,22 +9,35 @@ import (
 type PaymentStatus string
 
 const (
-	PaymentStatusPending       PaymentStatus = "pending"
-	PaymentStatusPaid          PaymentStatus = "paid"
-	PaymentStatusFailed        PaymentStatus = "failed"
-	PaymentStatusExpired       PaymentStatus = "expired"
-	PaymentStatusCancelled     PaymentStatus = "cancelled"
-	PaymentStatusRefunded      PaymentStatus = "refunded"
+	// Awaiting customer transfer, QR scan, or upstream gateway settlement.
+	PaymentStatusPending PaymentStatus = "pending"
+	// Funds captured and verified via upstream gateway webhook or reconciliation sync.
+	PaymentStatusPaid PaymentStatus = "paid"
+	// Unrecoverable processing failure or upstream gateway rejection.
+	PaymentStatusFailed PaymentStatus = "failed"
+	// Customer payment window timed out without settlement.
+	PaymentStatusExpired PaymentStatus = "expired"
+	// Aborted prior to settlement (e.g. order cancelled by customer or staff).
+	PaymentStatusCancelled PaymentStatus = "cancelled"
+	// Captured funds successfully remitted back to customer account.
+	PaymentStatusRefunded PaymentStatus = "refunded"
+	// Refund operation initiated with upstream processor; awaiting bank confirmation.
 	PaymentStatusRefundPending PaymentStatus = "refund_pending"
-	PaymentStatusRefundFailed  PaymentStatus = "refund_failed"
+	// Upstream refund request rejected or failed execution.
+	PaymentStatusRefundFailed PaymentStatus = "refund_failed"
 )
 
+// Upstream payment processor or multi-channel gateway aggregator discriminator.
 type PaymentProvider string
 
 const (
+	// Aggregated multi-channel payment gateway (e.g. Midtrans, Xendit).
 	PaymentProviderGateway PaymentProvider = "gateway"
 )
 
+// Aggregate root binding an order to external gateway charges, tracking settlement, and refund lifecycle.
+//
+// Invariant: Amount is stored as an integer in fractional currency / lowest denomination (e.g. IDR Rupiah or cents).
 type Payment struct {
 	ID uuid.UUID
 
@@ -33,8 +46,10 @@ type Payment struct {
 
 	Provider string
 
+	// Gateway's internal transaction ID once acknowledged by upstream processor.
 	ProviderPaymentID *string
-	ProviderOrderID   *string
+	// Merchant-side correlation ID passed upstream; presence identifies an active gateway session.
+	ProviderOrderID *string
 
 	Amount int64
 

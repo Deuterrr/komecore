@@ -54,7 +54,7 @@ jobs:
       - name: Verify OpenAPI Backward Compatibility (oasdiff)
         if: github.event_name == 'pull_request'
         run: |
-          go install github.com/tufin/oasdiff@latest
+          go install github.com/oasdiff/oasdiff@latest
           if git show "origin/${{ github.base_ref }}:api/openapi.yaml" > /tmp/base_openapi.yaml 2>/dev/null; then
             oasdiff breaking /tmp/base_openapi.yaml api/openapi.yaml
           fi

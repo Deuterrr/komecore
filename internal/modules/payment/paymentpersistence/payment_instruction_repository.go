@@ -18,11 +18,7 @@ func NewPaymentInstructionRepository() *PaymentInstructionRepository {
 	return &PaymentInstructionRepository{}
 }
 
-func (r *PaymentInstructionRepository) GetByPaymentMethodID(
-	ctx context.Context,
-	exec transaction.Executor,
-	methodID uuid.UUID,
-) (*payment.PaymentInstruction, error) {
+func (r *PaymentInstructionRepository) GetByPaymentMethodID(ctx context.Context, exec transaction.Executor, methodID uuid.UUID) (*payment.PaymentInstruction, error) {
 	query := `
 		SELECT
 			id,
@@ -51,11 +47,7 @@ func (r *PaymentInstructionRepository) GetByPaymentMethodID(
 	return &inst, nil
 }
 
-func (r *PaymentInstructionRepository) Save(
-	ctx context.Context,
-	exec transaction.Executor,
-	instruction payment.PaymentInstruction,
-) error {
+func (r *PaymentInstructionRepository) Save(ctx context.Context, exec transaction.Executor, instruction payment.PaymentInstruction) error {
 	query := `
 		INSERT INTO payment_instructions (
 			id,

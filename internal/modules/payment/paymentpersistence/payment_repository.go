@@ -20,11 +20,7 @@ func NewPaymentRepository() *PaymentRepository {
 	return &PaymentRepository{}
 }
 
-func (r *PaymentRepository) GetByID(
-	ctx context.Context,
-	exec transaction.Executor,
-	id uuid.UUID,
-) (*payment.Payment, error) {
+func (r *PaymentRepository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -48,18 +44,13 @@ func (r *PaymentRepository) GetByID(
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-
 		return nil, fmt.Errorf("query payment by id failed: %w", err)
 	}
 
 	return payment, nil
 }
 
-func (r *PaymentRepository) GetByOrderID(
-	ctx context.Context,
-	exec transaction.Executor,
-	orderID uuid.UUID,
-) (*payment.Payment, error) {
+func (r *PaymentRepository) GetByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -87,18 +78,13 @@ func (r *PaymentRepository) GetByOrderID(
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-
 		return nil, fmt.Errorf("query payment by order id failed: %w", err)
 	}
 
 	return payment, nil
 }
 
-func (r *PaymentRepository) GetByOrderIDForUpdate(
-	ctx context.Context,
-	exec transaction.Executor,
-	orderID uuid.UUID,
-) (*payment.Payment, error) {
+func (r *PaymentRepository) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -127,19 +113,13 @@ func (r *PaymentRepository) GetByOrderIDForUpdate(
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-
 		return nil, fmt.Errorf("query payment by order id for update failed: %w", err)
 	}
 
 	return payment, nil
 }
 
-func (r *PaymentRepository) UpdateStatus(
-	ctx context.Context,
-	exec transaction.Executor,
-	id uuid.UUID,
-	status payment.PaymentStatus,
-) error {
+func (r *PaymentRepository) UpdateStatus(ctx context.Context, exec transaction.Executor, id uuid.UUID, status payment.PaymentStatus) error {
 	query := `
 		UPDATE payments
 		SET
@@ -157,11 +137,7 @@ func (r *PaymentRepository) UpdateStatus(
 	return err
 }
 
-func (r *PaymentRepository) Save(
-	ctx context.Context,
-	exec transaction.Executor,
-	payment payment.Payment,
-) error {
+func (r *PaymentRepository) Save(ctx context.Context, exec transaction.Executor, payment payment.Payment) error {
 	now := appclock.Now()
 	payment.UpdatedAt = &now
 
@@ -215,9 +191,7 @@ func (r *PaymentRepository) Save(
 	return err
 }
 
-func (r *PaymentRepository) scanPayment(
-	row transaction.Row,
-) (*payment.Payment, error) {
+func (r *PaymentRepository) scanPayment(row transaction.Row) (*payment.Payment, error) {
 	var payment payment.Payment
 	err := row.Scan(
 		&payment.ID,
@@ -240,11 +214,7 @@ func (r *PaymentRepository) scanPayment(
 	return &payment, nil
 }
 
-func (r *PaymentRepository) ListByOrderIDs(
-	ctx context.Context,
-	exec transaction.Executor,
-	orderIDs []uuid.UUID,
-) ([]payment.Payment, error) {
+func (r *PaymentRepository) ListByOrderIDs(ctx context.Context, exec transaction.Executor, orderIDs []uuid.UUID) ([]payment.Payment, error) {
 	if len(orderIDs) == 0 {
 		return []payment.Payment{}, nil
 	}
@@ -304,11 +274,7 @@ func (r *PaymentRepository) ListByOrderIDs(
 	return payments, nil
 }
 
-func (r *PaymentRepository) ListPendingGateway(
-	ctx context.Context,
-	exec transaction.Executor,
-	since time.Time,
-) ([]payment.Payment, error) {
+func (r *PaymentRepository) ListPendingGateway(ctx context.Context, exec transaction.Executor, since time.Time) ([]payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -325,7 +291,6 @@ func (r *PaymentRepository) ListPendingGateway(
 			paid_at
 		FROM payments
 		WHERE status = 'pending'
-		  AND provider = 'gateway'
 		  AND provider_order_id IS NOT NULL
 		  AND created_at >= $1
 		ORDER BY created_at ASC
@@ -362,12 +327,7 @@ func (r *PaymentRepository) ListPendingGateway(
 	return payments, nil
 }
 
-func (r *PaymentRepository) ListPastDuePending(
-	ctx context.Context,
-	exec transaction.Executor,
-	now time.Time,
-	limit int,
-) ([]payment.Payment, error) {
+func (r *PaymentRepository) ListPastDuePending(ctx context.Context, exec transaction.Executor, now time.Time, limit int) ([]payment.Payment, error) {
 	if limit <= 0 {
 		limit = 100
 	}
