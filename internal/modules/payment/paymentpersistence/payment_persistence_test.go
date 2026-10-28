@@ -38,10 +38,10 @@ func (s *querySpyExecutor) QueryRow(_ context.Context, sql string, args ...any) 
 
 type emptyRows struct{}
 
-func (r *emptyRows) Close()                 {}
-func (r *emptyRows) Next() bool             { return false }
-func (r *emptyRows) Scan(_ ...any) error    { return nil }
-func (r *emptyRows) Err() error             { return nil }
+func (r *emptyRows) Close()              {}
+func (r *emptyRows) Next() bool          { return false }
+func (r *emptyRows) Scan(_ ...any) error { return nil }
+func (r *emptyRows) Err() error          { return nil }
 
 type emptyRow struct{}
 
