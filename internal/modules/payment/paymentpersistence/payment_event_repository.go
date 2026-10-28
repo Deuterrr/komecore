@@ -18,17 +18,13 @@ func NewPaymentEventRepository() *PaymentEventRepository {
 	return &PaymentEventRepository{}
 }
 
-func (r *PaymentEventRepository) GetByID(
-	ctx context.Context,
-	exec transaction.Executor,
-	id uuid.UUID,
-) (*payment.PaymentEvent, error) {
+func (r *PaymentEventRepository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*payment.PaymentEvent, error) {
 	query := `
 		SELECT
-			id
-			payment_id
-			event_name
-			payload
+			id,
+			payment_id,
+			event_name,
+			payload,
 			created_at
 		FROM
 			payment_events
@@ -54,21 +50,18 @@ func (r *PaymentEventRepository) GetByID(
 	return &event, nil
 }
 
-func (r *PaymentEventRepository) ListByPaymentID(
-	ctx context.Context,
-	exec transaction.Executor,
-	paymentID uuid.UUID,
-) ([]payment.PaymentEvent, error) {
+func (r *PaymentEventRepository) ListByPaymentID(ctx context.Context, exec transaction.Executor, paymentID uuid.UUID) ([]payment.PaymentEvent, error) {
 	query := `
 		SELECT
-			id
-			payment_id
-			event_name
-			payload
+			id,
+			payment_id,
+			event_name,
+			payload,
 			created_at
 		FROM
 			payment_events
 		WHERE payment_id = $1
+		ORDER BY created_at ASC
 	`
 
 	rows, err := exec.Query(ctx, query, paymentID)
@@ -93,7 +86,6 @@ func (r *PaymentEventRepository) ListByPaymentID(
 
 		events = append(events, event)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate payment events failed: %w", err)
 	}
@@ -101,11 +93,7 @@ func (r *PaymentEventRepository) ListByPaymentID(
 	return events, nil
 }
 
-func (r *PaymentEventRepository) Create(
-	ctx context.Context,
-	exec transaction.Executor,
-	event payment.PaymentEvent,
-) error {
+func (r *PaymentEventRepository) Create(ctx context.Context, exec transaction.Executor, event payment.PaymentEvent) error {
 	query := `
 		INSERT INTO payment_events (
 			id,

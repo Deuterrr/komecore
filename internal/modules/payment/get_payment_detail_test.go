@@ -227,6 +227,88 @@ func TestGetPaymentDetail_Gateway_Success(t *testing.T) {
 	}
 }
 
+func TestGetPaymentDetail_QRCode_ActionURLFallback(t *testing.T) {
+	ctx := context.Background()
+	orderID := uuid.New()
+	customerID := uuid.New()
+	methodID := uuid.New()
+	paymentID := uuid.New()
+
+	order := &OrderInfo{
+		ID:         orderID,
+		CustomerID: customerID,
+		Number:     "ORD-QR-1",
+		Total:      50000,
+	}
+
+	pmt := &Payment{
+		ID:        paymentID,
+		OrderID:   orderID,
+		MethodID:  methodID,
+		Provider:  "midtrans",
+		Amount:    50000,
+		Status:    PaymentStatusPending,
+		CreatedAt: time.Date(2026, 7, 12, 10, 0, 0, 0, time.UTC),
+	}
+
+	method := &PaymentMethod{
+		ID:   methodID,
+		Name: "QRIS",
+		Type: TypeQRCode,
+	}
+
+	qrURL := "https://api.midtrans.com/qris/qr-code-image.png"
+	// Simulating legacy channel data where QRString is nil and ActionURL holds the payload/url
+	channelData := &PaymentChannelData{
+		ID:          uuid.New(),
+		PaymentID:   paymentID,
+		ChannelType: TypeQRCode,
+		DisplayName: "QRIS",
+		QRString:    nil,
+		ActionURL:   &qrURL,
+	}
+
+	instruction := &PaymentInstruction{
+		ID:              uuid.New(),
+		PaymentMethodID: methodID,
+		Content:         "VA: {{va_number}} | QR: {{qr_string}}",
+	}
+
+	svc := NewService(
+		&mockOrderDetailPaymentRepo{payment: pmt},
+		&mockOrderDetailPaymentMethodRepo{method: method},
+		&mockOrderDetailPaymentInstructionRepo{instruction: instruction},
+		&mockOrderDetailPaymentChannelDataRepo{channelData: channelData},
+		&mockOrderDetailOrderPaymentManager{order: order, invoice: "INV-QR-1"},
+		nil,
+		nil,
+		nil,
+		&mockExecutor{},
+		&mockTransactor{},
+		&mockLogger{},
+		24*time.Hour,
+		100,
+		5,
+	)
+
+	res, err := svc.GetPaymentDetail(ctx, GetPaymentDetailInput{
+		OrderID:    orderID,
+		CustomerID: &customerID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if res.Instruction == nil {
+		t.Fatal("expected non-nil instruction")
+	}
+
+	expected := "VA:  | QR: https://api.midtrans.com/qris/qr-code-image.png"
+	if *res.Instruction != expected {
+		t.Errorf("expected instruction %q, got %q", expected, *res.Instruction)
+	}
+}
+
 func TestGetPaymentDetail_BankTransfer_Success(t *testing.T) {
 	ctx := context.Background()
 	orderID := uuid.New()

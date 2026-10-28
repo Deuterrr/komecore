@@ -22,12 +22,17 @@ func (m *mockPaymentExpiryRepo) GetByID(_ context.Context, _ transaction.Executo
 	return nil, nil
 }
 
-func (m *mockPaymentExpiryRepo) GetByOrderID(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*Payment, error) {
+func (m *mockPaymentExpiryRepo) GetByOrderID(_ context.Context, _ transaction.Executor, orderID uuid.UUID) (*Payment, error) {
+	for i := range m.pastDuePayments {
+		if m.pastDuePayments[i].OrderID == orderID {
+			return &m.pastDuePayments[i], nil
+		}
+	}
 	return nil, nil
 }
 
-func (m *mockPaymentExpiryRepo) GetByOrderIDForUpdate(_ context.Context, _ transaction.Executor, _ uuid.UUID) (*Payment, error) {
-	return nil, nil
+func (m *mockPaymentExpiryRepo) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*Payment, error) {
+	return m.GetByOrderID(ctx, exec, orderID)
 }
 
 func (m *mockPaymentExpiryRepo) ListByOrderIDs(_ context.Context, _ transaction.Executor, _ []uuid.UUID) ([]Payment, error) {
@@ -39,6 +44,11 @@ func (m *mockPaymentExpiryRepo) UpdateStatus(_ context.Context, _ transaction.Ex
 		m.updatedStatuses = make(map[uuid.UUID]PaymentStatus)
 	}
 	m.updatedStatuses[id] = status
+	for i := range m.pastDuePayments {
+		if m.pastDuePayments[i].ID == id {
+			m.pastDuePayments[i].Status = status
+		}
+	}
 	return nil
 }
 
@@ -255,5 +265,76 @@ func TestExpirePastDuePayments_InventoryAnomalyLogsWarnAndFinalizesState(t *test
 
 	if len(logger.warns) == 0 {
 		t.Error("expected WARN log for inventory anomaly, got 0")
+	}
+}
+
+func TestExpirePastDuePayments_ConcurrentSettlement_AbortsExpiry(t *testing.T) {
+	orderID := uuid.New()
+	paymentID := uuid.New()
+	productID := uuid.New()
+	shopID := uuid.New()
+	gatewayOrderID := "gw-concurrent-1"
+
+	listedPayment := Payment{
+		ID:              paymentID,
+		OrderID:         orderID,
+		Provider:        "midtrans",
+		ProviderOrderID: &gatewayOrderID,
+		Status:          PaymentStatusPending,
+		Amount:          100000,
+		CreatedAt:       time.Now().Add(-25 * time.Hour),
+		ExpiresAt:       pointer(time.Now().Add(-1 * time.Hour)),
+	}
+
+	paymentRepo := &mockPaymentExpiryRepo{
+		pastDuePayments: []Payment{listedPayment},
+	}
+
+	order := &mockOrder{
+		ID:     orderID,
+		Status: "confirmed",
+	}
+	items := []OrderItemInfo{
+		{ProductID: productID, ShopID: shopID, Quantity: 1},
+	}
+	orderMgr := &mockOrderPaymentManager{
+		orders: map[uuid.UUID]*mockOrder{orderID: order},
+		items:  map[uuid.UUID][]OrderItemInfo{orderID: items},
+	}
+	inventoryRepo := &mockInventoryRepo{}
+	gw := &mockPaymentGateway{}
+	transactor := &mockTransactor{}
+	logger := &mockLogger{}
+
+	svc := NewService(
+		paymentRepo,
+		nil,
+		nil,
+		nil,
+		orderMgr,
+		inventoryRepo,
+		gw,
+		nil,
+		nil,
+		transactor,
+		logger,
+		24*time.Hour,
+		100,
+		5,
+	)
+
+	// Simulate concurrent settlement happening right before lock
+	paymentRepo.pastDuePayments[0].Status = PaymentStatusPaid
+
+	svc.ExpirePastDuePayments(context.Background())
+
+	if status, exists := paymentRepo.updatedStatuses[paymentID]; exists && status == PaymentStatusExpired {
+		t.Errorf("expected payment not to be expired after concurrent settlement, got %s", status)
+	}
+	if order.Status != "confirmed" {
+		t.Errorf("expected order status to remain confirmed, got %s", order.Status)
+	}
+	if len(inventoryRepo.releases) != 0 {
+		t.Errorf("expected 0 inventory release calls, got %d", len(inventoryRepo.releases))
 	}
 }

@@ -173,3 +173,90 @@ func TestPaymentMethod_Validate_FeeMax(t *testing.T) {
 		t.Errorf("Validate() with nil FeeMax = %v, want nil", err)
 	}
 }
+
+func TestPaymentMethod_Validate_FeePercentageAndBps(t *testing.T) {
+	baseMethod := func() PaymentMethod {
+		return PaymentMethod{
+			Name:     "GoPay",
+			Code:     "gopay",
+			Provider: "midtrans",
+			Type:     TypeEWallet,
+		}
+	}
+
+	tests := []struct {
+		name        string
+		setup       func(m *PaymentMethod)
+		expectedErr error
+	}{
+		{
+			name: "valid percentage fee",
+			setup: func(m *PaymentMethod) {
+				m.FeeType = FeeTypePercentage
+				m.FeePercentage = 0.02
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "negative percentage fee fails validation",
+			setup: func(m *PaymentMethod) {
+				m.FeeType = FeeTypePercentage
+				m.FeePercentage = -0.05
+			},
+			expectedErr: ErrInvalidFeePercentage,
+		},
+		{
+			name: "percentage fee exceeding 1.0 fails validation",
+			setup: func(m *PaymentMethod) {
+				m.FeeType = FeeTypePercentage
+				m.FeePercentage = 1.25
+			},
+			expectedErr: ErrInvalidFeePercentage,
+		},
+		{
+			name: "negative fee bps fails validation",
+			setup: func(m *PaymentMethod) {
+				m.FeeType = FeeTypePercentage
+				m.FeeBps = -100
+			},
+			expectedErr: ErrInvalidFeePercentage,
+		},
+		{
+			name: "fee bps exceeding 10000 fails validation",
+			setup: func(m *PaymentMethod) {
+				m.FeeType = FeeTypePercentage
+				m.FeeBps = 15000
+			},
+			expectedErr: ErrInvalidFeePercentage,
+		},
+		{
+			name: "mixed fee with negative fixed fee fails validation",
+			setup: func(m *PaymentMethod) {
+				m.FeeType = FeeTypeMixed
+				m.FeeFixed = -1000
+				m.FeePercentage = 0.02
+			},
+			expectedErr: ErrInvalidFeeFixed,
+		},
+		{
+			name: "mixed fee with invalid percentage fails validation",
+			setup: func(m *PaymentMethod) {
+				m.FeeType = FeeTypeMixed
+				m.FeeFixed = 1000
+				m.FeePercentage = -0.02
+			},
+			expectedErr: ErrInvalidFeePercentage,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := baseMethod()
+			tc.setup(&m)
+			err := m.Validate()
+			if err != tc.expectedErr {
+				t.Errorf("Validate() error = %v, want %v", err, tc.expectedErr)
+			}
+		})
+	}
+}

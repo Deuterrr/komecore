@@ -6,38 +6,27 @@ import (
 	"github.com/google/uuid"
 )
 
-// PaymentChannelData holds the gateway-returned payment channel details
-// (QR string, VA number, deep-link URL) persisted after a charge so they
-// can be retrieved on any subsequent request — e.g. after a page refresh.
+// Persists transient gateway charge responses to guarantee idempotent recovery
+// and customer retrieval across browser reloads.
 type PaymentChannelData struct {
-	ID uuid.UUID
-
+	ID        uuid.UUID
 	PaymentID uuid.UUID
 
-	// ChannelType is the payment method type, using the domain constants:
-	// TypeBankTransfer | TypeEWallet | TypeQRCode
+	// Rail classification.
 	ChannelType PaymentMethodType
-
-	// DisplayName is the human-readable label returned by the gateway,
-	// e.g. "QRIS", "GoPay", "BCA Virtual Account".
+	// Merchant-facing brand label from gateway response (e.g. "BCA Virtual Account", "QRIS").
 	DisplayName string
 
-	// AccountNumber stores virtual account numbers or Mandiri Bill Keys.
 	AccountNumber *string
+	QRString      *string
 
-	// QRString stores raw EMVCo QR code payloads for dynamic QRIS rendering.
-	QRString *string
-
-	// RedirectURL stores external checkout links or e-wallet deep links.
+	// External checkout URL or e-wallet deep link for mobile app switching.
 	RedirectURL *string
-
-	// ActionURL is the legacy actionable value (retained for backward compatibility).
+	// Actionable link retained for backward compatibility with legacy mobile SDKs.
 	ActionURL *string
-
-	// Metadata holds arbitrary provider-specific context (biller_code, acquirer, etc.).
+	// Provider-specific metadata (biller_code, acquirer, settlement window).
 	Metadata map[string]any
 
 	ExpiresAt *time.Time
-
 	CreatedAt time.Time
 }

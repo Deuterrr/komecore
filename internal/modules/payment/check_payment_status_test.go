@@ -220,3 +220,62 @@ func TestCheckPaymentStatus_GatewayError(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 }
+
+func TestCheckPaymentStatus_Success_Deny(t *testing.T) {
+	ctx := context.Background()
+
+	orderID := uuid.New()
+	customerID := uuid.New()
+	paymentID := uuid.New()
+
+	order := &mockOrder{
+		ID:         orderID,
+		CustomerID: customerID,
+		Status:     "pending",
+	}
+
+	providerOrderID := orderID.String()
+	pmt := &Payment{
+		ID:              paymentID,
+		OrderID:         orderID,
+		Status:          PaymentStatusPending,
+		Provider:        "midtrans",
+		ProviderOrderID: &providerOrderID,
+		Amount:          100000,
+		CreatedAt:       time.Now(),
+	}
+
+	pRepo := &mockPaymentRepo{payments: map[uuid.UUID]*Payment{paymentID: pmt}}
+	oMgr := &mockOrderPaymentManager{orders: map[uuid.UUID]*mockOrder{orderID: order}}
+	gateway := &mockPaymentGateway{
+		result: &paymentgateway.NotificationResult{
+			GatewayOrderID:       providerOrderID,
+			GatewayTransactionID: "tx-deny-123",
+			Status:               paymentgateway.NotificationStatusDeny,
+			RawStatus:            "deny",
+			GrossAmount:          100000,
+		},
+	}
+
+	webhookProcessor := newWebhookProcessor(pRepo, &mockPaymentAccountRepo{}, &mockPaymentEventRepo{}, oMgr, &mockInventoryRepo{}, gateway, nil)
+	svc := NewService(pRepo, nil, nil, nil, oMgr, &mockInventoryRepo{}, gateway, webhookProcessor, &mockExecutor{}, &mockTransactor{}, &mockLogger{}, 24*time.Hour, 100, 5)
+
+	res, err := svc.CheckPaymentStatus(ctx, CheckPaymentStatusInput{
+		OrderID:    orderID,
+		CustomerID: customerID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if res.Status != PaymentStatusFailed {
+		t.Errorf("expected status %s, got %s", PaymentStatusFailed, res.Status)
+	}
+	if !res.Synced {
+		t.Error("expected synced to be true")
+	}
+
+	if pmt.Status != PaymentStatusFailed {
+		t.Errorf("expected payment status %s, got %s", PaymentStatusFailed, pmt.Status)
+	}
+}

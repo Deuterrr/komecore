@@ -21,11 +21,7 @@ func NewPaymentMethodRepository() *PaymentMethodRepository {
 	return &PaymentMethodRepository{}
 }
 
-func (r *PaymentMethodRepository) Save(
-	ctx context.Context,
-	exec transaction.Executor,
-	method payment.PaymentMethod,
-) error {
+func (r *PaymentMethodRepository) Save(ctx context.Context, exec transaction.Executor, method payment.PaymentMethod) error {
 	query := `
 		INSERT INTO payment_methods (
 			id,
@@ -44,17 +40,15 @@ func (r *PaymentMethodRepository) Save(
 		) VALUES (
 		 	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
 		)
-		ON CONFLICT (id) DO UPDATE SET
+		ON CONFLICT (code, provider, type) DO UPDATE SET
 			name = EXCLUDED.name,
-			code = EXCLUDED.code,
-			provider = EXCLUDED.provider,
-			type = EXCLUDED.type,
 			is_active = EXCLUDED.is_active,
 			description = EXCLUDED.description,
 			fee_type = EXCLUDED.fee_type,
 			fee_amount = EXCLUDED.fee_amount,
 			fee_rate = EXCLUDED.fee_rate,
 			fee_max = EXCLUDED.fee_max,
+			deleted_at = NULL,
 			updated_at = NOW()
 	`
 
@@ -73,7 +67,6 @@ func (r *PaymentMethodRepository) Save(
 		method.CreatedAt,
 		method.UpdatedAt,
 	)
-
 	if err != nil {
 		return fmt.Errorf("save payment method failed: %w", err)
 	}
@@ -81,11 +74,7 @@ func (r *PaymentMethodRepository) Save(
 	return nil
 }
 
-func (r *PaymentMethodRepository) FindByName(
-	ctx context.Context,
-	exec transaction.Executor,
-	name string,
-) (*payment.PaymentMethod, error) {
+func (r *PaymentMethodRepository) FindByName(ctx context.Context, exec transaction.Executor, name string) (*payment.PaymentMethod, error) {
 	query := `
 		SELECT
 			pm.id,
@@ -108,13 +97,16 @@ func (r *PaymentMethodRepository) FindByName(
 		LEFT JOIN payment_instructions pi ON pm.id = pi.payment_method_id
 		WHERE
 			pm.name LIKE $1 || '%'
+			AND pm.deleted_at IS NULL
 		LIMIT 1
 	`
 
-	var method payment.PaymentMethod
-	var piID *uuid.UUID
-	var piContent *string
-	var piCreatedAt *time.Time
+	var (
+		method      payment.PaymentMethod
+		piID        *uuid.UUID
+		piContent   *string
+		piCreatedAt *time.Time
+	)
 
 	err := exec.QueryRow(ctx, query, name).Scan(
 		&method.ID,
@@ -143,11 +135,11 @@ func (r *PaymentMethodRepository) FindByName(
 
 	if piID != nil {
 		var content string
+		var createdAt time.Time
+
 		if piContent != nil {
 			content = *piContent
 		}
-
-		var createdAt time.Time
 		if piCreatedAt != nil {
 			createdAt = *piCreatedAt
 		}
@@ -163,11 +155,7 @@ func (r *PaymentMethodRepository) FindByName(
 	return &method, nil
 }
 
-func (r *PaymentMethodRepository) GetByID(
-	ctx context.Context,
-	exec transaction.Executor,
-	paymentID uuid.UUID,
-) (*payment.PaymentMethod, error) {
+func (r *PaymentMethodRepository) GetByID(ctx context.Context, exec transaction.Executor, paymentID uuid.UUID) (*payment.PaymentMethod, error) {
 	query := `
 		SELECT
 			pm.id,
@@ -190,13 +178,16 @@ func (r *PaymentMethodRepository) GetByID(
 		LEFT JOIN payment_instructions pi ON pm.id = pi.payment_method_id
 		WHERE
 			pm.id = $1
+			AND pm.deleted_at IS NULL
 		LIMIT 1
 	`
 
-	var method payment.PaymentMethod
-	var piID *uuid.UUID
-	var piContent *string
-	var piCreatedAt *time.Time
+	var (
+		method      payment.PaymentMethod
+		piID        *uuid.UUID
+		piContent   *string
+		piCreatedAt *time.Time
+	)
 
 	err := exec.QueryRow(ctx, query, paymentID).Scan(
 		&method.ID,
@@ -216,7 +207,6 @@ func (r *PaymentMethodRepository) GetByID(
 		&piContent,
 		&piCreatedAt,
 	)
-
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -226,11 +216,11 @@ func (r *PaymentMethodRepository) GetByID(
 
 	if piID != nil {
 		var content string
+		var createdAt time.Time
+
 		if piContent != nil {
 			content = *piContent
 		}
-
-		var createdAt time.Time
 		if piCreatedAt != nil {
 			createdAt = *piCreatedAt
 		}
@@ -246,11 +236,7 @@ func (r *PaymentMethodRepository) GetByID(
 	return &method, nil
 }
 
-func (r *PaymentMethodRepository) ListAll(
-	ctx context.Context,
-	exec transaction.Executor,
-	sorts pagination.Sorts,
-) ([]payment.PaymentMethod, error) {
+func (r *PaymentMethodRepository) ListAll(ctx context.Context, exec transaction.Executor, sorts pagination.Sorts) ([]payment.PaymentMethod, error) {
 	var pmSortKeys = map[pagination.SortKey]string{
 		payment.PaymentMethodSortLatest: "pm.created_at",
 		payment.PaymentMethodSortName:   "pm.name",
@@ -359,7 +345,6 @@ func (r *PaymentMethodRepository) ListAll(
 
 		result = append(result, row)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate payment methods failed: %w", err)
 	}
