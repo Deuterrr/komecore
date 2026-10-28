@@ -1,0 +1,83 @@
+name: Feature Request
+description: Propose a new feature, endpoint, or architectural capability for KomeCore
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a new feature or architectural enhancement for KomeCore!
+        Please review [`CONTRIBUTING.md`](../CONTRIBUTING.md) before submitting.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the feature
+      description: Provide an executive summary of the proposal, what problem it solves, and who benefits.
+      placeholder: |
+        Executive summary explaining what capability is being added and why.
+
+        * **Sub-component or functional capability 1**
+
+          Currently, <file> does <behavior>. This should be enhanced to <new behavior>.
+
+        * **Sub-component or functional capability 2**
+
+          Detail additional data structures, behaviors, or lifecycle changes required.
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-highlights
+    attributes:
+      label: Technical highlights
+      description: Provide concrete technical context, affected packages, struct/interface signatures, or configuration changes.
+      placeholder: |
+        Store initialization data in `Container` or pass it to constructor functions.
+
+        ```go
+        // Proposed struct, interface, or helper function signatures
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: visual-contract
+    attributes:
+      label: API / Middleware Flow / Data Contract
+      description: Provide an API request/response example, ASCII flow diagram, or state transition model.
+      placeholder: |
+        ```text
+        POST /api/v1/orders
+
+        Request payload:
+        { ... }
+
+        Response: 201 Created
+        { ... }
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Specify observable, testable outcomes, HTTP status codes, and test verification commands.
+      placeholder: |
+        - Calling the endpoint returns HTTP 200 OK with expected JSON schema.
+        - Invariant guarantees remain preserved under concurrent calls.
+        - Running `go test -v -count=1 ./...` passes without regressions.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contributor-checklist
+    attributes:
+      label: Contributor Checklist
+      description: Please confirm the following before opening this issue:
+      options:
+        - label: I have verified this feature does not duplicate an existing issue or discussion.
+          required: true
+        - label: I have reviewed the [Contributing Guidelines](https://github.com/deuterrr/komecore/blob/main/CONTRIBUTING.md).
+          required: false

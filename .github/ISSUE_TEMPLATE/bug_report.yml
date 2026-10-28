@@ -1,0 +1,77 @@
+name: Bug Report
+description: Report a defect, incorrect behavior, or regression in KomeCore
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please provide reproduction details to help diagnose the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: Executive summary of the defect: what went wrong, which package/endpoint is affected, and high-level fix.
+      placeholder: |
+        Executive summary of the defect and affected component.
+
+        * **Root cause & current behavior**
+
+          Currently, function `Foo` in `internal/...` exhibits incorrect behavior under condition X. Explain the exact failure mechanism.
+
+        * **Edge cases & test coverage gap**
+
+          Identify missing test cases, unhandled nil/empty checks, race conditions, or unverified error paths.
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-highlights
+    attributes:
+      label: Technical highlights
+      description: Show the problematic code and the proposed fix or remediation approach.
+      placeholder: |
+        The fix in `internal/...`:
+        ```go
+        // Problematic snippet vs corrected implementation
+        ```
+
+        Tests should use table-driven cases or mock recorders to assert edge cases.
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps / Signatures
+      description: Minimal reproduction steps, request payloads, or state sequence illustrating when the failure occurs.
+      placeholder: |
+        1. Send request `POST /api/v1/...` with header / payload ...
+        2. Database state contains ...
+        3. Handler panics or returns unexpected error response ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Explicit assertions of correct behavior across missing, invalid, and valid inputs.
+      placeholder: |
+        - When input is missing or empty, return nil or default without error.
+        - When input is invalid, return a descriptive domain error.
+        - Running `go test -v -race -count=1 ./...` passes all unit and integration assertions.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Defect Checklist
+      description: Please verify before submitting:
+      options:
+        - label: I have confirmed this bug exists on the latest `main` branch.
+          required: true
+        - label: I have verified this is not a duplicate of an existing reported bug.
+          required: true

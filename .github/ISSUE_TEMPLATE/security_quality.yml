@@ -1,0 +1,77 @@
+name: Security & Code Quality
+description: Report a security vulnerability, threat surface concern, invariant breach, or architectural quality issue
+title: "sec: "
+labels: ["security", "quality"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!NOTE]
+        > If reporting a critical zero-day or sensitive security vulnerability affecting production deployments, please review [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md) or contact maintainers privately prior to opening a public issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the security or quality concern
+      description: Executive summary of the vulnerability, threat model, invariant violation, or structural quality degradation.
+      placeholder: |
+        Executive summary of the security vulnerability, invariant breach, or architectural degradation.
+
+        * **Vulnerability / Invariant breakdown**
+
+          Detailed analysis of the security gap, CWE/OWASP classification, concurrency race, or architecture violation (e.g. layer leakage, stuttering, unauthorized access).
+
+        * **Attack surface & blast radius / Maintainability impact**
+
+          Explain how this can be exploited or how it degrades developer velocity, cognitive load, or runtime stability.
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-highlights
+    attributes:
+      label: Technical highlights & Remediation
+      description: Detail defensive implementation steps, sanitization, middleware chains, cryptographic primitives, or refactoring strategy.
+      placeholder: |
+        ```go
+        // Defensive pattern, AST rule, or invariant enforcement snippet
+        ```
+
+        List configuration updates, dependencies to audit, or static analysis tools (e.g., govulncheck, gosec, golangci-lint).
+    validations:
+      required: false
+
+  - type: textarea
+    id: threat-model
+    attributes:
+      label: Threat Model / Policy / Invariant Flow
+      description: Provide threat matrix, HTTP security headers, AST rule, or invariant boundary diagram.
+      placeholder: |
+        ```text
+        Actor ──► Attack Vector ──► Invariant Barrier ──► Outcome
+        ```
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: Concrete criteria for resolving the issue and preventing regressions.
+      placeholder: |
+        - Attack vector or invariant violation is neutralized with strict validation or defense-in-depth.
+        - Static security scanners (`govulncheck ./...`, `gosec ./...`) report zero high/medium vulnerabilities.
+        - Running `make check` and `go test -race ./...` passes cleanly across all test suites.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Verification Checklist
+      description: Confirm the following:
+      options:
+        - label: This issue does not disclose unpatched critical production secrets or exploits publicly.
+          required: true
+        - label: Remediation preserves backward compatibility or specifies breaking migration requirements.
+          required: true
