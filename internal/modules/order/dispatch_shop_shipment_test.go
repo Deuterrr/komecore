@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
+func TestDispatchShopShipment_PartialAndFull(t *testing.T) {
 	ctx := context.Background()
 
 	shopA := uuid.New()
@@ -170,7 +170,7 @@ func TestDispatchShopShipmentUsecase_PartialAndFull(t *testing.T) {
 	}
 }
 
-func TestDispatchShopShipmentUsecase_ValidationErrors(t *testing.T) {
+func TestDispatchShopShipment_ValidationErrors(t *testing.T) {
 	ctx := context.Background()
 
 	shopA := uuid.New()

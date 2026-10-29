@@ -157,40 +157,40 @@ func NewRouter(c *Container) *chi.Mux {
 }
 
 type handlers struct {
-	product   *producthttp.ProductHandler
-	inventory *inventoryhttp.InventoryHandler
-	auth      *authhttp.AuthHandler
-	staff     *staffhttp.StaffHandler
-	cart      *carthttp.CartHandler
-	user      *userhttp.UserHandler
-	address   *addresshttp.AddressHandler
-	payment   *paymenthttp.PaymentHandler
-	shop      *shophttp.ShopHandler
-	courier   *courierhttp.CourierHandler
-	shipment  *shipmenthttp.ShipmentHandler
-	order     *orderhttp.OrderHandler
-	wishlist  *wishlisthttp.WishlistHandler
-	review    *reviewhttp.ReviewHandler
-	discount  *discounthttp.DiscountHandler
+	product   *producthttp.Handler
+	inventory *inventoryhttp.Handler
+	auth      *authhttp.Handler
+	staff     *staffhttp.Handler
+	cart      *carthttp.Handler
+	user      *userhttp.Handler
+	address   *addresshttp.Handler
+	payment   *paymenthttp.Handler
+	shop      *shophttp.Handler
+	courier   *courierhttp.Handler
+	shipment  *shipmenthttp.Handler
+	order     *orderhttp.Handler
+	wishlist  *wishlisthttp.Handler
+	review    *reviewhttp.Handler
+	discount  *discounthttp.Handler
 }
 
 func initHandlers(c *Container) *handlers {
 	return &handlers{
-		product:   producthttp.NewProductHandler(c.Catalog),
-		inventory: inventoryhttp.NewInventoryHandler(c.Inventory),
-		auth:      authhttp.NewAuthHandler(c.Auth, c.GoogleOAuth),
-		staff:     staffhttp.NewStaffHandler(c.Staff),
-		cart:      carthttp.NewCartHandler(c.Cart),
-		user:      userhttp.NewUserHandler(c.User),
-		address:   addresshttp.NewAddressHandler(c.Address),
-		payment:   paymenthttp.NewPaymentHandler(c.Payment, c.PaymentWebhook),
-		shop:      shophttp.NewShopHandler(c.Shop),
-		courier:   courierhttp.NewCourierHandler(c.Courier),
-		shipment:  shipmenthttp.NewShipmentHandler(c.Shipment),
-		order:     orderhttp.NewOrderHandler(c.Order, c.CreateOrder, c.Shop),
-		wishlist:  wishlisthttp.NewWishlistHandler(c.Wishlist),
-		review:    reviewhttp.NewReviewHandler(c.Review),
-		discount:  discounthttp.NewDiscountHandler(c.Discount),
+		product:   producthttp.New(c.Catalog),
+		inventory: inventoryhttp.New(c.Inventory),
+		auth:      authhttp.New(c.Auth, c.GoogleOAuth),
+		staff:     staffhttp.New(c.Staff),
+		cart:      carthttp.New(c.Cart),
+		user:      userhttp.New(c.User),
+		address:   addresshttp.New(c.Address),
+		payment:   paymenthttp.New(c.Payment, c.PaymentWebhook),
+		shop:      shophttp.New(c.Shop),
+		courier:   courierhttp.New(c.Courier),
+		shipment:  shipmenthttp.New(c.Shipment),
+		order:     orderhttp.New(c.Order, c.CreateOrder, c.Shop),
+		wishlist:  wishlisthttp.New(c.Wishlist),
+		review:    reviewhttp.New(c.Review),
+		discount:  discounthttp.New(c.Discount),
 	}
 }
 

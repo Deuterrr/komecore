@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
+func TestDeleteCustomerAddress(t *testing.T) {
 	ctx := context.Background()
 	addressID := uuid.New()
 	customerID := uuid.New()
@@ -27,8 +27,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := address.NewService(repo, nil, exec, nil)
-		err := uc.DeleteCustomerAddress(ctx, addressID)
+		svc := address.NewService(repo, nil, exec, nil)
+		err := svc.DeleteCustomerAddress(ctx, addressID)
 
 		require.NoError(t, err)
 		assert.Equal(t, 1, repo.getByIDCalls)
@@ -40,8 +40,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		repo := newMockCustomerAddressRepo() // empty
 		exec := &mockExecutor{}
 
-		uc := address.NewService(repo, nil, exec, nil)
-		err := uc.DeleteCustomerAddress(ctx, addressID)
+		svc := address.NewService(repo, nil, exec, nil)
+		err := svc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.True(t, apperror.IsNotFound(err))
@@ -57,8 +57,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := address.NewService(repo, nil, exec, nil)
-		err := uc.DeleteCustomerAddress(ctx, addressID)
+		svc := address.NewService(repo, nil, exec, nil)
+		err := svc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.True(t, apperror.IsConflict(err))
@@ -70,8 +70,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		repo.getByIDError = errors.New("db get error")
 		exec := &mockExecutor{}
 
-		uc := address.NewService(repo, nil, exec, nil)
-		err := uc.DeleteCustomerAddress(ctx, addressID)
+		svc := address.NewService(repo, nil, exec, nil)
+		err := svc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to retrieve address")
@@ -88,8 +88,8 @@ func TestDeleteCustomerAddressUsecase_Execute(t *testing.T) {
 		repo.deleteError = errors.New("db delete error")
 		exec := &mockExecutor{}
 
-		uc := address.NewService(repo, nil, exec, nil)
-		err := uc.DeleteCustomerAddress(ctx, addressID)
+		svc := address.NewService(repo, nil, exec, nil)
+		err := svc.DeleteCustomerAddress(ctx, addressID)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to delete address")

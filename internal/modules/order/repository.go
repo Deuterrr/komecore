@@ -34,142 +34,45 @@ type FindOrderParams struct {
 }
 
 type PricingService interface {
-	Calculate(
-		ctx context.Context,
-		exec transaction.Executor,
-		input PricingInput,
-	) (*PricingResult, error)
+	Calculate(ctx context.Context, exec transaction.Executor, input PricingInput) (*PricingResult, error)
 }
 
 type Repository interface {
-	GetByID(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) (*Order, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Order, error)
+	GetByIDForUpdate(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Order, error)
+	GetByNumber(ctx context.Context, exec transaction.Executor, number string) (*Order, error)
 
-	GetByIDForUpdate(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) (*Order, error)
+	UpdateStatus(ctx context.Context, exec transaction.Executor, id uuid.UUID, status OrderStatus) error
+	UpdateStatusWithSLA(ctx context.Context, exec transaction.Executor, id uuid.UUID, status OrderStatus, confirmedAt *time.Time, expiresAt *time.Time) error
 
-	GetByNumber(
-		ctx context.Context,
-		exec transaction.Executor,
-		number string,
-	) (*Order, error)
+	Save(ctx context.Context, exec transaction.Executor, order Order) error
 
-	UpdateStatus(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-		status OrderStatus,
-	) error
+	FindOrders(ctx context.Context, exec transaction.Executor, params FindOrderParams) ([]Order, int, error)
 
-	UpdateStatusWithSLA(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-		status OrderStatus,
-		confirmedAt *time.Time,
-		expiresAt *time.Time,
-	) error
+	SetConfirmedAndExpiry(ctx context.Context, exec transaction.Executor, id uuid.UUID, confirmedAt time.Time, expiresAt time.Time) error
 
-	Save(
-		ctx context.Context,
-		exec transaction.Executor,
-		order Order,
-	) error
-
-	FindOrders(
-		ctx context.Context,
-		exec transaction.Executor,
-		params FindOrderParams,
-	) ([]Order, int, error)
-
-	SetConfirmedAndExpiry(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-		confirmedAt time.Time,
-		expiresAt time.Time,
-	) error
-
-	FindExpiredUnfulfilledOrders(
-		ctx context.Context,
-		exec transaction.Executor,
-		now time.Time,
-		limit int,
-	) ([]Order, error)
+	FindExpiredUnfulfilledOrders(ctx context.Context, exec transaction.Executor, now time.Time, limit int) ([]Order, error)
 }
 
 type ItemRepository interface {
-	ListByOrderID(
-		ctx context.Context,
-		exec transaction.Executor,
-		orderID uuid.UUID,
-	) ([]OrderItem, error)
+	ListByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) ([]OrderItem, error)
+	ListByOrderIDs(ctx context.Context, exec transaction.Executor, orderIDs []uuid.UUID) ([]OrderItem, error)
+	ListByShipmentID(ctx context.Context, exec transaction.Executor, shipmentID uuid.UUID) ([]OrderItem, error)
 
-	ListByOrderIDs(
-		ctx context.Context,
-		exec transaction.Executor,
-		orderIDs []uuid.UUID,
-	) ([]OrderItem, error)
+	SaveBulk(ctx context.Context, exec transaction.Executor, items []OrderItem) error
 
-	ListByShipmentID(
-		ctx context.Context,
-		exec transaction.Executor,
-		shipmentID uuid.UUID,
-	) ([]OrderItem, error)
-
-	SaveBulk(
-		ctx context.Context,
-		exec transaction.Executor,
-		items []OrderItem,
-	) error
-
-	AssignShipment(
-		ctx context.Context,
-		exec transaction.Executor,
-		shipmentID uuid.UUID,
-		itemIDs []uuid.UUID,
-	) error
+	AssignShipment(ctx context.Context, exec transaction.Executor, shipmentID uuid.UUID, itemIDs []uuid.UUID) error
 }
 
 type InvoiceRepository interface {
-	GetByID(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) (*Invoice, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Invoice, error)
+	GetByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*Invoice, error)
 
-	GetByOrderID(
-		ctx context.Context,
-		exec transaction.Executor,
-		orderID uuid.UUID,
-	) (*Invoice, error)
-
-	Save(
-		ctx context.Context,
-		exec transaction.Executor,
-		invoice Invoice,
-	) error
+	Save(ctx context.Context, exec transaction.Executor, invoice Invoice) error
 }
 
 type InvoiceItemRepository interface {
-	ListByInvoiceID(
-		ctx context.Context,
-		exec transaction.Executor,
-		invoiceID uuid.UUID,
-	) ([]InvoiceItem, error)
+	ListByInvoiceID(ctx context.Context, exec transaction.Executor, invoiceID uuid.UUID) ([]InvoiceItem, error)
 
-	SaveBulk(
-		ctx context.Context,
-		exec transaction.Executor,
-		items []InvoiceItem,
-	) error
+	SaveBulk(ctx context.Context, exec transaction.Executor, items []InvoiceItem) error
 }
-
-type OrderRepository = Repository
-type OrderItemRepository = ItemRepository

@@ -8,16 +8,13 @@ import (
 	transaction "komecore/internal/infra/transactor"
 )
 
-type CourierRepository struct{}
+type Repository struct{}
 
-func NewCourierRepository() *CourierRepository {
-	return &CourierRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *CourierRepository) ListAll(
-	ctx context.Context,
-	exec transaction.Executor,
-) ([]string, error) {
+func (r *Repository) ListAll(ctx context.Context, exec transaction.Executor) ([]string, error) {
 	query := `
 		SELECT
 			code
@@ -45,11 +42,7 @@ func (r *CourierRepository) ListAll(
 	return result, nil
 }
 
-func (r *CourierRepository) GetActiveCodes(
-	ctx context.Context,
-	exec transaction.Executor,
-	codes []string,
-) ([]string, error) {
+func (r *Repository) GetActiveCodes(ctx context.Context, exec transaction.Executor, codes []string) ([]string, error) {
 	query := `
 		SELECT code
 		FROM couriers
@@ -75,11 +68,7 @@ func (r *CourierRepository) GetActiveCodes(
 	return result, nil
 }
 
-func (r *CourierRepository) ValidateCouriers(
-	ctx context.Context,
-	exec transaction.Executor,
-	codes []string,
-) ([]string, error) {
+func (r *Repository) ValidateCouriers(ctx context.Context, exec transaction.Executor, codes []string) ([]string, error) {
 	if len(codes) == 0 {
 		return nil, fmt.Errorf("courier codes cannot be empty")
 	}
@@ -96,7 +85,7 @@ func (r *CourierRepository) ValidateCouriers(
 	return validCodes, nil
 }
 
-func (r *CourierRepository) normalizeCodes(codes []string) []string {
+func (r *Repository) normalizeCodes(codes []string) []string {
 	seen := make(map[string]struct{})
 	result := make([]string, 0, len(codes))
 

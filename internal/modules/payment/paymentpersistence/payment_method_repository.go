@@ -15,13 +15,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type PaymentMethodRepository struct{}
+type MethodRepository struct{}
 
-func NewPaymentMethodRepository() *PaymentMethodRepository {
-	return &PaymentMethodRepository{}
+func NewMethodRepository() *MethodRepository {
+	return &MethodRepository{}
 }
 
-func (r *PaymentMethodRepository) Save(ctx context.Context, exec transaction.Executor, method payment.PaymentMethod) error {
+func (r *MethodRepository) Save(ctx context.Context, exec transaction.Executor, method payment.PaymentMethod) error {
 	query := `
 		INSERT INTO payment_methods (
 			id,
@@ -74,7 +74,7 @@ func (r *PaymentMethodRepository) Save(ctx context.Context, exec transaction.Exe
 	return nil
 }
 
-func (r *PaymentMethodRepository) FindByName(ctx context.Context, exec transaction.Executor, name string) (*payment.PaymentMethod, error) {
+func (r *MethodRepository) FindByName(ctx context.Context, exec transaction.Executor, name string) (*payment.PaymentMethod, error) {
 	query := `
 		SELECT
 			pm.id,
@@ -155,7 +155,7 @@ func (r *PaymentMethodRepository) FindByName(ctx context.Context, exec transacti
 	return &method, nil
 }
 
-func (r *PaymentMethodRepository) GetByID(ctx context.Context, exec transaction.Executor, paymentID uuid.UUID) (*payment.PaymentMethod, error) {
+func (r *MethodRepository) GetByID(ctx context.Context, exec transaction.Executor, paymentID uuid.UUID) (*payment.PaymentMethod, error) {
 	query := `
 		SELECT
 			pm.id,
@@ -236,7 +236,7 @@ func (r *PaymentMethodRepository) GetByID(ctx context.Context, exec transaction.
 	return &method, nil
 }
 
-func (r *PaymentMethodRepository) ListAll(ctx context.Context, exec transaction.Executor, sorts pagination.Sorts) ([]payment.PaymentMethod, error) {
+func (r *MethodRepository) ListAll(ctx context.Context, exec transaction.Executor, sorts pagination.Sorts) ([]payment.PaymentMethod, error) {
 	var pmSortKeys = map[pagination.SortKey]string{
 		payment.PaymentMethodSortLatest: "pm.created_at",
 		payment.PaymentMethodSortName:   "pm.name",

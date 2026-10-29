@@ -15,13 +15,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type OrderRepository struct{}
+type Repository struct{}
 
-func NewOrderRepository() *OrderRepository {
-	return &OrderRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *OrderRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -72,7 +72,7 @@ func (r *OrderRepository) GetByID(
 	return &order, nil
 }
 
-func (r *OrderRepository) GetByIDForUpdate(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*order.Order, error) {
+func (r *Repository) GetByIDForUpdate(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*order.Order, error) {
 	query := `
 		SELECT
 			id,
@@ -120,7 +120,7 @@ func (r *OrderRepository) GetByIDForUpdate(ctx context.Context, exec transaction
 	return &order, nil
 }
 
-func (r *OrderRepository) GetByNumber(ctx context.Context, exec transaction.Executor, number string) (*order.Order, error) {
+func (r *Repository) GetByNumber(ctx context.Context, exec transaction.Executor, number string) (*order.Order, error) {
 	query := `
 		SELECT
 			id,
@@ -167,7 +167,7 @@ func (r *OrderRepository) GetByNumber(ctx context.Context, exec transaction.Exec
 	return &order, nil
 }
 
-func (r *OrderRepository) UpdateStatus(
+func (r *Repository) UpdateStatus(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -192,7 +192,7 @@ func (r *OrderRepository) UpdateStatus(
 	return nil
 }
 
-func (r *OrderRepository) UpdateStatusWithSLA(
+func (r *Repository) UpdateStatusWithSLA(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -224,7 +224,7 @@ func (r *OrderRepository) UpdateStatusWithSLA(
 	return nil
 }
 
-func (r *OrderRepository) Save(
+func (r *Repository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
 	order order.Order,
@@ -277,7 +277,7 @@ func (r *OrderRepository) Save(
 	return nil
 }
 
-func (r *OrderRepository) FindOrders(
+func (r *Repository) FindOrders(
 	ctx context.Context,
 	exec transaction.Executor,
 	params order.FindOrderParams,
@@ -479,7 +479,7 @@ func (r *OrderRepository) FindOrders(
 	return results, total, nil
 }
 
-func (r *OrderRepository) SetConfirmedAndExpiry(
+func (r *Repository) SetConfirmedAndExpiry(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -504,7 +504,7 @@ func (r *OrderRepository) SetConfirmedAndExpiry(
 	return nil
 }
 
-func (r *OrderRepository) FindExpiredUnfulfilledOrders(
+func (r *Repository) FindExpiredUnfulfilledOrders(
 	ctx context.Context,
 	exec transaction.Executor,
 	now time.Time,

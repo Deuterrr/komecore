@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type sessionIssuerImpl struct {
+type sessionIssuer struct {
 	transactor       transaction.Transactor
 	tokenSvc         auth.TokenService
 	tokenHasher      auth.TokenHasher
@@ -29,7 +29,7 @@ func NewSessionIssuerService(
 	refreshTokenRepo auth.RefreshTokenRepository,
 	accountRepo auth.AccountRepository,
 ) auth.SessionIssuerService {
-	return &sessionIssuerImpl{
+	return &sessionIssuer{
 		transactor:       transactor,
 		tokenSvc:         tokenSvc,
 		tokenHasher:      tokenHasher,
@@ -39,10 +39,7 @@ func NewSessionIssuerService(
 	}
 }
 
-func (s *sessionIssuerImpl) Issue(
-	ctx context.Context,
-	params auth.IssueSessionParams,
-) (*auth.IssueSessionResult, error) {
+func (s *sessionIssuer) Issue(ctx context.Context, params auth.IssueSessionParams) (*auth.IssueSessionResult, error) {
 	now := appclock.Now()
 
 	session := auth.Session{

@@ -13,13 +13,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type ReviewRepository struct{}
+type Repository struct{}
 
-func NewReviewRepository() *ReviewRepository {
-	return &ReviewRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *ReviewRepository) Create(
+func (r *Repository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
 	review *review.Review,
@@ -51,7 +51,7 @@ func (r *ReviewRepository) Create(
 	return nil
 }
 
-func (r *ReviewRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -86,7 +86,7 @@ func (r *ReviewRepository) GetByID(
 	return &item, nil
 }
 
-func (r *ReviewRepository) Delete(
+func (r *Repository) Delete(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -105,7 +105,7 @@ func (r *ReviewRepository) Delete(
 	return nil
 }
 
-func (r *ReviewRepository) ListByProductID(
+func (r *Repository) ListByProductID(
 	ctx context.Context,
 	exec transaction.Executor,
 	params review.ListReviewsParams,
@@ -186,7 +186,7 @@ func (r *ReviewRepository) ListByProductID(
 	return results, total, nil
 }
 
-func (r *ReviewRepository) GetRatingSummary(
+func (r *Repository) GetRatingSummary(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -213,7 +213,7 @@ func (r *ReviewRepository) GetRatingSummary(
 	return summary, nil
 }
 
-func (r *ReviewRepository) HasReviewedOrder(
+func (r *Repository) HasReviewedOrder(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
@@ -236,7 +236,7 @@ func (r *ReviewRepository) HasReviewedOrder(
 	return exists, nil
 }
 
-func (r *ReviewRepository) GetReviewedOrderIDs(
+func (r *Repository) GetReviewedOrderIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,

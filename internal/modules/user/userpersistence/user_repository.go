@@ -12,13 +12,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type UserRepository struct{}
+type Repository struct{}
 
-func NewUserRepository() *UserRepository {
-	return &UserRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *UserRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -66,7 +66,7 @@ func (r *UserRepository) GetByID(
 	return &m, nil
 }
 
-func (r *UserRepository) GetByUsername(
+func (r *Repository) GetByUsername(
 	ctx context.Context,
 	exec transaction.Executor,
 	username string,
@@ -113,7 +113,7 @@ func (r *UserRepository) GetByUsername(
 	return &m, nil
 }
 
-func (r *UserRepository) CreateUser(
+func (r *Repository) CreateUser(
 	ctx context.Context,
 	exec transaction.Executor,
 	props user.CreateUserProps,
@@ -145,7 +145,7 @@ func (r *UserRepository) CreateUser(
 	return nil
 }
 
-func (r *UserRepository) SaveProfile(
+func (r *Repository) SaveProfile(
 	ctx context.Context,
 	exec transaction.Executor,
 	props user.SaveProfileProps,
@@ -176,7 +176,7 @@ func (r *UserRepository) SaveProfile(
 	return nil
 }
 
-func (r *UserRepository) Delete(
+func (r *Repository) Delete(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,

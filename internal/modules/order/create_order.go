@@ -104,14 +104,14 @@ func NewCreateOrderWorkflow(
 	}
 }
 
-func (u *CreateOrderWorkflow) WithCouponService(cs CouponRedeemer) *CreateOrderWorkflow {
-	u.couponService = cs
-	return u
+func (wf *CreateOrderWorkflow) WithCouponService(cs CouponRedeemer) *CreateOrderWorkflow {
+	wf.couponService = cs
+	return wf
 }
 
-func (u *CreateOrderWorkflow) WithOutboxRecorder(recorder OutboxRecorder) *CreateOrderWorkflow {
-	u.outboxRecorder = recorder
-	return u
+func (wf *CreateOrderWorkflow) WithOutboxRecorder(recorder OutboxRecorder) *CreateOrderWorkflow {
+	wf.outboxRecorder = recorder
+	return wf
 }
 
 type CheckoutItemInput struct {
@@ -143,7 +143,7 @@ type CheckoutInput struct {
 
 // Checkout evaluates pricing totals and courier options for checkout preview
 // without creating database records or holding inventory locks.
-func (u *CreateOrderWorkflow) Checkout(ctx context.Context, input CheckoutInput) (*PricingResult, error) {
+func (wf *CreateOrderWorkflow) Checkout(ctx context.Context, input CheckoutInput) (*PricingResult, error) {
 	customerID := input.CustomerID
 	if customerID == uuid.Nil {
 		if actor, ok := authctx.GetActor(ctx); ok && actor.CustomerID != nil {
@@ -195,7 +195,7 @@ func (u *CreateOrderWorkflow) Checkout(ctx context.Context, input CheckoutInput)
 		pricingInput.Shops = append(pricingInput.Shops, shopInput)
 	}
 
-	return u.pricingService.Calculate(ctx, u.executor, pricingInput)
+	return wf.pricingService.Calculate(ctx, wf.executor, pricingInput)
 }
 
 type OrderItemInput struct {
@@ -244,13 +244,9 @@ type CreateOrderResult struct {
 	Total          int64
 }
 
-func (u *CreateOrderWorkflow) Execute(ctx context.Context, input CreateOrderInput) (*CreateOrderResult, error) {
-	return u.CreateOrder(ctx, input)
-}
-
 // CreateOrder orchestrates order placement: it charges the payment gateway before
 // persisting to DB, and cancels the charge if local transaction rollback occurs.
-func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrderInput) (*CreateOrderResult, error) {
+func (wf *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrderInput) (*CreateOrderResult, error) {
 	now := appclock.Now()
 
 	var (
@@ -267,13 +263,13 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 
 	g.Go(func() error {
 		var err error
-		method, pricingResult, err = u.validateAndCalculatePricing(gCtx, input)
+		method, pricingResult, err = wf.validateAndCalculatePricing(gCtx, input)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		customerName, customerEmail, customerPhone, err = u.fetchCustomerDetails(gCtx, input.UserID)
+		customerName, customerEmail, customerPhone, err = wf.fetchCustomerDetails(gCtx, input.UserID)
 		return err
 	})
 
@@ -389,7 +385,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		CreatedAt: now,
 	}
 
-	chargeResp, err := u.paymentGateway.Charge(
+	chargeResp, err := wf.paymentGateway.Charge(
 		ctx,
 		paymentgateway.ChargeRequest{
 			PaymentID:     pmt.ID,
@@ -453,28 +449,28 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		CreatedAt: now,
 	}
 
-	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		if err := u.orderRepo.Save(ctx, exec, ord); err != nil {
+	err = wf.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
+		if err := wf.orderRepo.Save(ctx, exec, ord); err != nil {
 			return fmt.Errorf("failed to save order: %w", err)
 		}
-		if err := u.invoiceRepo.Save(ctx, exec, invoice); err != nil {
+		if err := wf.invoiceRepo.Save(ctx, exec, invoice); err != nil {
 			return fmt.Errorf("failed to save invoice: %w", err)
 		}
-		if err := u.orderItemRepo.SaveBulk(ctx, exec, orderItems); err != nil {
+		if err := wf.orderItemRepo.SaveBulk(ctx, exec, orderItems); err != nil {
 			return fmt.Errorf("failed to save order items: %w", err)
 		}
-		if err := u.invoiceItemRepo.SaveBulk(ctx, exec, invoiceItems); err != nil {
+		if err := wf.invoiceItemRepo.SaveBulk(ctx, exec, invoiceItems); err != nil {
 			return fmt.Errorf("failed to save invoice items: %w", err)
 		}
-		if err := u.paymentRepo.Save(ctx, exec, pmt); err != nil {
+		if err := wf.paymentRepo.Save(ctx, exec, pmt); err != nil {
 			return fmt.Errorf("failed to save payment: %w", err)
 		}
-		if err := u.paymentEventRepo.Create(ctx, exec, paymentEvent); err != nil {
+		if err := wf.paymentEventRepo.Create(ctx, exec, paymentEvent); err != nil {
 			return fmt.Errorf("failed to save payment event: %w", err)
 		}
 
-		if input.CouponCode != nil && strings.TrimSpace(*input.CouponCode) != "" && u.couponService != nil {
-			if _, err := u.couponService.RedeemCoupon(ctx, exec, discount.RedeemCouponInput{
+		if input.CouponCode != nil && strings.TrimSpace(*input.CouponCode) != "" && wf.couponService != nil {
+			if _, err := wf.couponService.RedeemCoupon(ctx, exec, discount.RedeemCouponInput{
 				Code:        *input.CouponCode,
 				CustomerID:  input.CustomerID,
 				OrderID:     ord.ID,
@@ -543,7 +539,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 				ExpiresAt:     pmt.ExpiresAt,
 				CreatedAt:     now,
 			}
-			if err := u.paymentChannelDataRepo.Save(ctx, exec, cd); err != nil {
+			if err := wf.paymentChannelDataRepo.Save(ctx, exec, cd); err != nil {
 				return fmt.Errorf("failed to save payment channel data: %w", err)
 			}
 			channelData = &cd
@@ -559,7 +555,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		})
 
 		for _, item := range orderItems {
-			if err := u.inventoryRepo.Reserve(ctx, exec,
+			if err := wf.inventoryRepo.Reserve(ctx, exec,
 				item.ProductID,
 				item.ShopID,
 				item.Quantity,
@@ -570,7 +566,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 
 		// Remove purchased items from persistent cart: match by CartItemID first,
 		// then fall back to (ProductID, ShopID, ItemOptions), and finally ProductID.
-		crt, err := u.cartRepo.GetWithItemsByCustomerID(ctx, exec, input.CustomerID)
+		crt, err := wf.cartRepo.GetWithItemsByCustomerID(ctx, exec, input.CustomerID)
 		if err != nil {
 			return fmt.Errorf("failed to load cart with items: %w", err)
 		}
@@ -596,19 +592,19 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 					}
 				}
 			}
-			if err := u.cartRepo.Save(ctx, exec, crt); err != nil {
+			if err := wf.cartRepo.Save(ctx, exec, crt); err != nil {
 				return fmt.Errorf("failed to update cart: %w", err)
 			}
 		}
 
-		ins, err := u.paymentInstructionRepo.GetByPaymentMethodID(ctx, exec, input.PaymentMethodID)
+		ins, err := wf.paymentInstructionRepo.GetByPaymentMethodID(ctx, exec, input.PaymentMethodID)
 		if err != nil {
 			return fmt.Errorf("failed to retrieve payment instruction: %w", err)
 		}
 
 		instruction = ins
 
-		if u.outboxRecorder != nil {
+		if wf.outboxRecorder != nil {
 			outboxItems := make([]outbox.OrderCreatedItem, 0, len(orderItems))
 			for _, item := range orderItems {
 				outboxItems = append(outboxItems, outbox.OrderCreatedItem{
@@ -626,7 +622,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 				Total:         ord.Total,
 				Items:         outboxItems,
 			}
-			if err := u.outboxRecorder.Enqueue(ctx, exec, outbox.EventOrderCreated, outboxPayload); err != nil {
+			if err := wf.outboxRecorder.Enqueue(ctx, exec, outbox.EventOrderCreated, outboxPayload); err != nil {
 				return fmt.Errorf("failed to enqueue outbox order.created event: %w", err)
 			}
 		}
@@ -637,7 +633,7 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 		if pmt.ProviderOrderID != nil {
 			// Compensate external gateway charge on transaction failure to prevent orphaned
 			// payments when the local database rollback occurs.
-			_ = u.paymentGateway.CancelTransaction(ctx, *pmt.ProviderOrderID)
+			_ = wf.paymentGateway.CancelTransaction(ctx, *pmt.ProviderOrderID)
 		}
 
 		return nil, err
@@ -689,15 +685,15 @@ func (u *CreateOrderWorkflow) CreateOrder(ctx context.Context, input CreateOrder
 	return &result, nil
 }
 
-func (u *CreateOrderWorkflow) validateAndCalculatePricing(ctx context.Context, input CreateOrderInput) (*payment.PaymentMethod, *PricingResult, error) {
-	method, err := u.paymentMethodRepo.GetByID(ctx, u.executor, input.PaymentMethodID)
+func (wf *CreateOrderWorkflow) validateAndCalculatePricing(ctx context.Context, input CreateOrderInput) (*payment.PaymentMethod, *PricingResult, error) {
+	method, err := wf.paymentMethodRepo.GetByID(ctx, wf.executor, input.PaymentMethodID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to retrieve payment method: %w", err)
 	}
 	if method == nil {
 		return nil, nil, apperror.NewNotFound("payment method not found")
 	}
-	if !u.paymentGateway.Supports(method.Code) {
+	if !wf.paymentGateway.Supports(method.Code) {
 		return nil, nil, apperror.NewBadRequest(fmt.Sprintf("payment method %q is not supported by the payment gateway", method.Code))
 	}
 
@@ -739,7 +735,7 @@ func (u *CreateOrderWorkflow) validateAndCalculatePricing(ctx context.Context, i
 		pricingInput.Shops = append(pricingInput.Shops, shopInput)
 	}
 
-	pricingResult, err := u.pricingService.Calculate(ctx, u.executor, pricingInput)
+	pricingResult, err := wf.pricingService.Calculate(ctx, wf.executor, pricingInput)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to calculate order prices: %w", err)
 	}
@@ -747,8 +743,8 @@ func (u *CreateOrderWorkflow) validateAndCalculatePricing(ctx context.Context, i
 	return method, pricingResult, nil
 }
 
-func (u *CreateOrderWorkflow) fetchCustomerDetails(ctx context.Context, userID uuid.UUID) (string, string, string, error) {
-	usr, err := u.userRepo.GetByID(ctx, u.executor, userID)
+func (wf *CreateOrderWorkflow) fetchCustomerDetails(ctx context.Context, userID uuid.UUID) (string, string, string, error) {
+	usr, err := wf.userRepo.GetByID(ctx, wf.executor, userID)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to retrieve user: %w", err)
 	}
@@ -756,7 +752,7 @@ func (u *CreateOrderWorkflow) fetchCustomerDetails(ctx context.Context, userID u
 		return "", "", "", apperror.NewNotFound("user not found")
 	}
 
-	account, err := u.accountRepo.GetByUserID(ctx, u.executor, usr.ID)
+	account, err := wf.accountRepo.GetByUserID(ctx, wf.executor, usr.ID)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to retrieve account: %w", err)
 	}

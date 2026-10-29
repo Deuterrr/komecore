@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type challengeServiceImpl struct {
+type challengeService struct {
 	transactor    transaction.Transactor
 	challengeRepo auth.VerificationChallengeRepository
 	pwHasher      auth.PasswordHasher
@@ -28,7 +28,7 @@ func NewChallengeService(
 	otpGen otp.Generator,
 	mailer mailer.Sender,
 ) auth.ChallengeService {
-	return &challengeServiceImpl{
+	return &challengeService{
 		transactor:    transactor,
 		challengeRepo: challengeRepo,
 		pwHasher:      pwHasher,
@@ -37,10 +37,7 @@ func NewChallengeService(
 	}
 }
 
-func (s *challengeServiceImpl) CreateAndSend(
-	ctx context.Context,
-	params auth.CreateChallengeParams,
-) (*uuid.UUID, error) {
+func (s *challengeService) CreateAndSend(ctx context.Context, params auth.CreateChallengeParams) (*uuid.UUID, error) {
 	now := appclock.Now()
 
 	code, err := s.otpGen.Generate()

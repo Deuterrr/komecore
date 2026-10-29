@@ -64,9 +64,9 @@ func (m *mockRepo) GetRedemptionByOrder(_ context.Context, _ transaction.Executo
 	return nil, nil
 }
 
-func setupHandler(repo *mockRepo, now time.Time) *discounthttp.DiscountHandler {
+func setupHandler(repo *mockRepo, now time.Time) *discounthttp.Handler {
 	svc := discount.NewService(repo, nil, clock.NewMockClock(now))
-	return discounthttp.NewDiscountHandler(svc)
+	return discounthttp.New(svc)
 }
 
 func TestDiscountHandler_ValidateCoupon_Success(t *testing.T) {

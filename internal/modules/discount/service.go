@@ -12,13 +12,13 @@ import (
 )
 
 type Service struct {
-	couponRepo CouponRepository
+	couponRepo Repository
 	executor   transaction.Executor
 	clock      appclock.Clock
 }
 
 func NewService(
-	couponRepo CouponRepository,
+	couponRepo Repository,
 	executor transaction.Executor,
 	clock appclock.Clock,
 ) *Service {

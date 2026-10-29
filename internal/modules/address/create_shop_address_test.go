@@ -61,7 +61,7 @@ func (m *mockShopAddressRepo) Delete(ctx context.Context, exec transaction.Execu
 	return nil
 }
 
-func TestCreateShopAddressUsecase_Execute(t *testing.T) {
+func TestCreateShopAddress(t *testing.T) {
 	ctx := context.Background()
 	shopID := uuid.New()
 	phone := "+6281111111"

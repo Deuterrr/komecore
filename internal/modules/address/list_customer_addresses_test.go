@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
+func TestListCustomerAddresses_ListByCustomerID(t *testing.T) {
 	ctx := context.Background()
 	customerID := uuid.New()
 	otherCustomerID := uuid.New()
@@ -43,9 +43,9 @@ func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
 		repo.addresses[addrOther.ID] = addrOther
 
 		exec := &mockExecutor{}
-		uc := address.NewService(repo, nil, exec, nil)
+		svc := address.NewService(repo, nil, exec, nil)
 
-		result, err := uc.ListCustomerAddresses(ctx, customerID)
+		result, err := svc.ListCustomerAddresses(ctx, customerID)
 		require.NoError(t, err)
 		assert.Len(t, result, 2)
 		assert.Equal(t, 1, repo.listCalls)
@@ -54,9 +54,9 @@ func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
 	t.Run("success returns empty slice when customer has no addresses", func(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
 		exec := &mockExecutor{}
-		uc := address.NewService(repo, nil, exec, nil)
+		svc := address.NewService(repo, nil, exec, nil)
 
-		result, err := uc.ListCustomerAddresses(ctx, customerID)
+		result, err := svc.ListCustomerAddresses(ctx, customerID)
 		require.NoError(t, err)
 		assert.Empty(t, result)
 		assert.Equal(t, 1, repo.listCalls)
@@ -66,9 +66,9 @@ func TestListCustomerAddressesUsecase_ListByCustomerID(t *testing.T) {
 		repo := newMockCustomerAddressRepo()
 		repo.listError = errors.New("db list error")
 		exec := &mockExecutor{}
-		uc := address.NewService(repo, nil, exec, nil)
+		svc := address.NewService(repo, nil, exec, nil)
 
-		result, err := uc.ListCustomerAddresses(ctx, customerID)
+		result, err := svc.ListCustomerAddresses(ctx, customerID)
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "failed to retrieve address")

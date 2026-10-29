@@ -32,9 +32,9 @@ func TestRemoveItemByID_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
+	svc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
 
-	err := uc.RemoveItemByID(ctx, RemoveItemByIDInput{
+	err := svc.RemoveItemByID(ctx, RemoveItemByIDInput{
 		CustomerID: customerID,
 		CartItemID: cartItemID,
 	})
@@ -75,9 +75,9 @@ func TestRemoveItemByID_NotFound_ItemDoesNotExist(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
+	svc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
 
-	err := uc.RemoveItemByID(ctx, RemoveItemByIDInput{
+	err := svc.RemoveItemByID(ctx, RemoveItemByIDInput{
 		CustomerID: customerID,
 		CartItemID: uuid.New(), // non-existent item
 	})
@@ -95,9 +95,9 @@ func TestRemoveItemByID_NotFound_CartDoesNotExist(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
+	svc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
 
-	err := uc.RemoveItemByID(ctx, RemoveItemByIDInput{
+	err := svc.RemoveItemByID(ctx, RemoveItemByIDInput{
 		CustomerID: customerID,
 		CartItemID: uuid.New(),
 	})
@@ -107,7 +107,7 @@ func TestRemoveItemByID_NotFound_CartDoesNotExist(t *testing.T) {
 	}
 }
 
-func TestRemoveItem_Execute_WithOptions(t *testing.T) {
+func TestRemoveItem_WithOptions(t *testing.T) {
 	ctx := context.Background()
 	customerID := uuid.New()
 	shopID := uuid.New()
@@ -141,10 +141,10 @@ func TestRemoveItem_Execute_WithOptions(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
+	svc := NewService(cartR, nil, nil, nil, nil, nil, exec, tx)
 
 	// Remove specifically the large item
-	err := uc.RemoveItem(ctx, RemoveItemInput{
+	err := svc.RemoveItem(ctx, RemoveItemInput{
 		CustomerID:  customerID,
 		ProductID:   productID,
 		ShopID:      shopID,

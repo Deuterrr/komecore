@@ -13,13 +13,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type PaymentWebhookEventRepository struct{}
+type WebhookEventRepository struct{}
 
-func NewPaymentWebhookEventRepository() *PaymentWebhookEventRepository {
-	return &PaymentWebhookEventRepository{}
+func NewWebhookEventRepository() *WebhookEventRepository {
+	return &WebhookEventRepository{}
 }
 
-func (r *PaymentWebhookEventRepository) Upsert(ctx context.Context, exec transaction.Executor, event payment.PaymentWebhookEvent) (*payment.PaymentWebhookEvent, error) {
+func (r *WebhookEventRepository) Upsert(ctx context.Context, exec transaction.Executor, event payment.PaymentWebhookEvent) (*payment.PaymentWebhookEvent, error) {
 	// INSERT ... ON CONFLICT DO NOTHING, then SELECT to return the
 	// authoritative row (either the newly inserted one or the pre-existing one).
 	insertQuery := `
@@ -70,7 +70,7 @@ func (r *PaymentWebhookEventRepository) Upsert(ctx context.Context, exec transac
 	)
 }
 
-func (r *PaymentWebhookEventRepository) MarkProcessed(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
+func (r *WebhookEventRepository) MarkProcessed(ctx context.Context, exec transaction.Executor, id uuid.UUID) error {
 	query := `
 		UPDATE payment_webhook_events
 		SET
@@ -87,7 +87,7 @@ func (r *PaymentWebhookEventRepository) MarkProcessed(ctx context.Context, exec 
 	return nil
 }
 
-func (r *PaymentWebhookEventRepository) MarkFailed(ctx context.Context, exec transaction.Executor, id uuid.UUID, errMsg string) error {
+func (r *WebhookEventRepository) MarkFailed(ctx context.Context, exec transaction.Executor, id uuid.UUID, errMsg string) error {
 	query := `
 		UPDATE payment_webhook_events
 		SET
@@ -104,7 +104,7 @@ func (r *PaymentWebhookEventRepository) MarkFailed(ctx context.Context, exec tra
 	return nil
 }
 
-func (r *PaymentWebhookEventRepository) scanWebhookEvent(row transaction.Row) (*payment.PaymentWebhookEvent, error) {
+func (r *WebhookEventRepository) scanWebhookEvent(row transaction.Row) (*payment.PaymentWebhookEvent, error) {
 	var e payment.PaymentWebhookEvent
 	err := row.Scan(
 		&e.ID,

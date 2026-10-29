@@ -11,21 +11,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateStaffUsecase_Success(t *testing.T) {
+func TestCreateStaff_Success(t *testing.T) {
 	staffR := &mockStaffRepo{}
 	userR := &mockUserRepo{}
 	exec := &mockExecutor{}
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
+	svc := NewService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
 
 	input := CreateStaffInput{
 		Name:     "Floral Logistics",
 		Username: "floral-logistics",
 	}
 
-	err := uc.CreateStaff(context.Background(), input)
+	err := svc.CreateStaff(context.Background(), input)
 	require.NoError(t, err)
 	assert.Equal(t, 1, userR.createCalls)
 	assert.Equal(t, 1, staffR.createCalls)
@@ -33,17 +33,17 @@ func TestCreateStaffUsecase_Success(t *testing.T) {
 	assert.Equal(t, "create_staff_profile", audit.events[0].Action)
 }
 
-func TestCreateStaffUsecase_ValidationErrors(t *testing.T) {
+func TestCreateStaff_ValidationErrors(t *testing.T) {
 	staffR := &mockStaffRepo{}
 	userR := &mockUserRepo{}
 	exec := &mockExecutor{}
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
+	svc := NewService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
 
 	// Missing name
-	err := uc.CreateStaff(context.Background(), CreateStaffInput{
+	err := svc.CreateStaff(context.Background(), CreateStaffInput{
 		Name:     "",
 		Username: "floral-logistics",
 	})
@@ -53,7 +53,7 @@ func TestCreateStaffUsecase_ValidationErrors(t *testing.T) {
 	assert.Equal(t, 400, badReq.StatusCode)
 
 	// Missing username
-	err = uc.CreateStaff(context.Background(), CreateStaffInput{
+	err = svc.CreateStaff(context.Background(), CreateStaffInput{
 		Name:     "Floral Logistics",
 		Username: "",
 	})
@@ -62,7 +62,7 @@ func TestCreateStaffUsecase_ValidationErrors(t *testing.T) {
 	assert.Equal(t, 400, badReq.StatusCode)
 }
 
-func TestCreateStaffUsecase_DuplicateUsername(t *testing.T) {
+func TestCreateStaff_DuplicateUsername(t *testing.T) {
 	staffR := &mockStaffRepo{}
 	userR := &mockUserRepo{
 		user: &user.User{
@@ -73,14 +73,14 @@ func TestCreateStaffUsecase_DuplicateUsername(t *testing.T) {
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
+	svc := NewService(exec, tx, staffR, nil, nil, userR, nil, nil, nil, audit)
 
 	input := CreateStaffInput{
 		Name:     "Floral Logistics",
 		Username: "existing-user",
 	}
 
-	err := uc.CreateStaff(context.Background(), input)
+	err := svc.CreateStaff(context.Background(), input)
 	assert.Error(t, err)
 	var appErr *apperror.AppError
 	assert.ErrorAs(t, err, &appErr)

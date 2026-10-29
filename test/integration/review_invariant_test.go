@@ -64,10 +64,10 @@ func TestIntegration_Review_VerifiedPurchaseInvariant(t *testing.T) {
 	require.NoError(t, err)
 
 	// 3. Instantiate ReviewService with real repositories
-	reviewRepo := reviewpersistence.NewReviewRepository()
-	productRatingUpdater := productpersistence.NewProductRepository()
-	orderRepo := orderpersistence.NewOrderRepository()
-	orderItemRepo := orderpersistence.NewOrderItemRepository()
+	reviewRepo := reviewpersistence.New()
+	productRatingUpdater := productpersistence.New()
+	orderRepo := orderpersistence.New()
+	orderItemRepo := orderpersistence.NewItemRepository()
 	memCache := cache.NewMemoryCache()
 
 	reviewSvc := review.NewService(

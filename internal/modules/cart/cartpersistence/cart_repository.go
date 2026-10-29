@@ -14,13 +14,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type CartRepository struct{}
+type Repository struct{}
 
-func NewCartRepository() *CartRepository {
-	return &CartRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *CartRepository) GetWithItemsByCustomerID(
+func (r *Repository) GetWithItemsByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
@@ -120,7 +120,7 @@ func (r *CartRepository) GetWithItemsByCustomerID(
 	return c, nil
 }
 
-func (r *CartRepository) NewCart(
+func (r *Repository) NewCart(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
@@ -161,7 +161,7 @@ func (r *CartRepository) NewCart(
 	return &c, nil
 }
 
-func (r *CartRepository) Save(
+func (r *Repository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
 	cart *cart.Cart,
@@ -235,7 +235,7 @@ func (r *CartRepository) Save(
 	return nil
 }
 
-func (r *CartRepository) DeleteByCustomerID(
+func (r *Repository) DeleteByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,

@@ -14,15 +14,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type ShopHandler struct {
+type Handler struct {
 	service *shop.Service
 }
 
-func NewShopHandler(service *shop.Service) *ShopHandler {
-	return &ShopHandler{service: service}
+func New(service *shop.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *ShopHandler) resolveShopID(r *http.Request) (uuid.UUID, error) {
+func (h *Handler) resolveShopID(r *http.Request) (uuid.UUID, error) {
 	param := chi.URLParam(r, "shopID")
 	if param == "" {
 		param = chi.URLParam(r, "id")
@@ -50,7 +50,7 @@ func (h *ShopHandler) resolveShopID(r *http.Request) (uuid.UUID, error) {
 	return shop.ID, nil
 }
 
-func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) FindShops(w http.ResponseWriter, r *http.Request) error {
 	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
@@ -130,7 +130,7 @@ func (h *ShopHandler) FindShops(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetShopByID(w http.ResponseWriter, r *http.Request) error {
 	param := chi.URLParam(r, "shopID")
 	if param == "" {
 		param = chi.URLParam(r, "id")
@@ -173,7 +173,7 @@ func (h *ShopHandler) GetShopByID(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -225,7 +225,7 @@ func (h *ShopHandler) SaveShop(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *ShopHandler) GetShopAddresses(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetShopAddresses(w http.ResponseWriter, r *http.Request) error {
 	shopID, err := h.resolveShopID(r)
 	if err != nil {
 		return err
@@ -262,7 +262,7 @@ func (h *ShopHandler) GetShopAddresses(w http.ResponseWriter, r *http.Request) e
 	return nil
 }
 
-func (h *ShopHandler) GetShopProducts(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetShopProducts(w http.ResponseWriter, r *http.Request) error {
 	shopID, err := h.resolveShopID(r)
 	if err != nil {
 		return err
@@ -301,7 +301,7 @@ func (h *ShopHandler) GetShopProducts(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-func (h *ShopHandler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DeleteShop(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")

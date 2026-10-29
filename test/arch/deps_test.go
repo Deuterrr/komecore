@@ -1,6 +1,7 @@
 package archtest
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -167,6 +168,135 @@ func TestDomainPurity(t *testing.T) {
 				for _, forbidden := range forbiddenPrefixes {
 					if importPath == forbidden || strings.HasPrefix(importPath, forbidden+"/") {
 						t.Errorf("domain package purity violation in %s: imports forbidden package %q", filePath, importPath)
+					}
+				}
+			}
+		}
+	}
+}
+
+// Enforces anti-stuttering invariants across domain roots, persistence layers, and HTTP handlers.
+// Prevents regression of legacy clean-architecture type aliases and repetitive package naming.
+func TestNoStutteredExportedTypes(t *testing.T) {
+	root := findRepoRoot(t)
+	modulesDir := filepath.Join(root, "internal", "modules")
+
+	entries, err := os.ReadDir(modulesDir)
+	if err != nil {
+		t.Fatalf("failed to read internal/modules directory: %v", err)
+	}
+
+	fset := token.NewFileSet()
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		modName := entry.Name()
+		modDir := filepath.Join(modulesDir, modName)
+
+		// 1. Inspect domain module root (*.go directly under internal/modules/<mod>/)
+		rootFiles, err := os.ReadDir(modDir)
+		if err != nil {
+			t.Fatalf("failed reading module dir %s: %v", modName, err)
+		}
+
+		for _, f := range rootFiles {
+			if f.IsDir() || !strings.HasSuffix(f.Name(), ".go") || strings.HasSuffix(f.Name(), "_test.go") {
+				continue
+			}
+
+			filePath := filepath.Join(modDir, f.Name())
+			node, err := parser.ParseFile(fset, filePath, nil, 0)
+			if err != nil {
+				t.Fatalf("failed parsing %s: %v", filePath, err)
+			}
+
+			for _, decl := range node.Decls {
+				genDecl, ok := decl.(*ast.GenDecl)
+				if !ok || genDecl.Tok != token.TYPE {
+					continue
+				}
+				for _, spec := range genDecl.Specs {
+					typeSpec, ok := spec.(*ast.TypeSpec)
+					if !ok || !ast.IsExported(typeSpec.Name.Name) {
+						continue
+					}
+					typeName := typeSpec.Name.Name
+					if strings.EqualFold(typeName, modName+"Repository") {
+						t.Errorf("obsolete stuttered repository alias %s found in module root %s (Issue #30)", typeName, filePath)
+					}
+					if strings.EqualFold(typeName, modName+"Handler") {
+						t.Errorf("obsolete stuttered handler alias %s found in module root %s (Issue #30)", typeName, filePath)
+					}
+				}
+			}
+		}
+
+		// 2. Inspect subdirectories (*persistence and *http)
+		subDirs, err := os.ReadDir(modDir)
+		if err != nil {
+			t.Fatalf("failed reading module subdirs for %s: %v", modName, err)
+		}
+
+		for _, sub := range subDirs {
+			if !sub.IsDir() {
+				continue
+			}
+			subName := sub.Name()
+			isPersistence := strings.HasSuffix(subName, "persistence")
+			isHTTP := strings.HasSuffix(subName, "http")
+			if !isPersistence && !isHTTP {
+				continue
+			}
+
+			subDirPath := filepath.Join(modDir, subName)
+			subFiles, err := os.ReadDir(subDirPath)
+			if err != nil {
+				t.Fatalf("failed reading dir %s: %v", subDirPath, err)
+			}
+
+			for _, f := range subFiles {
+				if f.IsDir() || !strings.HasSuffix(f.Name(), ".go") || strings.HasSuffix(f.Name(), "_test.go") {
+					continue
+				}
+
+				filePath := filepath.Join(subDirPath, f.Name())
+				node, err := parser.ParseFile(fset, filePath, nil, 0)
+				if err != nil {
+					t.Fatalf("failed parsing %s: %v", filePath, err)
+				}
+
+				for _, decl := range node.Decls {
+					switch d := decl.(type) {
+					case *ast.GenDecl:
+						if d.Tok != token.TYPE {
+							continue
+						}
+						for _, spec := range d.Specs {
+							typeSpec, ok := spec.(*ast.TypeSpec)
+							if !ok || !ast.IsExported(typeSpec.Name.Name) {
+								continue
+							}
+							typeName := typeSpec.Name.Name
+							if isPersistence && strings.EqualFold(typeName, modName+"Repository") {
+								t.Errorf("stuttered repository type %s found in persistence package %s (should be Repository)", typeName, filePath)
+							}
+							if isHTTP && strings.EqualFold(typeName, modName+"Handler") {
+								t.Errorf("stuttered handler type %s found in http delivery package %s (should be Handler)", typeName, filePath)
+							}
+						}
+					case *ast.FuncDecl:
+						if d.Recv != nil || !ast.IsExported(d.Name.Name) {
+							continue
+						}
+						funcName := d.Name.Name
+						if isPersistence && strings.EqualFold(funcName, "New"+modName+"Repository") {
+							t.Errorf("stuttered constructor %s found in persistence package %s (should be New())", funcName, filePath)
+						}
+						if isHTTP && strings.EqualFold(funcName, "New"+modName+"Handler") {
+							t.Errorf("stuttered constructor %s found in http delivery package %s (should be New())", funcName, filePath)
+						}
 					}
 				}
 			}

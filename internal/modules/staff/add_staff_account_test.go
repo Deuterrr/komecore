@@ -33,7 +33,7 @@ func (m *customMockAccountRepo) CreateStaffAccount(ctx context.Context, exec tra
 	return nil
 }
 
-func TestAddStaffAccountUsecase_Success(t *testing.T) {
+func TestAddStaffAccount_Success(t *testing.T) {
 	actorAccountID := uuid.New()
 	actorStaffID := uuid.New()
 	targetStaffID := uuid.New()
@@ -66,7 +66,7 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	audit := &mockAuditLogger{}
 
-	uc := NewService(exec, tx, staffR, memRepo, roleR, nil, accRepo, pwHash, nil, audit)
+	svc := NewService(exec, tx, staffR, memRepo, roleR, nil, accRepo, pwHash, nil, audit)
 
 	params := AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
@@ -76,7 +76,7 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 		Password:       "password123",
 	}
 
-	err := uc.AddStaffAccount(context.Background(), params)
+	err := svc.AddStaffAccount(context.Background(), params)
 	require.NoError(t, err)
 	assert.Equal(t, 1, accRepo.createCalls)
 	assert.Equal(t, 1, memRepo.saveCalls)
@@ -84,8 +84,8 @@ func TestAddStaffAccountUsecase_Success(t *testing.T) {
 	assert.Equal(t, "add_staff_account", audit.events[0].Action)
 }
 
-func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
-	uc := NewService(
+func TestAddStaffAccount_ValidationErrors(t *testing.T) {
+	svc := NewService(
 		&mockExecutor{},
 		&mockTransactor{},
 		&mockStaffRepo{},
@@ -99,7 +99,7 @@ func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
 	)
 
 	// Missing email
-	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
+	err := svc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		Email:    "",
 		Password: "password123",
 	})
@@ -109,7 +109,7 @@ func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
 	assert.Equal(t, 400, badReq.StatusCode)
 
 	// Missing password
-	err = uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
+	err = svc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		Email:    "staff@komecore.com",
 		Password: "",
 	})
@@ -118,7 +118,7 @@ func TestAddStaffAccountUsecase_ValidationErrors(t *testing.T) {
 	assert.Equal(t, 400, badReq.StatusCode)
 }
 
-func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
+func TestAddStaffAccount_NonAdminForbidden(t *testing.T) {
 	actorAccountID := uuid.New()
 	actorStaffID := uuid.New()
 	targetStaffID := uuid.New()
@@ -137,7 +137,7 @@ func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
 		staff: &Staff{ID: targetStaffID, UserID: uuid.New()},
 	}
 
-	uc := NewService(
+	svc := NewService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffR,
@@ -150,7 +150,7 @@ func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
 		&mockAuditLogger{},
 	)
 
-	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
+	err := svc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,
@@ -163,7 +163,7 @@ func TestAddStaffAccountUsecase_NonAdminForbidden(t *testing.T) {
 	assert.Equal(t, 403, appErr.StatusCode)
 }
 
-func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
+func TestAddStaffAccount_DuplicateEmail(t *testing.T) {
 	actorAccountID := uuid.New()
 	actorStaffID := uuid.New()
 	targetStaffID := uuid.New()
@@ -185,7 +185,7 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 		},
 	}
 
-	uc := NewService(
+	svc := NewService(
 		&mockExecutor{},
 		&mockTransactor{},
 		&mockStaffRepo{},
@@ -198,7 +198,7 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 		&mockAuditLogger{},
 	)
 
-	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
+	err := svc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,
@@ -211,7 +211,7 @@ func TestAddStaffAccountUsecase_DuplicateEmail(t *testing.T) {
 	assert.Equal(t, 409, appErr.StatusCode)
 }
 
-func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
+func TestAddStaffAccount_AlreadyBoundConflict(t *testing.T) {
 	actorAccountID := uuid.New()
 	actorStaffID := uuid.New()
 	targetStaffID := uuid.New()
@@ -238,7 +238,7 @@ func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
 		},
 	}
 
-	uc := NewService(
+	svc := NewService(
 		&mockExecutor{},
 		&mockTransactor{},
 		staffR,
@@ -251,7 +251,7 @@ func TestAddStaffAccountUsecase_AlreadyBoundConflict(t *testing.T) {
 		&mockAuditLogger{},
 	)
 
-	err := uc.AddStaffAccount(context.Background(), AddStaffAccountParams{
+	err := svc.AddStaffAccount(context.Background(), AddStaffAccountParams{
 		ActorAccountID: actorAccountID,
 		ActorStaffID:   actorStaffID,
 		StaffID:        targetStaffID,

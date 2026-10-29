@@ -14,13 +14,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type StaffRepository struct{}
+type Repository struct{}
 
-func NewStaffRepository() *StaffRepository {
-	return &StaffRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *StaffRepository) Create(
+func (r *Repository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
 	staff staff.Staff,
@@ -45,7 +45,7 @@ func (r *StaffRepository) Create(
 	return nil
 }
 
-func (r *StaffRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -78,7 +78,7 @@ func (r *StaffRepository) GetByID(
 	return &m, nil
 }
 
-func (r *StaffRepository) GetProfileByUserID(
+func (r *Repository) GetProfileByUserID(
 	ctx context.Context,
 	exec transaction.Executor,
 	userID uuid.UUID,
@@ -121,7 +121,7 @@ func (r *StaffRepository) GetProfileByUserID(
 	return &profile, nil
 }
 
-func (r *StaffRepository) FindStaff(
+func (r *Repository) FindStaff(
 	ctx context.Context,
 	exec transaction.Executor,
 	params staff.FindStaffParams,
@@ -264,7 +264,7 @@ func (r *StaffRepository) FindStaff(
 	return results, total, nil
 }
 
-func (r *StaffRepository) Update(
+func (r *Repository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
 	staffID uuid.UUID,
@@ -305,7 +305,7 @@ func (r *StaffRepository) Update(
 	return nil
 }
 
-func (r *StaffRepository) Delete(
+func (r *Repository) Delete(
 	ctx context.Context,
 	exec transaction.Executor,
 	staffID uuid.UUID,

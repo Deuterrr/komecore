@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type userDeletionServiceImpl struct {
+type userDeletionService struct {
 	accountRepo AccountRepository
 	oauthRepo   OAuthConnectionRepository
 	sessionRepo SessionRepository
@@ -23,7 +23,7 @@ func NewUserDeletionService(
 	sessionRepo SessionRepository,
 	userRepo user.Repository,
 ) UserDeletionService {
-	return &userDeletionServiceImpl{
+	return &userDeletionService{
 		accountRepo: accountRepo,
 		oauthRepo:   oauthRepo,
 		sessionRepo: sessionRepo,
@@ -31,11 +31,7 @@ func NewUserDeletionService(
 	}
 }
 
-func (s *userDeletionServiceImpl) DeleteUserRecord(
-	ctx context.Context,
-	exec transaction.Executor,
-	userID uuid.UUID,
-) error {
+func (s *userDeletionService) DeleteUserRecord(ctx context.Context, exec transaction.Executor, userID uuid.UUID) error {
 	if err := s.userRepo.Delete(ctx, exec, userID); err != nil {
 		return fmt.Errorf("failed to soft delete user profile: %w", err)
 	}

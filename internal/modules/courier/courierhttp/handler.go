@@ -7,15 +7,15 @@ import (
 	"komecore/internal/modules/courier"
 )
 
-type CourierHandler struct {
+type Handler struct {
 	service *courier.Service
 }
 
-func NewCourierHandler(service *courier.Service) *CourierHandler {
-	return &CourierHandler{service: service}
+func New(service *courier.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *CourierHandler) ListAllCouriers(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListAllCouriers(w http.ResponseWriter, r *http.Request) error {
 	codes, err := h.service.ListAllCouriers(r.Context())
 	if err != nil {
 		return err

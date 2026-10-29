@@ -9,15 +9,15 @@ import (
 	"komecore/internal/modules/user"
 )
 
-type UserHandler struct {
+type Handler struct {
 	service *user.Service
 }
 
-func NewUserHandler(service *user.Service) *UserHandler {
-	return &UserHandler{service: service}
+func New(service *user.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.ParamUUID(r, "id")
 	if err != nil {
 		return apperror.NewBadRequest("invalid user id")
@@ -43,7 +43,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetCurrentUser(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
-func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
@@ -123,7 +123,7 @@ func (h *UserHandler) GetCurrentProfile(w http.ResponseWriter, r *http.Request) 
 	return nil
 }
 
-func (h *UserHandler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateCurrentProfile(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err

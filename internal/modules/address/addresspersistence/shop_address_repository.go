@@ -14,15 +14,11 @@ import (
 
 type ShopAddressRepository struct{}
 
-func NewShopAddressRepository() *ShopAddressRepository {
+func NewShopRepository() *ShopAddressRepository {
 	return &ShopAddressRepository{}
 }
 
-func (r *ShopAddressRepository) GetByID(
-	ctx context.Context,
-	exec transaction.Executor,
-	addressID uuid.UUID,
-) (*address.ShopAddress, error) {
+func (r *ShopAddressRepository) GetByID(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) (*address.ShopAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -77,11 +73,7 @@ func (r *ShopAddressRepository) GetByID(
 	return &a, nil
 }
 
-func (r *ShopAddressRepository) GetDefaultByShopID(
-	ctx context.Context,
-	exec transaction.Executor,
-	shopID uuid.UUID,
-) (*address.ShopAddress, error) {
+func (r *ShopAddressRepository) GetDefaultByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) (*address.ShopAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -140,11 +132,7 @@ func (r *ShopAddressRepository) GetDefaultByShopID(
 	return &a, nil
 }
 
-func (r *ShopAddressRepository) GetDefaultsByShopIDs(
-	ctx context.Context,
-	exec transaction.Executor,
-	shopIDs []uuid.UUID,
-) (map[uuid.UUID]address.ShopAddress, error) {
+func (r *ShopAddressRepository) GetDefaultsByShopIDs(ctx context.Context, exec transaction.Executor, shopIDs []uuid.UUID) (map[uuid.UUID]address.ShopAddress, error) {
 	addressMap := make(map[uuid.UUID]address.ShopAddress)
 	if len(shopIDs) == 0 {
 		return addressMap, nil
@@ -224,11 +212,7 @@ func (r *ShopAddressRepository) GetDefaultsByShopIDs(
 	return addressMap, nil
 }
 
-func (r *ShopAddressRepository) FindByShopID(
-	ctx context.Context,
-	exec transaction.Executor,
-	shopID uuid.UUID,
-) ([]address.ShopAddress, error) {
+func (r *ShopAddressRepository) FindByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) ([]address.ShopAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -292,11 +276,7 @@ func (r *ShopAddressRepository) FindByShopID(
 	return addresses, nil
 }
 
-func (r *ShopAddressRepository) Create(
-	ctx context.Context,
-	exec transaction.Executor,
-	address address.ShopAddress,
-) error {
+func (r *ShopAddressRepository) Create(ctx context.Context, exec transaction.Executor, address address.ShopAddress) error {
 	query := `
 		INSERT INTO shop_addresses (
 			id,
@@ -341,11 +321,7 @@ func (r *ShopAddressRepository) Create(
 	return nil
 }
 
-func (r *ShopAddressRepository) Update(
-	ctx context.Context,
-	exec transaction.Executor,
-	address address.ShopAddress,
-) error {
+func (r *ShopAddressRepository) Update(ctx context.Context, exec transaction.Executor, address address.ShopAddress) error {
 	query := `
 		UPDATE shop_addresses
 		SET
@@ -389,11 +365,7 @@ func (r *ShopAddressRepository) Update(
 	return nil
 }
 
-func (r *ShopAddressRepository) Delete(
-	ctx context.Context,
-	exec transaction.Executor,
-	addressID uuid.UUID,
-) error {
+func (r *ShopAddressRepository) Delete(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) error {
 	query := `
 		UPDATE shop_addresses
 		SET
@@ -412,11 +384,7 @@ func (r *ShopAddressRepository) Delete(
 	return nil
 }
 
-func (r *ShopAddressRepository) UnsetActiveByShopID(
-	ctx context.Context,
-	exec transaction.Executor,
-	shopID uuid.UUID,
-) error {
+func (r *ShopAddressRepository) UnsetActiveByShopID(ctx context.Context, exec transaction.Executor, shopID uuid.UUID) error {
 	query := `
 		UPDATE shop_addresses
 		SET

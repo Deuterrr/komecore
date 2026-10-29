@@ -2,9 +2,9 @@ package logger
 
 import "context"
 
-// Business logs a meaningful domain event from the usecase layer.
+// Business logs a meaningful domain event from the service layer.
 //
-// It automatically attaches layer=usecase and action fields so callers
+// It automatically attaches layer=service and action fields so callers
 // only need to describe what happened, without building field slices manually.
 //
 // Usage:
@@ -15,7 +15,7 @@ import "context"
 //	)
 func Business(ctx context.Context, log Logger, action string, fields ...Field) {
 	all := append([]Field{
-		{Key: "layer", Value: string(LayerUsecase)},
+		{Key: "layer", Value: string(LayerService)},
 		{Key: "action", Value: action},
 	}, fields...)
 	log.Info(ctx, action, all...)
@@ -33,14 +33,7 @@ func Business(ctx context.Context, log Logger, action string, fields ...Field) {
 //	resp, err := midtransClient.Charge(req)
 //	applogger.Dependency(ctx, log, "midtrans", "charge",
 //	    time.Since(start).Milliseconds(), err)
-func Dependency(
-	ctx context.Context,
-	log Logger,
-	provider string,
-	operation string,
-	durationMs int64,
-	err error,
-) {
+func Dependency(ctx context.Context, log Logger, provider string, operation string, durationMs int64, err error) {
 	fields := []Field{
 		{Key: "layer", Value: string(LayerInfra)},
 		{Key: "provider", Value: provider},

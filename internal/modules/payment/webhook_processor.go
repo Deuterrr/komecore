@@ -35,8 +35,6 @@ type WebhookProcessor struct {
 	outboxRecorder   OutboxRecorder
 }
 
-type ProcessPaymentWebhookUsecase = WebhookProcessor
-
 func NewWebhookProcessor(
 	repository Repository,
 	paymentEventRepo EventRepository,
@@ -61,11 +59,9 @@ func NewWebhookProcessor(
 	}
 }
 
-var NewProcessPaymentWebhookUsecase = NewWebhookProcessor
-
-func (u *WebhookProcessor) WithOutboxRecorder(recorder OutboxRecorder) *WebhookProcessor {
-	u.outboxRecorder = recorder
-	return u
+func (p *WebhookProcessor) WithOutboxRecorder(recorder OutboxRecorder) *WebhookProcessor {
+	p.outboxRecorder = recorder
+	return p
 }
 
 type ProcessPaymentWebhookInput struct {
@@ -73,13 +69,13 @@ type ProcessPaymentWebhookInput struct {
 	NotificationResult *paymentgateway.NotificationResult
 }
 
-func (u *WebhookProcessor) ProcessWebhook(ctx context.Context, payload map[string]any) error {
-	return u.Execute(ctx, ProcessPaymentWebhookInput{
+func (p *WebhookProcessor) ProcessWebhook(ctx context.Context, payload map[string]any) error {
+	return p.ProcessNotification(ctx, ProcessPaymentWebhookInput{
 		Payload: payload,
 	})
 }
 
-// Execute processes payment notifications from the gateway webhook or
+// ProcessNotification processes payment notifications from the gateway webhook or
 // reconciliation workflows.
 //
 // Processing is idempotent and concurrency-safe. Each notification is
@@ -92,7 +88,7 @@ func (u *WebhookProcessor) ProcessWebhook(ctx context.Context, payload map[strin
 //
 // Business processing failures are persisted on the payment event and returned
 // to the delivery handler so the gateway can retry the notification.
-func (u *WebhookProcessor) Execute(
+func (p *WebhookProcessor) ProcessNotification(
 	ctx context.Context,
 	input ProcessPaymentWebhookInput,
 ) (err error) {
@@ -108,7 +104,7 @@ func (u *WebhookProcessor) Execute(
 			orderIDStr != "" &&
 			eventID != uuid.Nil {
 
-			u.auditLogger.Log(ctx, applogger.AuditEvent{
+			p.auditLogger.Log(ctx, applogger.AuditEvent{
 				Category:   "user_action",
 				Action:     "webhook_processing_failed",
 				Resource:   "payment",
@@ -124,7 +120,7 @@ func (u *WebhookProcessor) Execute(
 			orderIDStr != "" &&
 			eventID != uuid.Nil {
 
-			u.auditLogger.Log(ctx, applogger.AuditEvent{
+			p.auditLogger.Log(ctx, applogger.AuditEvent{
 				Category:   "user_action",
 				Action:     "webhook_mark_processed_failed",
 				Resource:   "payment",
@@ -190,7 +186,7 @@ func (u *WebhookProcessor) Execute(
 		ReceivedAt:        appclock.Now(),
 	}
 
-	canonicalEvent, err := u.webhookEventRepo.Upsert(ctx, u.executor,
+	canonicalEvent, err := p.webhookEventRepo.Upsert(ctx, p.executor,
 		webhookEvent,
 	)
 	if err != nil {
@@ -211,10 +207,10 @@ func (u *WebhookProcessor) Execute(
 	// Any error here is recorded on the persisted event and
 	// re-surfaced to the caller
 	// (non-2xx -> Midtrans will retry delivery).
-	if err = u.process(ctx, input); err != nil {
+	if err = p.process(ctx, input); err != nil {
 		// MarkFailed is intentionally outside the main transaction
 		// so it persists even when the inner tx rolls back.
-		_ = u.webhookEventRepo.MarkFailed(ctx, u.executor,
+		_ = p.webhookEventRepo.MarkFailed(ctx, p.executor,
 			eventID,
 			err.Error(),
 		)
@@ -223,7 +219,7 @@ func (u *WebhookProcessor) Execute(
 	}
 
 	// Stamp the event as processed
-	if markErr = u.webhookEventRepo.MarkProcessed(ctx, u.executor,
+	if markErr = p.webhookEventRepo.MarkProcessed(ctx, p.executor,
 		eventID,
 	); markErr != nil {
 		// Non-fatal: the payment itself was updated correctly.
@@ -239,7 +235,7 @@ func (u *WebhookProcessor) Execute(
 // process contains the core payment-state-machine logic.
 //
 // It is called only after the idempotency gate passes.
-func (u *WebhookProcessor) process(
+func (p *WebhookProcessor) process(
 	ctx context.Context,
 	input ProcessPaymentWebhookInput,
 ) error {
@@ -251,7 +247,7 @@ func (u *WebhookProcessor) process(
 	if input.NotificationResult != nil {
 		notifResult = input.NotificationResult
 	} else {
-		notifResult, err = u.paymentGateway.ParseNotification(ctx, input.Payload)
+		notifResult, err = p.paymentGateway.ParseNotification(ctx, input.Payload)
 		if err != nil {
 			if errors.Is(err, paymentgateway.ErrInvalidSignature) {
 				return apperror.NewBadRequest("invalid webhook signature")
@@ -265,8 +261,8 @@ func (u *WebhookProcessor) process(
 		return apperror.NewBadRequest(fmt.Sprintf("invalid order ID in gateway response: %s", notifResult.GatewayOrderID))
 	}
 
-	err = u.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
-		pmt, err := u.repository.GetByOrderIDForUpdate(ctx, exec,
+	err = p.transactor.WithinTransaction(ctx, func(exec transaction.Executor) error {
+		pmt, err := p.repository.GetByOrderIDForUpdate(ctx, exec,
 			orderID,
 		)
 		if err != nil {
@@ -311,7 +307,7 @@ func (u *WebhookProcessor) process(
 			return nil
 		}
 
-		if err := u.repository.UpdateStatus(ctx, exec,
+		if err := p.repository.UpdateStatus(ctx, exec,
 			pmt.ID,
 			newPaymentStatus,
 		); err != nil {
@@ -325,11 +321,11 @@ func (u *WebhookProcessor) process(
 		now := appclock.Now()
 		switch action {
 		case "commit":
-			orderItems, orderErr = u.orderMgr.ConfirmOrderPayment(ctx, exec, pmt.OrderID, now, 72*time.Hour)
+			orderItems, orderErr = p.orderMgr.ConfirmOrderPayment(ctx, exec, pmt.OrderID, now, 72*time.Hour)
 		case "release_expire":
-			orderItems, orderErr = u.orderMgr.ExpireOrderPayment(ctx, exec, pmt.OrderID)
+			orderItems, orderErr = p.orderMgr.ExpireOrderPayment(ctx, exec, pmt.OrderID)
 		case "release_cancel":
-			orderItems, orderErr = u.orderMgr.CancelOrderPayment(ctx, exec, pmt.OrderID)
+			orderItems, orderErr = p.orderMgr.CancelOrderPayment(ctx, exec, pmt.OrderID)
 		}
 		if orderErr != nil {
 			return orderErr
@@ -338,7 +334,7 @@ func (u *WebhookProcessor) process(
 		for _, item := range orderItems {
 			switch action {
 			case "commit":
-				if err := u.inventoryRepo.Commit(ctx, exec,
+				if err := p.inventoryRepo.Commit(ctx, exec,
 					item.ProductID,
 					item.ShopID,
 					item.Quantity,
@@ -347,7 +343,7 @@ func (u *WebhookProcessor) process(
 				}
 
 			default:
-				if err := u.inventoryRepo.Release(ctx, exec,
+				if err := p.inventoryRepo.Release(ctx, exec,
 					item.ProductID,
 					item.ShopID,
 					item.Quantity,
@@ -355,8 +351,8 @@ func (u *WebhookProcessor) process(
 					if errors.Is(err, inventory.ErrInsufficientReserved) ||
 						errors.Is(err, apperror.ErrNotFound) {
 
-						if u.auditLogger != nil {
-							u.auditLogger.Log(ctx, applogger.AuditEvent{
+						if p.auditLogger != nil {
+							p.auditLogger.Log(ctx, applogger.AuditEvent{
 								Category:   "system",
 								Action:     "inventory_anomaly_detected",
 								Resource:   "inventory",
@@ -403,17 +399,17 @@ func (u *WebhookProcessor) process(
 			CreatedAt: appclock.Now(),
 		}
 
-		if err := u.paymentEventRepo.Create(ctx, exec, paymentEvent); err != nil {
+		if err := p.paymentEventRepo.Create(ctx, exec, paymentEvent); err != nil {
 			return fmt.Errorf("failed to create payment event: %w", err)
 		}
 
-		if action == "commit" && u.outboxRecorder != nil {
+		if action == "commit" && p.outboxRecorder != nil {
 			var (
 				orderNum  string
 				custEmail string
 				custName  string
 			)
-			if orderInfo, err := u.orderMgr.GetOrderForPayment(ctx, exec, pmt.OrderID); err == nil && orderInfo != nil {
+			if orderInfo, err := p.orderMgr.GetOrderForPayment(ctx, exec, pmt.OrderID); err == nil && orderInfo != nil {
 				orderNum = orderInfo.Number
 				custEmail = orderInfo.CustomerEmail
 				custName = orderInfo.CustomerName
@@ -442,7 +438,7 @@ func (u *WebhookProcessor) process(
 				PaymentMethod: payMethod,
 				PaidAt:        paidAt,
 			}
-			if err := u.outboxRecorder.Enqueue(ctx, exec, outbox.EventPaymentSettled, outboxPayload); err != nil {
+			if err := p.outboxRecorder.Enqueue(ctx, exec, outbox.EventPaymentSettled, outboxPayload); err != nil {
 				return fmt.Errorf("failed to enqueue outbox payment.settled event: %w", err)
 			}
 		}

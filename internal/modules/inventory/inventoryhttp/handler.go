@@ -8,15 +8,15 @@ import (
 	"komecore/internal/modules/inventory"
 )
 
-type InventoryHandler struct {
+type Handler struct {
 	service *inventory.Service
 }
 
-func NewInventoryHandler(service *inventory.Service) *InventoryHandler {
-	return &InventoryHandler{service: service}
+func New(service *inventory.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *InventoryHandler) AddInventory(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) AddInventory(w http.ResponseWriter, r *http.Request) error {
 	var req createInventoryRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -50,7 +50,7 @@ func (h *InventoryHandler) AddInventory(w http.ResponseWriter, r *http.Request) 
 	return nil
 }
 
-func (h *InventoryHandler) UpdateInventory(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateInventory(w http.ResponseWriter, r *http.Request) error {
 	var req updateInventoryRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -84,7 +84,7 @@ func (h *InventoryHandler) UpdateInventory(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *InventoryHandler) RemoveInventory(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) RemoveInventory(w http.ResponseWriter, r *http.Request) error {
 	shopID, err := httpx.ParamUUID(r, "shopID")
 	if err != nil {
 		return apperror.NewBadRequest("invalid shop id")

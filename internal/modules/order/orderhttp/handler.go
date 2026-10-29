@@ -20,25 +20,25 @@ import (
 	"github.com/google/uuid"
 )
 
-type OrderHandler struct {
+type Handler struct {
 	service     *order.Service
 	createOrder *order.CreateOrderWorkflow
 	shopService *shop.Service
 }
 
-func NewOrderHandler(
+func New(
 	service *order.Service,
 	createOrder *order.CreateOrderWorkflow,
 	shopService *shop.Service,
-) *OrderHandler {
-	return &OrderHandler{
+) *Handler {
+	return &Handler{
 		service:     service,
 		createOrder: createOrder,
 		shopService: shopService,
 	}
 }
 
-func (h *OrderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) FindOrders(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -180,7 +180,7 @@ func (h *OrderHandler) FindOrders(w http.ResponseWriter, r *http.Request) error 
 }
 
 // GetOrder handles GET /orders/{orderID} — staff-only, returns a single order with full detail.
-func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -251,7 +251,7 @@ func (h *OrderHandler) GetOrder(w http.ResponseWriter, r *http.Request) error {
 }
 
 // ListMyOrders handles GET /users/me/orders — customer-only, returns the caller's orders with detail.
-func (h *OrderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListMyOrders(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -339,7 +339,7 @@ func (h *OrderHandler) ListMyOrders(w http.ResponseWriter, r *http.Request) erro
 }
 
 // GetMyOrder handles GET /users/me/orders/{orderID} — customer-only, returns their own order with full detail.
-func (h *OrderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetMyOrder(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -375,7 +375,7 @@ func (h *OrderHandler) GetMyOrder(w http.ResponseWriter, r *http.Request) error 
 }
 
 // CreateOrder handles POST /order — customer-only.
-func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) error {
 	authCtx, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -501,7 +501,7 @@ func (h *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) error
 // In Komerce mode the provider calls the external API and returns a tracking
 // number automatically. In manual mode the optional "tracking_number" field
 // in the request body is used instead — no external call is made.
-func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -587,7 +587,7 @@ func (h *OrderHandler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request)
 
 // DispatchOrderShipment handles POST /orders/{orderID}/shipments — staff-only.
 // Creates a shipment for a specific shop's order items.
-func (h *OrderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DispatchOrderShipment(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -654,7 +654,7 @@ func (h *OrderHandler) DispatchOrderShipment(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func (h *OrderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -685,7 +685,7 @@ func (h *OrderHandler) GetMyOrderTracking(w http.ResponseWriter, r *http.Request
 }
 
 // GetOrderTrackingForStaff handles GET /orders/{orderID}/tracking — staff-only.
-func (h *OrderHandler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetOrderTrackingForStaff(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok {
 		return apperror.NewUnauthorized("authentication required")
@@ -857,7 +857,7 @@ func mapShipmentDetail(s *shipment.Shipment) *shipmentDetailResponse {
 	}
 }
 
-func (h *OrderHandler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, error) {
+func (h *Handler) resolveShopFilter(r *http.Request) (*uuid.UUID, bool, error) {
 	shopIDStr := httpx.Query(r, "shop_id")
 	shopSlug := httpx.Query(r, "shop_slug")
 	shopParam := httpx.Query(r, "shop")

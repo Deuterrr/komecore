@@ -14,13 +14,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type ShopRepository struct{}
+type Repository struct{}
 
-func NewShopRepository() *ShopRepository {
-	return &ShopRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *ShopRepository) FindByParams(
+func (r *Repository) FindByParams(
 	ctx context.Context,
 	exec transaction.Executor,
 	params shop.FindShopsParams,
@@ -199,7 +199,7 @@ func (r *ShopRepository) FindByParams(
 	return shops, total, nil
 }
 
-func (r *ShopRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
@@ -241,7 +241,7 @@ func (r *ShopRepository) GetByID(
 	return &s, nil
 }
 
-func (r *ShopRepository) GetBySlug(
+func (r *Repository) GetBySlug(
 	ctx context.Context,
 	exec transaction.Executor,
 	slug string,
@@ -283,7 +283,7 @@ func (r *ShopRepository) GetBySlug(
 	return &s, nil
 }
 
-func (r *ShopRepository) FindByIDs(
+func (r *Repository) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	ids []uuid.UUID,
@@ -344,7 +344,7 @@ func (r *ShopRepository) FindByIDs(
 	return results, nil
 }
 
-func (r *ShopRepository) Save(
+func (r *Repository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
 	shp shop.Shop,
@@ -392,7 +392,7 @@ func (r *ShopRepository) Save(
 	return nil
 }
 
-func (r *ShopRepository) Delete(
+func (r *Repository) Delete(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,

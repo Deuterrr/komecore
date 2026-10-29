@@ -11,15 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type ShipmentHandler struct {
+type Handler struct {
 	service *shipment.Service
 }
 
-func NewShipmentHandler(service *shipment.Service) *ShipmentHandler {
-	return &ShipmentHandler{service: service}
+func New(service *shipment.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) EstimateShippingOptions(w http.ResponseWriter, r *http.Request) error {
 	var req estimateShippingOptionsRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -72,7 +72,7 @@ func (h *ShipmentHandler) EstimateShippingOptions(w http.ResponseWriter, r *http
 	return nil
 }
 
-func (h *ShipmentHandler) UpdateShipmentStatus(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateShipmentStatus(w http.ResponseWriter, r *http.Request) error {
 	shipmentIDStr := chi.URLParam(r, "shipmentID")
 	shipmentID, err := uuid.Parse(shipmentIDStr)
 	if err != nil {
@@ -103,7 +103,7 @@ func (h *ShipmentHandler) UpdateShipmentStatus(w http.ResponseWriter, r *http.Re
 	return nil
 }
 
-func (h *ShipmentHandler) UpdateShipment(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateShipment(w http.ResponseWriter, r *http.Request) error {
 	shipmentIDStr := chi.URLParam(r, "shipmentID")
 	shipmentID, err := uuid.Parse(shipmentIDStr)
 	if err != nil {
@@ -131,7 +131,7 @@ func (h *ShipmentHandler) UpdateShipment(w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
-func (h *ShipmentHandler) DispatchShipment(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DispatchShipment(w http.ResponseWriter, r *http.Request) error {
 	shipmentIDStr := chi.URLParam(r, "shipmentID")
 	shipmentID, err := uuid.Parse(shipmentIDStr)
 	if err != nil {

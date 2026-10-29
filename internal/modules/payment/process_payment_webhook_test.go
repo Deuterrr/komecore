@@ -325,8 +325,6 @@ func newWebhookProcessor(
 	)
 }
 
-var newWebhookUsecase = newWebhookProcessor
-
 // ---------------------------------------------------------------------------
 // All terminal states
 // ---------------------------------------------------------------------------
@@ -930,7 +928,7 @@ func TestProcessPaymentWebhook_DirectNotificationResult_BypassesParseNotificatio
 		&mockTransactor{}, &mockExecutor{},
 	)
 
-	err := uc.Execute(ctx, ProcessPaymentWebhookInput{
+	err := uc.ProcessNotification(ctx, ProcessPaymentWebhookInput{
 		NotificationResult: &paymentgateway.NotificationResult{
 			GatewayOrderID:       orderID.String(),
 			GatewayTransactionID: "tx-direct-123",

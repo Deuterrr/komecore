@@ -252,7 +252,7 @@ func TestGetOrderTracking_TimelineProgress(t *testing.T) {
 	}
 }
 
-func TestGetOrderTracking_ExecuteForStaff(t *testing.T) {
+func TestGetOrderTracking_ForStaff(t *testing.T) {
 	orderID := uuid.New()
 	customerID := uuid.New()
 	shipmentID := uuid.New()

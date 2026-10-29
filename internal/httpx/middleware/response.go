@@ -6,9 +6,6 @@ import (
 	"komecore/internal/httpx"
 )
 
-// ErrResponse is an alias for httpx.ErrResponse for backward compatibility.
-type ErrResponse = httpx.ErrResponse
-
 // Response intercepts any returned error, formats it using httpx.WriteError,
 // and passes the error along for upstream logging and correlation.
 func Response() Middleware {

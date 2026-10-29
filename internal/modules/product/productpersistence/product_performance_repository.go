@@ -12,13 +12,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type ProductPerformanceRepository struct{}
+type PerformanceRepository struct{}
 
-func NewProductPerformanceRepository() *ProductPerformanceRepository {
-	return &ProductPerformanceRepository{}
+func NewPerformanceRepository() *PerformanceRepository {
+	return &PerformanceRepository{}
 }
 
-func (r *ProductPerformanceRepository) UpsertPerformance(
+func (r *PerformanceRepository) UpsertPerformance(
 	ctx context.Context,
 	exec transaction.Executor,
 	perf product.ProductPerformance,
@@ -62,7 +62,7 @@ func (r *ProductPerformanceRepository) UpsertPerformance(
 	return nil
 }
 
-func (r *ProductPerformanceRepository) IncrementViewCount(
+func (r *PerformanceRepository) IncrementViewCount(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -89,7 +89,7 @@ func (r *ProductPerformanceRepository) IncrementViewCount(
 	return nil
 }
 
-func (r *ProductPerformanceRepository) GetProductStats(
+func (r *PerformanceRepository) GetProductStats(
 	ctx context.Context,
 	exec transaction.Executor,
 	params product.GetProductStatsParams,

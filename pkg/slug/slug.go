@@ -19,18 +19,18 @@ func Generate(input string) string {
 	return Make(input)
 }
 
-// Generator abstracts slug generation. Kept for backwards compatibility with existing usecase constructors.
+// Generator abstracts slug generation. Kept for backwards compatibility with existing constructors.
 type Generator interface {
 	Generate(input string) string
 }
 
-type generatorImpl struct{}
+type generator struct{}
 
 // NewGenerator returns a Generator backed by slug.Make.
 func NewGenerator() Generator {
-	return generatorImpl{}
+	return generator{}
 }
 
-func (generatorImpl) Generate(input string) string {
+func (generator) Generate(input string) string {
 	return Make(input)
 }

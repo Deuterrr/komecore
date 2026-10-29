@@ -14,13 +14,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type PaymentRepository struct{}
+type Repository struct{}
 
-func NewPaymentRepository() *PaymentRepository {
-	return &PaymentRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *PaymentRepository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*payment.Payment, error) {
+func (r *Repository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -50,7 +50,7 @@ func (r *PaymentRepository) GetByID(ctx context.Context, exec transaction.Execut
 	return payment, nil
 }
 
-func (r *PaymentRepository) GetByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
+func (r *Repository) GetByOrderID(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -84,7 +84,7 @@ func (r *PaymentRepository) GetByOrderID(ctx context.Context, exec transaction.E
 	return payment, nil
 }
 
-func (r *PaymentRepository) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
+func (r *Repository) GetByOrderIDForUpdate(ctx context.Context, exec transaction.Executor, orderID uuid.UUID) (*payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -119,7 +119,7 @@ func (r *PaymentRepository) GetByOrderIDForUpdate(ctx context.Context, exec tran
 	return payment, nil
 }
 
-func (r *PaymentRepository) UpdateStatus(ctx context.Context, exec transaction.Executor, id uuid.UUID, status payment.PaymentStatus) error {
+func (r *Repository) UpdateStatus(ctx context.Context, exec transaction.Executor, id uuid.UUID, status payment.PaymentStatus) error {
 	query := `
 		UPDATE payments
 		SET
@@ -137,7 +137,7 @@ func (r *PaymentRepository) UpdateStatus(ctx context.Context, exec transaction.E
 	return err
 }
 
-func (r *PaymentRepository) Save(ctx context.Context, exec transaction.Executor, payment payment.Payment) error {
+func (r *Repository) Save(ctx context.Context, exec transaction.Executor, payment payment.Payment) error {
 	now := appclock.Now()
 	payment.UpdatedAt = &now
 
@@ -191,7 +191,7 @@ func (r *PaymentRepository) Save(ctx context.Context, exec transaction.Executor,
 	return err
 }
 
-func (r *PaymentRepository) scanPayment(row transaction.Row) (*payment.Payment, error) {
+func (r *Repository) scanPayment(row transaction.Row) (*payment.Payment, error) {
 	var payment payment.Payment
 	err := row.Scan(
 		&payment.ID,
@@ -214,7 +214,7 @@ func (r *PaymentRepository) scanPayment(row transaction.Row) (*payment.Payment, 
 	return &payment, nil
 }
 
-func (r *PaymentRepository) ListByOrderIDs(ctx context.Context, exec transaction.Executor, orderIDs []uuid.UUID) ([]payment.Payment, error) {
+func (r *Repository) ListByOrderIDs(ctx context.Context, exec transaction.Executor, orderIDs []uuid.UUID) ([]payment.Payment, error) {
 	if len(orderIDs) == 0 {
 		return []payment.Payment{}, nil
 	}
@@ -274,7 +274,7 @@ func (r *PaymentRepository) ListByOrderIDs(ctx context.Context, exec transaction
 	return payments, nil
 }
 
-func (r *PaymentRepository) ListPendingGateway(ctx context.Context, exec transaction.Executor, since time.Time) ([]payment.Payment, error) {
+func (r *Repository) ListPendingGateway(ctx context.Context, exec transaction.Executor, since time.Time) ([]payment.Payment, error) {
 	query := `
 		SELECT
 			id,
@@ -327,7 +327,7 @@ func (r *PaymentRepository) ListPendingGateway(ctx context.Context, exec transac
 	return payments, nil
 }
 
-func (r *PaymentRepository) ListPastDuePending(ctx context.Context, exec transaction.Executor, now time.Time, limit int) ([]payment.Payment, error) {
+func (r *Repository) ListPastDuePending(ctx context.Context, exec transaction.Executor, now time.Time, limit int) ([]payment.Payment, error) {
 	if limit <= 0 {
 		limit = 100
 	}

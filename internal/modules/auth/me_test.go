@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestMeUsecase_Execute_Success(t *testing.T) {
+func TestMe_Success(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	accountID := uuid.New()
@@ -79,7 +79,7 @@ func TestMeUsecase_Execute_Success(t *testing.T) {
 	}
 }
 
-func TestMeUsecase_SmartWrite_SkippedWhenRecent(t *testing.T) {
+func TestMe_SmartWrite_SkippedWhenRecent(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	accountID := uuid.New()
@@ -136,7 +136,7 @@ func TestMeUsecase_SmartWrite_SkippedWhenRecent(t *testing.T) {
 	}
 }
 
-func TestMeUsecase_SmartWrite_TriggersWhenOlderThanThreshold(t *testing.T) {
+func TestMe_SmartWrite_TriggersWhenOlderThanThreshold(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	accountID := uuid.New()

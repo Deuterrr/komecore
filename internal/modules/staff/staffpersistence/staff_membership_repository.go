@@ -12,13 +12,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type StaffMembershipRepository struct{}
+type MembershipRepository struct{}
 
-func NewStaffMembershipRepository() *StaffMembershipRepository {
-	return &StaffMembershipRepository{}
+func NewMembershipRepository() *MembershipRepository {
+	return &MembershipRepository{}
 }
 
-func (r *StaffMembershipRepository) GetByAccountID(
+func (r *MembershipRepository) GetByAccountID(
 	ctx context.Context,
 	exec transaction.Executor,
 	accountID uuid.UUID,
@@ -57,7 +57,7 @@ func (r *StaffMembershipRepository) GetByAccountID(
 	return &m, nil
 }
 
-func (r *StaffMembershipRepository) GetByAccountIDAndStaffID(
+func (r *MembershipRepository) GetByAccountIDAndStaffID(
 	ctx context.Context,
 	exec transaction.Executor,
 	accountID uuid.UUID,
@@ -97,7 +97,7 @@ func (r *StaffMembershipRepository) GetByAccountIDAndStaffID(
 	return &m, nil
 }
 
-func (r *StaffMembershipRepository) ListRolesByAccountIDAndStaffID(
+func (r *MembershipRepository) ListRolesByAccountIDAndStaffID(
 	ctx context.Context,
 	exec transaction.Executor,
 	accountID uuid.UUID,
@@ -142,7 +142,7 @@ func (r *StaffMembershipRepository) ListRolesByAccountIDAndStaffID(
 	return roles, nil
 }
 
-func (r *StaffMembershipRepository) Save(
+func (r *MembershipRepository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
 	membership staff.StaffMembership,
@@ -179,7 +179,7 @@ func (r *StaffMembershipRepository) Save(
 	return nil
 }
 
-func (r *StaffMembershipRepository) DeleteByAccountID(
+func (r *MembershipRepository) DeleteByAccountID(
 	ctx context.Context,
 	exec transaction.Executor,
 	accountID uuid.UUID,
@@ -197,7 +197,7 @@ func (r *StaffMembershipRepository) DeleteByAccountID(
 	return nil
 }
 
-func (r *StaffMembershipRepository) DeleteByAccountIDAndStaffID(
+func (r *MembershipRepository) DeleteByAccountIDAndStaffID(
 	ctx context.Context,
 	exec transaction.Executor,
 	accountID uuid.UUID,
@@ -216,7 +216,7 @@ func (r *StaffMembershipRepository) DeleteByAccountIDAndStaffID(
 	return nil
 }
 
-func (r *StaffMembershipRepository) DeleteByStaffID(
+func (r *MembershipRepository) DeleteByStaffID(
 	ctx context.Context,
 	exec transaction.Executor,
 	staffID uuid.UUID,
@@ -234,7 +234,7 @@ func (r *StaffMembershipRepository) DeleteByStaffID(
 	return nil
 }
 
-func (r *StaffMembershipRepository) ListAccountsByStaffID(
+func (r *MembershipRepository) ListAccountsByStaffID(
 	ctx context.Context,
 	exec transaction.Executor,
 	staffID uuid.UUID,

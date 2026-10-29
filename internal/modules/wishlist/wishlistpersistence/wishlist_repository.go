@@ -11,13 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type WishlistRepository struct{}
+type Repository struct{}
 
-func NewWishlistRepository() *WishlistRepository {
-	return &WishlistRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *WishlistRepository) Add(
+func (r *Repository) Add(
 	ctx context.Context,
 	exec transaction.Executor,
 	item wishlist.WishlistItem,
@@ -39,7 +39,7 @@ func (r *WishlistRepository) Add(
 	return nil
 }
 
-func (r *WishlistRepository) Remove(
+func (r *Repository) Remove(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
@@ -58,7 +58,7 @@ func (r *WishlistRepository) Remove(
 	return nil
 }
 
-func (r *WishlistRepository) ListByCustomerID(
+func (r *Repository) ListByCustomerID(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,
@@ -92,7 +92,7 @@ func (r *WishlistRepository) ListByCustomerID(
 	return items, nil
 }
 
-func (r *WishlistRepository) Exists(
+func (r *Repository) Exists(
 	ctx context.Context,
 	exec transaction.Executor,
 	customerID uuid.UUID,

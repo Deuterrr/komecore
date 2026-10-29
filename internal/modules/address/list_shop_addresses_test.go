@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestListShopAddressesUsecase_FindByShopID(t *testing.T) {
+func TestListShopAddresses_FindByShopID(t *testing.T) {
 	ctx := context.Background()
 	shopID := uuid.New()
 
@@ -30,8 +30,8 @@ func TestListShopAddressesUsecase_FindByShopID(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := address.NewService(nil, repo, exec, nil)
-		result, err := uc.ListShopAddresses(ctx, shopID)
+		svc := address.NewService(nil, repo, exec, nil)
+		result, err := svc.ListShopAddresses(ctx, shopID)
 
 		require.NoError(t, err)
 		assert.Equal(t, expected, result)
@@ -44,8 +44,8 @@ func TestListShopAddressesUsecase_FindByShopID(t *testing.T) {
 		}
 		exec := &mockExecutor{}
 
-		uc := address.NewService(nil, repo, exec, nil)
-		result, err := uc.ListShopAddresses(ctx, shopID)
+		svc := address.NewService(nil, repo, exec, nil)
+		result, err := svc.ListShopAddresses(ctx, shopID)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)

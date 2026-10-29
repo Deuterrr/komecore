@@ -169,7 +169,7 @@ type testHasher struct{}
 func (h *testHasher) Hash(p string) (string, error) { return "hash", nil }
 func (h *testHasher) Compare(hash, p string) error  { return nil }
 
-func setupTestHandler(staffID, accountID uuid.UUID) (*StaffHandler, *testStaffRepo, *testMembershipRepo) {
+func setupTestHandler(staffID, accountID uuid.UUID) (*Handler, *testStaffRepo, *testMembershipRepo) {
 	sRepo := &testStaffRepo{
 		staff: &staff.Staff{
 			ID:     staffID,
@@ -231,7 +231,7 @@ func setupTestHandler(staffID, accountID uuid.UUID) (*StaffHandler, *testStaffRe
 		audit,
 	)
 
-	handler := NewStaffHandler(svc)
+	handler := New(svc)
 	return handler, sRepo, mRepo
 }
 

@@ -29,41 +29,13 @@ type FindShopsParams struct {
 }
 
 type Repository interface {
-	FindByParams(
-		ctx context.Context,
-		exec transaction.Executor,
-		params FindShopsParams,
-	) ([]Shop, int, error)
+	FindByParams(ctx context.Context, exec transaction.Executor, params FindShopsParams) ([]Shop, int, error)
+	FindByIDs(ctx context.Context, exec transaction.Executor, IDs []uuid.UUID) ([]Shop, error)
 
-	GetByID(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) (*Shop, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Shop, error)
+	GetBySlug(ctx context.Context, exec transaction.Executor, slug string) (*Shop, error)
 
-	GetBySlug(
-		ctx context.Context,
-		exec transaction.Executor,
-		slug string,
-	) (*Shop, error)
+	Save(ctx context.Context, exec transaction.Executor, shop Shop) error
 
-	FindByIDs(
-		ctx context.Context,
-		exec transaction.Executor,
-		IDs []uuid.UUID,
-	) ([]Shop, error)
-
-	Save(
-		ctx context.Context,
-		exec transaction.Executor,
-		shop Shop,
-	) error
-
-	Delete(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) error
+	Delete(ctx context.Context, exec transaction.Executor, id uuid.UUID) error
 }
-
-type ShopRepository = Repository

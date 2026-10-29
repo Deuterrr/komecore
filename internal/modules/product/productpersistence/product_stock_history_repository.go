@@ -8,13 +8,13 @@ import (
 	"komecore/internal/modules/product"
 )
 
-type ProductStockHistoryRepository struct{}
+type StockHistoryRepository struct{}
 
-func NewProductStockHistoryRepository() *ProductStockHistoryRepository {
-	return &ProductStockHistoryRepository{}
+func NewStockHistoryRepository() *StockHistoryRepository {
+	return &StockHistoryRepository{}
 }
 
-func (r *ProductStockHistoryRepository) RecordStockEvent(
+func (r *StockHistoryRepository) RecordStockEvent(
 	ctx context.Context,
 	exec transaction.Executor,
 	event product.ProductStockEvent,

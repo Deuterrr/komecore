@@ -12,13 +12,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type PaymentInstructionRepository struct{}
+type InstructionRepository struct{}
 
-func NewPaymentInstructionRepository() *PaymentInstructionRepository {
-	return &PaymentInstructionRepository{}
+func NewInstructionRepository() *InstructionRepository {
+	return &InstructionRepository{}
 }
 
-func (r *PaymentInstructionRepository) GetByPaymentMethodID(ctx context.Context, exec transaction.Executor, methodID uuid.UUID) (*payment.PaymentInstruction, error) {
+func (r *InstructionRepository) GetByPaymentMethodID(ctx context.Context, exec transaction.Executor, methodID uuid.UUID) (*payment.PaymentInstruction, error) {
 	query := `
 		SELECT
 			id,
@@ -47,7 +47,7 @@ func (r *PaymentInstructionRepository) GetByPaymentMethodID(ctx context.Context,
 	return &inst, nil
 }
 
-func (r *PaymentInstructionRepository) Save(ctx context.Context, exec transaction.Executor, instruction payment.PaymentInstruction) error {
+func (r *InstructionRepository) Save(ctx context.Context, exec transaction.Executor, instruction payment.PaymentInstruction) error {
 	query := `
 		INSERT INTO payment_instructions (
 			id,
