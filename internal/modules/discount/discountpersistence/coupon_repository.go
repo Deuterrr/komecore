@@ -13,13 +13,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type CouponRepository struct{}
+type Repository struct{}
 
-func NewCouponRepository() *CouponRepository {
-	return &CouponRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *CouponRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -61,7 +61,7 @@ func (r *CouponRepository) GetByID(
 	return &coupon, nil
 }
 
-func (r *CouponRepository) GetByCode(
+func (r *Repository) GetByCode(
 	ctx context.Context,
 	exec transaction.Executor,
 	code string,
@@ -103,7 +103,7 @@ func (r *CouponRepository) GetByCode(
 	return &coupon, nil
 }
 
-func (r *CouponRepository) Save(
+func (r *Repository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
 	coupon discount.Coupon,
@@ -156,7 +156,7 @@ func (r *CouponRepository) Save(
 	return nil
 }
 
-func (r *CouponRepository) List(
+func (r *Repository) List(
 	ctx context.Context,
 	exec transaction.Executor,
 	params discount.ListCouponsParams,
@@ -253,7 +253,7 @@ func (r *CouponRepository) List(
 	return coupons, total, nil
 }
 
-func (r *CouponRepository) DecrementQuota(
+func (r *Repository) DecrementQuota(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -277,7 +277,7 @@ func (r *CouponRepository) DecrementQuota(
 	return nil
 }
 
-func (r *CouponRepository) SaveRedemption(
+func (r *Repository) SaveRedemption(
 	ctx context.Context,
 	exec transaction.Executor,
 	redemption discount.CouponRedemption,
@@ -307,7 +307,7 @@ func (r *CouponRepository) SaveRedemption(
 	return nil
 }
 
-func (r *CouponRepository) GetRedemptionByOrder(
+func (r *Repository) GetRedemptionByOrder(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,

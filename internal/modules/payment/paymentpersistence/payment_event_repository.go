@@ -12,13 +12,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type PaymentEventRepository struct{}
+type EventRepository struct{}
 
-func NewPaymentEventRepository() *PaymentEventRepository {
-	return &PaymentEventRepository{}
+func NewEventRepository() *EventRepository {
+	return &EventRepository{}
 }
 
-func (r *PaymentEventRepository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*payment.PaymentEvent, error) {
+func (r *EventRepository) GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*payment.PaymentEvent, error) {
 	query := `
 		SELECT
 			id,
@@ -50,7 +50,7 @@ func (r *PaymentEventRepository) GetByID(ctx context.Context, exec transaction.E
 	return &event, nil
 }
 
-func (r *PaymentEventRepository) ListByPaymentID(ctx context.Context, exec transaction.Executor, paymentID uuid.UUID) ([]payment.PaymentEvent, error) {
+func (r *EventRepository) ListByPaymentID(ctx context.Context, exec transaction.Executor, paymentID uuid.UUID) ([]payment.PaymentEvent, error) {
 	query := `
 		SELECT
 			id,
@@ -93,7 +93,7 @@ func (r *PaymentEventRepository) ListByPaymentID(ctx context.Context, exec trans
 	return events, nil
 }
 
-func (r *PaymentEventRepository) Create(ctx context.Context, exec transaction.Executor, event payment.PaymentEvent) error {
+func (r *EventRepository) Create(ctx context.Context, exec transaction.Executor, event payment.PaymentEvent) error {
 	query := `
 		INSERT INTO payment_events (
 			id,

@@ -10,15 +10,15 @@ import (
 	"komecore/internal/pagination"
 )
 
-type DiscountHandler struct {
+type Handler struct {
 	service *discount.Service
 }
 
-func NewDiscountHandler(service *discount.Service) *DiscountHandler {
-	return &DiscountHandler{service: service}
+func New(service *discount.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *DiscountHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ValidateCoupon(w http.ResponseWriter, r *http.Request) error {
 	var req ValidateCouponRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -49,7 +49,7 @@ func (h *DiscountHandler) ValidateCoupon(w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
-func (h *DiscountHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) CreateCoupon(w http.ResponseWriter, r *http.Request) error {
 	var req CreateCouponRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -79,7 +79,7 @@ func (h *DiscountHandler) CreateCoupon(w http.ResponseWriter, r *http.Request) e
 	return nil
 }
 
-func (h *DiscountHandler) ListCoupons(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListCoupons(w http.ResponseWriter, r *http.Request) error {
 	page := httpx.QueryIntDefault(r, "page", 1)
 	limit := httpx.QueryIntDefault(r, "limit", 10)
 

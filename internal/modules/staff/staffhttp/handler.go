@@ -13,15 +13,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type StaffHandler struct {
+type Handler struct {
 	service *staff.Service
 }
 
-func NewStaffHandler(service *staff.Service) *StaffHandler {
-	return &StaffHandler{service: service}
+func New(service *staff.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *StaffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) AddStaffAccount(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -66,7 +66,7 @@ func (h *StaffHandler) AddStaffAccount(w http.ResponseWriter, r *http.Request) e
 	return nil
 }
 
-func (h *StaffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) CreateStaff(w http.ResponseWriter, r *http.Request) error {
 	var req createStaffRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -97,7 +97,7 @@ func (h *StaffHandler) CreateStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *StaffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
@@ -146,7 +146,7 @@ func (h *StaffHandler) FindStaff(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *StaffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListStaffAccounts(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -200,7 +200,7 @@ func (h *StaffHandler) ListStaffAccounts(w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
-func (h *StaffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateStaff(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -244,7 +244,7 @@ func (h *StaffHandler) UpdateStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *StaffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DeleteStaff(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {
@@ -276,7 +276,7 @@ func (h *StaffHandler) DeleteStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *StaffHandler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) RemoveStaffAccount(w http.ResponseWriter, r *http.Request) error {
 	staffIDStr := chi.URLParam(r, "staffID")
 	staffID, err := uuid.Parse(staffIDStr)
 	if err != nil {

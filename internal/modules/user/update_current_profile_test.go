@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUpdateCurrentProfile_Execute(t *testing.T) {
+func TestUpdateCurrentProfile(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	customerID := uuid.New()

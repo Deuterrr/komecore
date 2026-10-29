@@ -27,7 +27,7 @@ func (m *mockCourierRepo) ListAll(ctx context.Context, exec transaction.Executor
 	return m.couriers, nil
 }
 
-func TestListCouriers_Execute(t *testing.T) {
+func TestListCouriers(t *testing.T) {
 	t.Run("success returns courier codes", func(t *testing.T) {
 		repo := &mockCourierRepo{
 			couriers: []string{"jne", "jnt"},

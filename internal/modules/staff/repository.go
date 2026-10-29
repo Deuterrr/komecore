@@ -23,112 +23,35 @@ type FindStaffParams struct {
 }
 
 type Repository interface {
-	Create(
-		ctx context.Context,
-		exec transaction.Executor,
-		staff Staff,
-	) error
+	Create(ctx context.Context, exec transaction.Executor, staff Staff) error
 
-	GetByID(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) (*Staff, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Staff, error)
+	GetProfileByUserID(ctx context.Context, exec transaction.Executor, userID uuid.UUID) (*StaffProfile, error)
 
-	GetProfileByUserID(
-		ctx context.Context,
-		exec transaction.Executor,
-		userID uuid.UUID,
-	) (*StaffProfile, error)
+	FindStaff(ctx context.Context, exec transaction.Executor, params FindStaffParams) ([]StaffProfile, int, error)
 
-	FindStaff(
-		ctx context.Context,
-		exec transaction.Executor,
-		params FindStaffParams,
-	) ([]StaffProfile, int, error)
+	Update(ctx context.Context, exec transaction.Executor, staffID uuid.UUID, name string, logoUrl *string, bannerUrl *string) error
 
-	Update(
-		ctx context.Context,
-		exec transaction.Executor,
-		staffID uuid.UUID,
-		name string,
-		logoUrl *string,
-		bannerUrl *string,
-	) error
-
-	Delete(
-		ctx context.Context,
-		exec transaction.Executor,
-		staffID uuid.UUID,
-	) error
+	Delete(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) error
 }
 
 type MembershipRepository interface {
-	GetByAccountID(
-		ctx context.Context,
-		exec transaction.Executor,
-		accountID uuid.UUID,
-	) (*StaffMembership, error)
+	GetByAccountID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID) (*StaffMembership, error)
+	GetByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID, staffID uuid.UUID) (*StaffMembership, error)
 
-	GetByAccountIDAndStaffID(
-		ctx context.Context,
-		exec transaction.Executor,
-		accountID uuid.UUID,
-		staffID uuid.UUID,
-	) (*StaffMembership, error)
+	ListAccountsByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) ([]StaffAccountMember, error)
+	ListRolesByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID, staffID uuid.UUID) ([]Role, error)
 
-	ListRolesByAccountIDAndStaffID(
-		ctx context.Context,
-		exec transaction.Executor,
-		accountID uuid.UUID,
-		staffID uuid.UUID,
-	) ([]Role, error)
+	Save(ctx context.Context, exec transaction.Executor, membership StaffMembership) error
 
-	Save(
-		ctx context.Context,
-		exec transaction.Executor,
-		membership StaffMembership,
-	) error
-
-	DeleteByAccountID(
-		ctx context.Context,
-		exec transaction.Executor,
-		accountID uuid.UUID,
-	) error
-
-	DeleteByAccountIDAndStaffID(
-		ctx context.Context,
-		exec transaction.Executor,
-		accountID uuid.UUID,
-		staffID uuid.UUID,
-	) error
-
-	DeleteByStaffID(
-		ctx context.Context,
-		exec transaction.Executor,
-		staffID uuid.UUID,
-	) error
-
-	ListAccountsByStaffID(
-		ctx context.Context,
-		exec transaction.Executor,
-		staffID uuid.UUID,
-	) ([]StaffAccountMember, error)
+	DeleteByAccountID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID) error
+	DeleteByAccountIDAndStaffID(ctx context.Context, exec transaction.Executor, accountID uuid.UUID, staffID uuid.UUID) error
+	DeleteByStaffID(ctx context.Context, exec transaction.Executor, staffID uuid.UUID) error
 }
 
 type RoleRepository interface {
-	GetRolesByAccountAndStaff(
-		ctx context.Context,
-		exec transaction.Executor,
-		accountID uuid.UUID,
-		staffID uuid.UUID,
-	) ([]Role, error)
-
-	GetByCode(
-		ctx context.Context,
-		exec transaction.Executor,
-		code RoleCode,
-	) (*Role, error)
+	GetRolesByAccountAndStaff(ctx context.Context, exec transaction.Executor, accountID uuid.UUID, staffID uuid.UUID) ([]Role, error)
+	GetByCode(ctx context.Context, exec transaction.Executor, code RoleCode) (*Role, error)
 }
 
 type AnalyticsRepository interface {
@@ -136,6 +59,3 @@ type AnalyticsRepository interface {
 	GetOrderPipeline(ctx context.Context, exec transaction.Executor) ([]OrderStatusCount, error)
 	GetTopProducts(ctx context.Context, exec transaction.Executor, limit int) ([]TopProduct, error)
 }
-
-type StaffRepository = Repository
-type StaffMembershipRepository = MembershipRepository

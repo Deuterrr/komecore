@@ -21,22 +21,22 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-type AuthHandler struct {
+type Handler struct {
 	service   *auth.Service
 	googleCfg appconfig.GoogleOAuthConfig
 }
 
-func NewAuthHandler(
+func New(
 	service *auth.Service,
 	googleCfg appconfig.GoogleOAuthConfig,
-) *AuthHandler {
-	return &AuthHandler{
+) *Handler {
+	return &Handler{
 		service:   service,
 		googleCfg: googleCfg,
 	}
 }
 
-func (h *AuthHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func (h *AuthHandler) GetByID(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *AuthHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) SignInEmail(w http.ResponseWriter, r *http.Request) error {
 	var req signInEmailRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -179,7 +179,7 @@ func (h *AuthHandler) SignInEmail(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func (h *AuthHandler) SignUpAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) SignUpAccount(w http.ResponseWriter, r *http.Request) error {
 	var req signUpRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -214,7 +214,7 @@ func (h *AuthHandler) SignUpAccount(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-func (h *AuthHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) VerifyAccount(w http.ResponseWriter, r *http.Request) error {
 	var req verifyAccountRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -272,7 +272,7 @@ func (h *AuthHandler) VerifyAccount(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-func (h *AuthHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) error {
 	var req signInEmailRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -326,7 +326,7 @@ func (h *AuthHandler) SignInStaffEmail(w http.ResponseWriter, r *http.Request) e
 	return nil
 }
 
-func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
@@ -350,7 +350,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *AuthHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) LogoutStaff(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err
@@ -374,7 +374,7 @@ func (h *AuthHandler) LogoutStaff(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func (h *AuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) error {
 	oauth2Config := &oauth2.Config{
 		ClientID:     h.googleCfg.ClientID,
 		ClientSecret: h.googleCfg.ClientSecret,
@@ -404,7 +404,7 @@ func (h *AuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
-func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) error {
 	cookie, err := appcookie.Extract(r, appcookie.CookieOAuthState)
 	if err != nil {
 		return apperror.NewBadRequest("missing oauth state cookie")
@@ -516,7 +516,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
-func (h *AuthHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Request) error {
 	var req forgotPasswordCustomerRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -547,7 +547,7 @@ func (h *AuthHandler) ForgotPasswordCustomer(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func (h *AuthHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request) error {
 	var req forgotPasswordCustomerRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -578,7 +578,7 @@ func (h *AuthHandler) ForgotPasswordStaff(w http.ResponseWriter, r *http.Request
 	return nil
 }
 
-func (h *AuthHandler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request) error {
 	var req verifyPasswordResetRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -611,7 +611,7 @@ func (h *AuthHandler) VerifyPasswordReset(w http.ResponseWriter, r *http.Request
 	return nil
 }
 
-func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) error {
 	var req resetPasswordRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -642,7 +642,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-func (h *AuthHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) RefreshCustomer(w http.ResponseWriter, r *http.Request) error {
 	var req refreshTokenRequest
 	_ = httpx.DecodeJSON(r, &req)
 
@@ -673,7 +673,7 @@ func (h *AuthHandler) RefreshCustomer(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-func (h *AuthHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) RefreshStaff(w http.ResponseWriter, r *http.Request) error {
 	var req refreshTokenRequest
 	_ = httpx.DecodeJSON(r, &req)
 
@@ -704,7 +704,7 @@ func (h *AuthHandler) RefreshStaff(w http.ResponseWriter, r *http.Request) error
 	return nil
 }
 
-func (h *AuthHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) error {
 	authCtx, err := httpx.RequireAuth(r)
 	if err != nil {
 		return err

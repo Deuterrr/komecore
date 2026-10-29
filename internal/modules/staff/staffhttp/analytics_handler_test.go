@@ -43,7 +43,7 @@ func TestHandler_GetRevenueAnalytics(t *testing.T) {
 		&mockExec{}, &mockTx{}, nil, nil, nil, nil, nil, nil, nil, nil,
 	).WithAnalyticsRepository(repo)
 
-	handler := NewStaffHandler(svc)
+	handler := New(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/staff/analytics/revenue?range=30d&interval=day", nil)
 	rr := httptest.NewRecorder()
@@ -85,7 +85,7 @@ func TestHandler_GetOrderPipelineAnalytics(t *testing.T) {
 		&mockExec{}, &mockTx{}, nil, nil, nil, nil, nil, nil, nil, nil,
 	).WithAnalyticsRepository(repo)
 
-	handler := NewStaffHandler(svc)
+	handler := New(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/staff/analytics/orders", nil)
 	rr := httptest.NewRecorder()
@@ -127,7 +127,7 @@ func TestHandler_GetTopProductsAnalytics(t *testing.T) {
 		&mockExec{}, &mockTx{}, nil, nil, nil, nil, nil, nil, nil, nil,
 	).WithAnalyticsRepository(repo)
 
-	handler := NewStaffHandler(svc)
+	handler := New(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/staff/analytics/top-products?limit=5", nil)
 	rr := httptest.NewRecorder()

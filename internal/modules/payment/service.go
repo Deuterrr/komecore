@@ -176,7 +176,7 @@ func (s *Service) CheckPaymentStatus(ctx context.Context, input CheckPaymentStat
 
 	// Status has resolved — drive it through the standard
 	// webhook processing pipeline directly without redundant outbound calls.
-	if err := s.processWebhook.Execute(ctx, ProcessPaymentWebhookInput{
+	if err := s.processWebhook.ProcessNotification(ctx, ProcessPaymentWebhookInput{
 		NotificationResult: result,
 	}); err != nil {
 		return nil, fmt.Errorf("check payment status: process resolved status: %w", err)
@@ -841,7 +841,7 @@ func (s *Service) reconcileSinglePayment(ctx context.Context, pmt Payment) bool 
 
 	// Drive resolved status directly through the webhook processing pipeline
 	// without redundant outbound network calls.
-	if err := s.processWebhook.Execute(ctx, ProcessPaymentWebhookInput{
+	if err := s.processWebhook.ProcessNotification(ctx, ProcessPaymentWebhookInput{
 		NotificationResult: result,
 	}); err != nil {
 		msg := "failed to process reconciled payment"

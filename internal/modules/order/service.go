@@ -393,8 +393,6 @@ type GetOrderResult struct {
 	Shipments   []shipment.Shipment
 }
 
-type GetOrderOutput = GetOrderResult
-
 func (s *Service) GetOrder(ctx context.Context, input GetOrderInput) (*GetOrderResult, error) {
 	ord, err := s.orderRepo.GetByID(ctx, s.executor, input.OrderID)
 	if err != nil {
@@ -468,8 +466,6 @@ type GetOrderTrackingResult struct {
 	Warning        *string                 `json:"warning,omitempty"`
 	Timeline       []TrackingTimelineEvent `json:"timeline"`
 }
-
-type OrderTrackingOutput = GetOrderTrackingResult
 
 func (s *Service) GetOrderTracking(
 	ctx context.Context,

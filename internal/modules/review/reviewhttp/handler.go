@@ -10,15 +10,15 @@ import (
 	"komecore/internal/pagination"
 )
 
-type ReviewHandler struct {
+type Handler struct {
 	service *review.Service
 }
 
-func NewReviewHandler(service *review.Service) *ReviewHandler {
-	return &ReviewHandler{service: service}
+func New(service *review.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) CreateReview(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (h *ReviewHandler) CreateReview(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
-func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListProductReviews(w http.ResponseWriter, r *http.Request) error {
 	productID, err := httpx.ParamUUID(r, "productId")
 	if err != nil {
 		return apperror.NewBadRequest("invalid product id")
@@ -112,7 +112,7 @@ func (h *ReviewHandler) ListProductReviews(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *ReviewHandler) DeleteReview(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DeleteReview(w http.ResponseWriter, r *http.Request) error {
 	actor, ok := authctx.GetActor(r.Context())
 	if !ok || actor == nil {
 		authCtx, err := httpx.RequireAuth(r)

@@ -69,7 +69,7 @@ func (m *refundMockGateway) RefundTransaction(_ context.Context, req paymentgate
 	}, nil
 }
 
-func TestProcessOrderRefundUsecase_NonPaidPayment(t *testing.T) {
+func TestProcessOrderRefund_NonPaidPayment(t *testing.T) {
 	orderID := uuid.New()
 	repo := &refundMockPaymentRepo{
 		payment: &Payment{
@@ -94,7 +94,7 @@ func TestProcessOrderRefundUsecase_NonPaidPayment(t *testing.T) {
 	}
 }
 
-func TestProcessOrderRefundUsecase_PaidPaymentAutomatedRefund(t *testing.T) {
+func TestProcessOrderRefund_PaidPaymentAutomatedRefund(t *testing.T) {
 	orderID := uuid.New()
 	providerOrderID := "ord-123"
 	repo := &refundMockPaymentRepo{
@@ -123,7 +123,7 @@ func TestProcessOrderRefundUsecase_PaidPaymentAutomatedRefund(t *testing.T) {
 	}
 }
 
-func TestProcessOrderRefundUsecase_MidtransProvider_AutomatedRefund(t *testing.T) {
+func TestProcessOrderRefund_MidtransProvider_AutomatedRefund(t *testing.T) {
 	orderID := uuid.New()
 	providerOrderID := "midtrans-ord-999"
 	repo := &refundMockPaymentRepo{

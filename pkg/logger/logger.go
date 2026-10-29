@@ -31,7 +31,8 @@ const (
 	CategoryWAF    LogCategory = "waf"
 
 	LayerMiddleware LogLayer = "middleware"
-	LayerUsecase    LogLayer = "usecase"
+	LayerService    LogLayer = "service"
+	LayerUsecase    LogLayer = LayerService
 	LayerInfra      LogLayer = "infra"
 )
 

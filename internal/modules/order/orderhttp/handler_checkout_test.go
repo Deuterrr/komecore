@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseCheckoutInput_CartItemWithoutProductID(t *testing.T) {
-	h := &OrderHandler{}
+	h := &Handler{}
 
 	shopID := uuid.New().String()
 	cartItemID := uuid.New().String()
@@ -43,7 +43,7 @@ func TestParseCheckoutInput_CartItemWithoutProductID(t *testing.T) {
 }
 
 func TestParseCheckoutInput_InvalidPaymentMethodID_ErrorMessage(t *testing.T) {
-	h := &OrderHandler{}
+	h := &Handler{}
 	invalidID := "not-a-valid-uuid"
 	req := checkoutCalculateRequest{
 		PaymentMethodID: &invalidID,

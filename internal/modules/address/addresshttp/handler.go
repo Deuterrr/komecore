@@ -11,15 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type AddressHandler struct {
+type Handler struct {
 	service *address.Service
 }
 
-func NewAddressHandler(service *address.Service) *AddressHandler {
-	return &AddressHandler{service: service}
+func New(service *address.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListUserAddresses(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (h *AddressHandler) ListUserAddresses(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) SaveUserAddress(w http.ResponseWriter, r *http.Request) error {
 	var req saveCustomerAddressRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid body request")
@@ -135,7 +135,7 @@ func (h *AddressHandler) SaveUserAddress(w http.ResponseWriter, r *http.Request)
 	return nil
 }
 
-func (h *AddressHandler) DeleteUserAddress(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DeleteUserAddress(w http.ResponseWriter, r *http.Request) error {
 	_, _, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -158,7 +158,7 @@ func (h *AddressHandler) DeleteUserAddress(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *AddressHandler) ListShopAddresses(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListShopAddresses(w http.ResponseWriter, r *http.Request) error {
 	shopID, err := httpx.ParamUUID(r, "id")
 	if err != nil {
 		return apperror.NewBadRequest("invalid shop id")
@@ -199,7 +199,7 @@ func (h *AddressHandler) ListShopAddresses(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) CreateShopAddress(w http.ResponseWriter, r *http.Request) error {
 	var req createShopAddressRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -260,7 +260,7 @@ func (h *AddressHandler) CreateShopAddress(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateShopAddress(w http.ResponseWriter, r *http.Request) error {
 	var req createShopAddressRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -327,7 +327,7 @@ func (h *AddressHandler) UpdateShopAddress(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *AddressHandler) DeleteShopAddress(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DeleteShopAddress(w http.ResponseWriter, r *http.Request) error {
 	addressID, err := httpx.ParamUUID(r, "addressID")
 	if err != nil {
 		return apperror.NewBadRequest("invalid address id")

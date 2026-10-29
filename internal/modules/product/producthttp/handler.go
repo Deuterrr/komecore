@@ -14,15 +14,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type ProductHandler struct {
+type Handler struct {
 	service *product.Service
 }
 
-func NewProductHandler(service *product.Service) *ProductHandler {
-	return &ProductHandler{service: service}
+func New(service *product.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) FindProducts(w http.ResponseWriter, r *http.Request) error {
 	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1
@@ -119,7 +119,7 @@ func (h *ProductHandler) FindProducts(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetProduct(w http.ResponseWriter, r *http.Request) error {
 	productSlug := httpx.Param(r, "slug")
 
 	productDetail, err := h.service.GetProduct(r.Context(), productSlug)
@@ -208,7 +208,7 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) erro
 	return nil
 }
 
-func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) SaveProduct(w http.ResponseWriter, r *http.Request) error {
 	var req saveProductRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -258,7 +258,7 @@ func (h *ProductHandler) SaveProduct(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
-func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) AddProductImages(w http.ResponseWriter, r *http.Request) error {
 	files, err := appmultipart.ParseMultiple(r, "image", 16<<20)
 	if err != nil {
 		return err
@@ -307,7 +307,7 @@ func (h *ProductHandler) AddProductImages(w http.ResponseWriter, r *http.Request
 	return nil
 }
 
-func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) error {
 	productID, err := httpx.ParamUUID(r, "id")
 	if err != nil {
 		return apperror.NewBadRequest(err.Error())
@@ -336,7 +336,7 @@ func (s productStatusDTO) isStatusValid() bool {
 	}
 }
 
-func (h *ProductHandler) GetProductStats(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetProductStats(w http.ResponseWriter, r *http.Request) error {
 	page := httpx.QueryIntDefault(r, "page", 1)
 	if page <= 0 {
 		page = 1

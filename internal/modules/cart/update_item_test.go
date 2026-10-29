@@ -42,10 +42,10 @@ func TestUpdateItemByID_Success(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewService(cartR, invR, prodR, nil, nil, nil, exec, tx)
+	svc := NewService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
 	opt := ItemOptions{"size": "large", "color": "red"}
-	err := uc.UpdateItemByID(ctx, UpdateItemByIDInput{
+	err := svc.UpdateItemByID(ctx, UpdateItemByIDInput{
 		CustomerID:  customerID,
 		CartItemID:  cartItemID,
 		Quantity:    4,
@@ -245,7 +245,7 @@ func TestUpdateItemByID_CartItemNotFound(t *testing.T) {
 	}
 }
 
-func TestUpdateItem_Execute_NoOptions_PreservesOptions(t *testing.T) {
+func TestUpdateItem_NoOptions_PreservesOptions(t *testing.T) {
 	ctx := context.Background()
 	customerID := uuid.New()
 	shopID := uuid.New()
@@ -284,10 +284,10 @@ func TestUpdateItem_Execute_NoOptions_PreservesOptions(t *testing.T) {
 	tx := &mockTransactor{}
 	exec := &mockExecutor{}
 
-	uc := NewService(cartR, invR, prodR, nil, nil, nil, exec, tx)
+	svc := NewService(cartR, invR, prodR, nil, nil, nil, exec, tx)
 
 	// Execute without options (e.g. PUT /{shopID}/{productID})
-	err := uc.UpdateItem(ctx, UpdateItemInput{
+	err := svc.UpdateItem(ctx, UpdateItemInput{
 		CustomerID: customerID,
 		ProductID:  productID,
 		ShopID:     shopID,

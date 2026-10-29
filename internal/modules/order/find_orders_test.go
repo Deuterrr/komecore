@@ -165,7 +165,7 @@ func (m *foMockAddressRepo) UnsetDefaultByCustomerID(_ context.Context, _ transa
 	return nil
 }
 
-func TestFindOrdersUsecase_ShopFilter(t *testing.T) {
+func TestFindOrders_ShopFilter(t *testing.T) {
 	mockOrderRepo := &foMockOrderRepo{}
 	svc := NewService(
 		&foMockExecutor{},
@@ -213,7 +213,7 @@ func TestFindOrdersUsecase_ShopFilter(t *testing.T) {
 	}
 }
 
-func TestFindOrdersUsecase_StatusFilter_ClearsSingleStatusWhenStatusesProvided(t *testing.T) {
+func TestFindOrders_StatusFilter_ClearsSingleStatusWhenStatusesProvided(t *testing.T) {
 	mockOrderRepo := &foMockOrderRepo{}
 	svc := NewService(
 		&foMockExecutor{},

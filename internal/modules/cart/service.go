@@ -37,7 +37,7 @@ type ShopCatalogReader interface {
 const MaxCartItemQuantity = 80
 
 type Service struct {
-	cartRepo       CartRepository
+	cartRepo       Repository
 	inventoryRepo  InventoryStockReader
 	productRepo    ProductCatalogReader
 	productImgRepo ProductImageCatalogReader
@@ -48,7 +48,7 @@ type Service struct {
 }
 
 func NewService(
-	cartRepo CartRepository,
+	cartRepo Repository,
 	inventoryRepo InventoryStockReader,
 	productRepo ProductCatalogReader,
 	productImgRepo ProductImageCatalogReader,

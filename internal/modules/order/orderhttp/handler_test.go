@@ -146,7 +146,7 @@ func (m *hMockShipmentRepo) Update(_ context.Context, _ transaction.Executor, _ 
 // Tests
 
 func TestResolveShopFilter_NilGetShopDependency_ReturnsError(t *testing.T) {
-	handler := &OrderHandler{
+	handler := &Handler{
 		shopService: nil,
 	}
 
@@ -197,7 +197,7 @@ func TestGetOrderTrackingForStaff_CustomerActor_ReturnsForbidden(t *testing.T) {
 		nil,
 	)
 
-	handler := &OrderHandler{
+	handler := &Handler{
 		service: orderSvc,
 	}
 
@@ -229,7 +229,7 @@ func TestUpdateOrderStatus_CustomerActor_ReturnsForbidden(t *testing.T) {
 	customerID := uuid.New()
 	orderID := uuid.New()
 
-	handler := &OrderHandler{}
+	handler := &Handler{}
 
 	actor := &authctx.Actor{
 		Type:       authctx.AccountTypeCustomer,
@@ -296,7 +296,7 @@ func TestUpdateOrderStatus_MultiShop_PartialPermission_Forbidden(t *testing.T) {
 		nil,
 	)
 
-	handler := &OrderHandler{
+	handler := &Handler{
 		service: orderSvc,
 	}
 

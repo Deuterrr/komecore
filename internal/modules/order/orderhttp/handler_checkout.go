@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) Checkout(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (h *OrderHandler) Checkout(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *OrderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (h *OrderHandler) CheckoutEstimate(w http.ResponseWriter, r *http.Request) 
 	return nil
 }
 
-func (h *OrderHandler) parseCheckoutInput(
+func (h *Handler) parseCheckoutInput(
 	req checkoutCalculateRequest,
 ) (order.CheckoutInput, error) {
 	var paymentMethodID *uuid.UUID

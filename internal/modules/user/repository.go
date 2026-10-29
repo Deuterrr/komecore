@@ -39,35 +39,12 @@ type SaveProfileProps struct {
 }
 
 type Repository interface {
-	GetByID(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) (*User, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*User, error)
+	GetByUsername(ctx context.Context, exec transaction.Executor, username string) (*User, error)
 
-	GetByUsername(
-		ctx context.Context,
-		exec transaction.Executor,
-		username string,
-	) (*User, error)
+	CreateUser(ctx context.Context, exec transaction.Executor, props CreateUserProps) error
 
-	CreateUser(
-		ctx context.Context,
-		exec transaction.Executor,
-		props CreateUserProps,
-	) error
+	SaveProfile(ctx context.Context, exec transaction.Executor, props SaveProfileProps) error
 
-	SaveProfile(
-		ctx context.Context,
-		exec transaction.Executor,
-		props SaveProfileProps,
-	) error
-
-	Delete(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) error
+	Delete(ctx context.Context, exec transaction.Executor, id uuid.UUID) error
 }
-
-type UserRepository = Repository

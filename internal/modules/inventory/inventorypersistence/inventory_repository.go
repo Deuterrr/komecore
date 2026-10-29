@@ -12,13 +12,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type InventoryRepository struct{}
+type Repository struct{}
 
-func NewInventoryRepository() *InventoryRepository {
-	return &InventoryRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *InventoryRepository) GetByProductIDAndShopID(
+func (r *Repository) GetByProductIDAndShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -58,7 +58,7 @@ func (r *InventoryRepository) GetByProductIDAndShopID(
 	return &inventory, nil
 }
 
-func (r *InventoryRepository) ListByProductID(
+func (r *Repository) ListByProductID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -106,7 +106,7 @@ func (r *InventoryRepository) ListByProductID(
 	return inventories, nil
 }
 
-func (r *InventoryRepository) ListByProductIDs(
+func (r *Repository) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
@@ -168,7 +168,7 @@ func (r *InventoryRepository) ListByProductIDs(
 	return result, nil
 }
 
-func (r *InventoryRepository) ListByShopID(
+func (r *Repository) ListByShopID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shopID uuid.UUID,
@@ -216,7 +216,7 @@ func (r *InventoryRepository) ListByShopID(
 	return inventories, nil
 }
 
-func (r *InventoryRepository) Create(
+func (r *Repository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
 	inventory *inventory.Inventory,
@@ -248,7 +248,7 @@ func (r *InventoryRepository) Create(
 	return nil
 }
 
-func (r *InventoryRepository) Reserve(
+func (r *Repository) Reserve(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -287,7 +287,7 @@ func (r *InventoryRepository) Reserve(
 	return nil
 }
 
-func (r *InventoryRepository) Release(
+func (r *Repository) Release(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -321,7 +321,7 @@ func (r *InventoryRepository) Release(
 	return nil
 }
 
-func (r *InventoryRepository) Commit(
+func (r *Repository) Commit(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -357,7 +357,7 @@ func (r *InventoryRepository) Commit(
 	return nil
 }
 
-func (r *InventoryRepository) Restock(
+func (r *Repository) Restock(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -390,7 +390,7 @@ func (r *InventoryRepository) Restock(
 	return nil
 }
 
-func (r *InventoryRepository) Update(
+func (r *Repository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
 	inventory *inventory.Inventory,
@@ -415,7 +415,7 @@ func (r *InventoryRepository) Update(
 	return nil
 }
 
-func (r *InventoryRepository) Delete(
+func (r *Repository) Delete(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,

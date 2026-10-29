@@ -70,81 +70,27 @@ type UploadedProductImage struct {
 }
 
 type Repository interface {
-	GetByID(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) (*Product, error)
+	GetByID(ctx context.Context, exec transaction.Executor, id uuid.UUID) (*Product, error)
+	GetBySlug(ctx context.Context, exec transaction.Executor, string string) (*Product, error)
 
-	GetBySlug(
-		ctx context.Context,
-		exec transaction.Executor,
-		string string,
-	) (*Product, error)
+	FindProducts(ctx context.Context, exec transaction.Executor, params FindProductParams) ([]Product, int, error)
+	FindProductsWithInventory(ctx context.Context, exec transaction.Executor, params FindProductParams) ([]ProductWithInventory, int, error)
+	FindByIDs(ctx context.Context, exec transaction.Executor, IDs []uuid.UUID) ([]Product, error)
 
-	FindProducts(
-		ctx context.Context,
-		exec transaction.Executor,
-		params FindProductParams,
-	) ([]Product, int, error)
+	Save(ctx context.Context, exec transaction.Executor, product *Product) error
 
-	FindProductsWithInventory(
-		ctx context.Context,
-		exec transaction.Executor,
-		params FindProductParams,
-	) ([]ProductWithInventory, int, error)
+	Delete(ctx context.Context, exec transaction.Executor, id uuid.UUID) error
 
-	FindByIDs(
-		ctx context.Context,
-		exec transaction.Executor,
-		IDs []uuid.UUID,
-	) ([]Product, error)
-
-	Save(
-		ctx context.Context,
-		exec transaction.Executor,
-		product *Product,
-	) error
-
-	Delete(
-		ctx context.Context,
-		exec transaction.Executor,
-		id uuid.UUID,
-	) error
-
-	UpdateRating(
-		ctx context.Context,
-		exec transaction.Executor,
-		productID uuid.UUID,
-		averageRating float64,
-		reviewCount int,
-	) error
+	UpdateRating(ctx context.Context, exec transaction.Executor, productID uuid.UUID, averageRating float64, reviewCount int) error
 }
 
 type ImageRepository interface {
-	Create(
-		ctx context.Context,
-		exec transaction.Executor,
-		images []ProductImage,
-	) error
+	Create(ctx context.Context, exec transaction.Executor, images []ProductImage) error
 
-	ListByProductIDs(
-		ctx context.Context,
-		exec transaction.Executor,
-		productIDs []uuid.UUID,
-	) (map[uuid.UUID][]ProductImage, error)
+	ListByProductIDs(ctx context.Context, exec transaction.Executor, productIDs []uuid.UUID) (map[uuid.UUID][]ProductImage, error)
+	ListByProductID(ctx context.Context, exec transaction.Executor, productID uuid.UUID) ([]ProductImage, error)
 
-	ListByProductID(
-		ctx context.Context,
-		exec transaction.Executor,
-		productID uuid.UUID,
-	) ([]ProductImage, error)
-
-	SoftDeleteByProductID(
-		ctx context.Context,
-		exec transaction.Executor,
-		productID uuid.UUID,
-	) error
+	SoftDeleteByProductID(ctx context.Context, exec transaction.Executor, productID uuid.UUID) error
 }
 
 type ImageUploadService interface {
@@ -153,36 +99,13 @@ type ImageUploadService interface {
 }
 
 type PerformanceRepository interface {
-	UpsertPerformance(
-		ctx context.Context,
-		exec transaction.Executor,
-		perf ProductPerformance,
-		basePrice int64,
-	) error
+	UpsertPerformance(ctx context.Context, exec transaction.Executor, perf ProductPerformance, basePrice int64) error
 
-	IncrementViewCount(
-		ctx context.Context,
-		exec transaction.Executor,
-		productID uuid.UUID,
-	) error
+	IncrementViewCount(ctx context.Context, exec transaction.Executor, productID uuid.UUID) error
 
-	GetProductStats(
-		ctx context.Context,
-		exec transaction.Executor,
-		params GetProductStatsParams,
-	) ([]ProductStats, int, error)
+	GetProductStats(ctx context.Context, exec transaction.Executor, params GetProductStatsParams) ([]ProductStats, int, error)
 }
 
 type StockHistoryRepository interface {
-	RecordStockEvent(
-		ctx context.Context,
-		exec transaction.Executor,
-		event ProductStockEvent,
-	) error
+	RecordStockEvent(ctx context.Context, exec transaction.Executor, event ProductStockEvent) error
 }
-
-type ProductRepository = Repository
-type ProductImageRepository = ImageRepository
-type ProductImageUploadService = ImageUploadService
-type ProductPerformanceRepository = PerformanceRepository
-type ProductStockHistoryRepository = StockHistoryRepository

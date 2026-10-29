@@ -7,22 +7,9 @@ import (
 )
 
 type Repository interface {
-	ListAll(
-		ctx context.Context,
-		exec transaction.Executor,
-	) ([]string, error)
+	ListAll(ctx context.Context, exec transaction.Executor) ([]string, error)
 
-	GetActiveCodes(
-		ctx context.Context,
-		exec transaction.Executor,
-		codes []string,
-	) ([]string, error)
+	GetActiveCodes(ctx context.Context, exec transaction.Executor, codes []string) ([]string, error)
 
-	ValidateCouriers(
-		ctx context.Context,
-		exec transaction.Executor,
-		codes []string,
-	) ([]string, error)
+	ValidateCouriers(ctx context.Context, exec transaction.Executor, codes []string) ([]string, error)
 }
-
-type CourierRepository = Repository

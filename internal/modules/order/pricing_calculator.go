@@ -26,7 +26,7 @@ type CouponValidator interface {
 	ValidateCoupon(ctx context.Context, input discount.ValidateCouponInput) (*discount.ValidateCouponResult, error)
 }
 
-type pricingServiceImpl struct {
+type pricingCalculator struct {
 	addressRepo       address.CustomerAddressRepository
 	cartRepo          cart.Repository
 	courierRepo       courier.Repository
@@ -49,8 +49,8 @@ func NewPricingService(
 	shippingProvider shipping.ShippingProvider,
 	shopAddressRepo address.ShopAddressRepository,
 	shopRepo shop.Repository,
-) *pricingServiceImpl {
-	return &pricingServiceImpl{
+) *pricingCalculator {
+	return &pricingCalculator{
 		addressRepo:       addressRepo,
 		cartRepo:          cartRepo,
 		courierRepo:       courierRepo,
@@ -63,7 +63,7 @@ func NewPricingService(
 	}
 }
 
-func (s *pricingServiceImpl) WithCouponService(cs CouponValidator) *pricingServiceImpl {
+func (s *pricingCalculator) WithCouponService(cs CouponValidator) *pricingCalculator {
 	s.couponService = cs
 	return s
 }
@@ -72,7 +72,7 @@ const defaultShippingWeightGrams = 1000
 
 // Calculate evaluates multi-shop basket totals, resolving destination addresses,
 // live courier rates, stock availability, coupons, and payment method fees.
-func (s *pricingServiceImpl) Calculate(ctx context.Context, exec transaction.Executor, input PricingInput) (*PricingResult, error) {
+func (s *pricingCalculator) Calculate(ctx context.Context, exec transaction.Executor, input PricingInput) (*PricingResult, error) {
 	var destAddress *address.CustomerAddress
 	if input.AddressID != nil {
 		addr, err := s.addressRepo.GetByID(ctx, exec, *input.AddressID)

@@ -109,10 +109,3 @@ type WebhookEventRepository interface {
 	// Records processing failure and error message to unblock retries on redelivery.
 	MarkFailed(ctx context.Context, exec transaction.Executor, id uuid.UUID, errMsg string) error
 }
-
-type PaymentRepository = Repository
-type PaymentMethodRepository = MethodRepository
-type PaymentEventRepository = EventRepository
-type PaymentInstructionRepository = InstructionRepository
-type PaymentChannelDataRepository = ChannelDataRepository
-type PaymentWebhookEventRepository = WebhookEventRepository

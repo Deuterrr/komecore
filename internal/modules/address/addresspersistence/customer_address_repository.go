@@ -14,15 +14,11 @@ import (
 
 type CustomerAddressRepository struct{}
 
-func NewCustomerAddressRepository() *CustomerAddressRepository {
+func NewCustomerRepository() *CustomerAddressRepository {
 	return &CustomerAddressRepository{}
 }
 
-func (r *CustomerAddressRepository) GetByID(
-	ctx context.Context,
-	exec transaction.Executor,
-	addressID uuid.UUID,
-) (*address.CustomerAddress, error) {
+func (r *CustomerAddressRepository) GetByID(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) (*address.CustomerAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -75,11 +71,7 @@ func (r *CustomerAddressRepository) GetByID(
 	return &add, nil
 }
 
-func (r *CustomerAddressRepository) GetDefaultByCustomerID(
-	ctx context.Context,
-	exec transaction.Executor,
-	customerID uuid.UUID,
-) (*address.CustomerAddress, error) {
+func (r *CustomerAddressRepository) GetDefaultByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (*address.CustomerAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -137,11 +129,7 @@ func (r *CustomerAddressRepository) GetDefaultByCustomerID(
 	return &add, nil
 }
 
-func (r *CustomerAddressRepository) ListByCustomerID(
-	ctx context.Context,
-	exec transaction.Executor,
-	customerID uuid.UUID,
-) ([]address.CustomerAddress, error) {
+func (r *CustomerAddressRepository) ListByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) ([]address.CustomerAddress, error) {
 	query := `
 		SELECT
 			id,
@@ -205,11 +193,7 @@ func (r *CustomerAddressRepository) ListByCustomerID(
 	return addresses, nil
 }
 
-func (r *CustomerAddressRepository) CountByCustomerID(
-	ctx context.Context,
-	exec transaction.Executor,
-	customerID uuid.UUID,
-) (*int, error) {
+func (r *CustomerAddressRepository) CountByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) (*int, error) {
 	query := `
 		SELECT COUNT(*)
 		FROM
@@ -231,11 +215,7 @@ func (r *CustomerAddressRepository) CountByCustomerID(
 	return &count, nil
 }
 
-func (r *CustomerAddressRepository) UnsetDefaultByCustomerID(
-	ctx context.Context,
-	exec transaction.Executor,
-	customerID uuid.UUID,
-) error {
+func (r *CustomerAddressRepository) UnsetDefaultByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) error {
 	query := `
 		UPDATE
 			customer_addresses
@@ -256,11 +236,7 @@ func (r *CustomerAddressRepository) UnsetDefaultByCustomerID(
 	return nil
 }
 
-func (r *CustomerAddressRepository) Save(
-	ctx context.Context,
-	exec transaction.Executor,
-	address address.CustomerAddress,
-) error {
+func (r *CustomerAddressRepository) Save(ctx context.Context, exec transaction.Executor, address address.CustomerAddress) error {
 	query := `
 		INSERT INTO customer_addresses (
 			id,
@@ -321,11 +297,7 @@ func (r *CustomerAddressRepository) Save(
 	return nil
 }
 
-func (r *CustomerAddressRepository) Delete(
-	ctx context.Context,
-	exec transaction.Executor,
-	addressID uuid.UUID,
-) error {
+func (r *CustomerAddressRepository) Delete(ctx context.Context, exec transaction.Executor, addressID uuid.UUID) error {
 	query := `
 		UPDATE
 			customer_addresses
@@ -347,11 +319,7 @@ func (r *CustomerAddressRepository) Delete(
 	return nil
 }
 
-func (r *CustomerAddressRepository) DeleteByCustomerID(
-	ctx context.Context,
-	exec transaction.Executor,
-	customerID uuid.UUID,
-) error {
+func (r *CustomerAddressRepository) DeleteByCustomerID(ctx context.Context, exec transaction.Executor, customerID uuid.UUID) error {
 	query := `
 		UPDATE
 			customer_addresses
@@ -371,11 +339,7 @@ func (r *CustomerAddressRepository) DeleteByCustomerID(
 	return nil
 }
 
-func (r *CustomerAddressRepository) ListByIDs(
-	ctx context.Context,
-	exec transaction.Executor,
-	addressIDs []uuid.UUID,
-) ([]address.CustomerAddress, error) {
+func (r *CustomerAddressRepository) ListByIDs(ctx context.Context, exec transaction.Executor, addressIDs []uuid.UUID) ([]address.CustomerAddress, error) {
 	if len(addressIDs) == 0 {
 		return []address.CustomerAddress{}, nil
 	}
@@ -440,7 +404,6 @@ func (r *CustomerAddressRepository) ListByIDs(
 		}
 		addresses = append(addresses, a)
 	}
-
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate addresses failed: %w", err)
 	}

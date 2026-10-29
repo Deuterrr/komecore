@@ -10,15 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type CartHandler struct {
+type Handler struct {
 	service *cart.Service
 }
 
-func NewCartHandler(service *cart.Service) *CartHandler {
-	return &CartHandler{service: service}
+func New(service *cart.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetCart(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) AddItem(w http.ResponseWriter, r *http.Request) error {
 	var req addItemRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -142,7 +142,7 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 	var req updateItemRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -191,7 +191,7 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdateItemByID(w http.ResponseWriter, r *http.Request) error {
 	var req updateItemByIDRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return apperror.NewBadRequest("invalid request body")
@@ -233,7 +233,7 @@ func (h *CartHandler) UpdateItemByID(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
-func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -265,7 +265,7 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *CartHandler) RemoveItemByID(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) RemoveItemByID(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err

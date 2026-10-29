@@ -14,13 +14,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type ProductRepository struct{}
+type Repository struct{}
 
-func NewProductRepository() *ProductRepository {
-	return &ProductRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
-func (r *ProductRepository) FindProducts(
+func (r *Repository) FindProducts(
 	ctx context.Context,
 	exec transaction.Executor,
 	params product.FindProductParams,
@@ -256,7 +256,7 @@ func (r *ProductRepository) FindProducts(
 	return results, total, nil
 }
 
-func (r *ProductRepository) FindProductsWithInventory(
+func (r *Repository) FindProductsWithInventory(
 	ctx context.Context,
 	exec transaction.Executor,
 	params product.FindProductParams,
@@ -498,7 +498,7 @@ func (r *ProductRepository) FindProductsWithInventory(
 	return results, total, nil
 }
 
-func (r *ProductRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -550,7 +550,7 @@ func (r *ProductRepository) GetByID(
 	return &result, nil
 }
 
-func (r *ProductRepository) GetBySlug(
+func (r *Repository) GetBySlug(
 	ctx context.Context,
 	exec transaction.Executor,
 	slug string,
@@ -602,7 +602,7 @@ func (r *ProductRepository) GetBySlug(
 	return &result, nil
 }
 
-func (r *ProductRepository) FindByIDs(
+func (r *Repository) FindByIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	ids []uuid.UUID,
@@ -675,7 +675,7 @@ func (r *ProductRepository) FindByIDs(
 	return results, nil
 }
 
-func (r *ProductRepository) Save(
+func (r *Repository) Save(
 	ctx context.Context,
 	exec transaction.Executor,
 	product *product.Product,
@@ -724,7 +724,7 @@ func (r *ProductRepository) Save(
 	return nil
 }
 
-func (r *ProductRepository) Delete(
+func (r *Repository) Delete(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -746,7 +746,7 @@ func (r *ProductRepository) Delete(
 	return nil
 }
 
-func (r *ProductRepository) UpdateRating(
+func (r *Repository) UpdateRating(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,

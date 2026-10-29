@@ -50,7 +50,7 @@ func (r *emptyRow) Scan(_ ...any) error {
 }
 
 func TestPaymentEventRepository_SQLSyntax(t *testing.T) {
-	repo := NewPaymentEventRepository()
+	repo := NewEventRepository()
 	spy := &querySpyExecutor{}
 	ctx := context.Background()
 
@@ -73,7 +73,7 @@ func TestPaymentEventRepository_SQLSyntax(t *testing.T) {
 }
 
 func TestPaymentRepository_ListPendingGateway_Query(t *testing.T) {
-	repo := NewPaymentRepository()
+	repo := New()
 	spy := &querySpyExecutor{}
 	ctx := context.Background()
 
@@ -89,7 +89,7 @@ func TestPaymentRepository_ListPendingGateway_Query(t *testing.T) {
 }
 
 func TestPaymentMethodRepository_SoftDeleteAndConflict_Query(t *testing.T) {
-	repo := NewPaymentMethodRepository()
+	repo := NewMethodRepository()
 	spy := &querySpyExecutor{}
 	ctx := context.Background()
 

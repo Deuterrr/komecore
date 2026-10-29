@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetCurrentProfile_Execute(t *testing.T) {
+func TestGetCurrentProfile(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
 	sessionID := uuid.New()

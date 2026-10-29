@@ -11,13 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type OrderItemRepository struct{}
+type ItemRepository struct{}
 
-func NewOrderItemRepository() *OrderItemRepository {
-	return &OrderItemRepository{}
+func NewItemRepository() *ItemRepository {
+	return &ItemRepository{}
 }
 
-func (r *OrderItemRepository) ListByOrderID(
+func (r *ItemRepository) ListByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
@@ -82,7 +82,7 @@ func (r *OrderItemRepository) ListByOrderID(
 	return items, nil
 }
 
-func (r *OrderItemRepository) SaveBulk(
+func (r *ItemRepository) SaveBulk(
 	ctx context.Context,
 	exec transaction.Executor,
 	items []order.OrderItem,
@@ -149,7 +149,7 @@ func (r *OrderItemRepository) SaveBulk(
 	return nil
 }
 
-func (r *OrderItemRepository) ListByOrderIDs(
+func (r *ItemRepository) ListByOrderIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderIDs []uuid.UUID,
@@ -223,7 +223,7 @@ func (r *OrderItemRepository) ListByOrderIDs(
 	return items, nil
 }
 
-func (r *OrderItemRepository) ListByShipmentID(
+func (r *ItemRepository) ListByShipmentID(
 	ctx context.Context,
 	exec transaction.Executor,
 	shipmentID uuid.UUID,
@@ -288,7 +288,7 @@ func (r *OrderItemRepository) ListByShipmentID(
 	return items, nil
 }
 
-func (r *OrderItemRepository) AssignShipment(
+func (r *ItemRepository) AssignShipment(
 	ctx context.Context,
 	exec transaction.Executor,
 	shipmentID uuid.UUID,

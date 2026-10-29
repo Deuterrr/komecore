@@ -8,15 +8,15 @@ import (
 	"komecore/internal/modules/wishlist"
 )
 
-type WishlistHandler struct {
+type Handler struct {
 	service *wishlist.Service
 }
 
-func NewWishlistHandler(service *wishlist.Service) *WishlistHandler {
-	return &WishlistHandler{service: service}
+func New(service *wishlist.Service) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetWishlist(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -34,7 +34,7 @@ func (h *WishlistHandler) GetWishlist(w http.ResponseWriter, r *http.Request) er
 	return nil
 }
 
-func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) AddToWishlist(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (h *WishlistHandler) AddToWishlist(w http.ResponseWriter, r *http.Request) 
 	return nil
 }
 
-func (h *WishlistHandler) RemoveFromWishlist(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) RemoveFromWishlist(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err

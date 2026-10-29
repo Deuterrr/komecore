@@ -11,13 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type ProductImageRepository struct{}
+type ImageRepository struct{}
 
-func NewProductImageRepository() *ProductImageRepository {
-	return &ProductImageRepository{}
+func NewImageRepository() *ImageRepository {
+	return &ImageRepository{}
 }
 
-func (r *ProductImageRepository) ListByProductIDs(
+func (r *ImageRepository) ListByProductIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	productIDs []uuid.UUID,
@@ -112,7 +112,7 @@ func (r *ProductImageRepository) ListByProductIDs(
 	return result, nil
 }
 
-func (r *ProductImageRepository) ListByProductID(
+func (r *ImageRepository) ListByProductID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,
@@ -203,7 +203,7 @@ func (r *ProductImageRepository) ListByProductID(
 	return images, nil
 }
 
-func (r *ProductImageRepository) Create(
+func (r *ImageRepository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
 	images []product.ProductImage,
@@ -246,7 +246,7 @@ func (r *ProductImageRepository) Create(
 	return nil
 }
 
-func (r *ProductImageRepository) SoftDeleteByProductID(
+func (r *ImageRepository) SoftDeleteByProductID(
 	ctx context.Context,
 	exec transaction.Executor,
 	productID uuid.UUID,

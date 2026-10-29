@@ -11,22 +11,22 @@ import (
 	"github.com/google/uuid"
 )
 
-type PaymentHandler struct {
+type Handler struct {
 	service *payment.Service
 	webhook *payment.WebhookProcessor
 }
 
-func NewPaymentHandler(
+func New(
 	service *payment.Service,
 	webhook *payment.WebhookProcessor,
-) *PaymentHandler {
-	return &PaymentHandler{
+) *Handler {
+	return &Handler{
 		service: service,
 		webhook: webhook,
 	}
 }
 
-func (h *PaymentHandler) UpdatePaymentMethodActive(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) UpdatePaymentMethodActive(w http.ResponseWriter, r *http.Request) error {
 	idStr := chi.URLParam(r, "methodID")
 	methodID, err := uuid.Parse(idStr)
 	if err != nil {
@@ -54,7 +54,7 @@ func (h *PaymentHandler) UpdatePaymentMethodActive(w http.ResponseWriter, r *htt
 	return nil
 }
 
-func (h *PaymentHandler) ListPaymentMethod(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) ListPaymentMethod(w http.ResponseWriter, r *http.Request) error {
 	sortParam := httpx.Query(r, "sort")
 	input := payment.ListPaymentMethodInput{
 		Sort: sortParam,
@@ -99,7 +99,7 @@ func (h *PaymentHandler) ListPaymentMethod(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (h *PaymentHandler) HandleMidtransWebhook(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) HandleMidtransWebhook(w http.ResponseWriter, r *http.Request) error {
 	var payload map[string]any
 	if err := httpx.DecodeJSON(r, &payload); err != nil {
 		return apperror.NewBadRequest("invalid payload")
@@ -116,7 +116,7 @@ func (h *PaymentHandler) HandleMidtransWebhook(w http.ResponseWriter, r *http.Re
 	return nil
 }
 
-func (h *PaymentHandler) SavePaymentInstruction(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) SavePaymentInstruction(w http.ResponseWriter, r *http.Request) error {
 	methodIDStr := chi.URLParam(r, "methodID")
 	methodID, err := uuid.Parse(methodIDStr)
 	if err != nil {
@@ -147,7 +147,7 @@ func (h *PaymentHandler) SavePaymentInstruction(w http.ResponseWriter, r *http.R
 	return nil
 }
 
-func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) GetMyOrderPayment(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err
@@ -212,7 +212,7 @@ func (h *PaymentHandler) GetMyOrderPayment(w http.ResponseWriter, r *http.Reques
 // When a customer's payment appears stuck as 'pending' after they have paid,
 // calling this endpoint immediately queries Midtrans for the current status
 // and resolves the payment — without waiting for the background reconciler.
-func (h *PaymentHandler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *http.Request) error {
+func (h *Handler) CheckMyOrderPaymentStatus(w http.ResponseWriter, r *http.Request) error {
 	_, customerID, err := httpx.RequireCustomer(r)
 	if err != nil {
 		return err

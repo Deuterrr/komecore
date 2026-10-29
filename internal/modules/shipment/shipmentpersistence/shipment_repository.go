@@ -12,10 +12,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type ShipmentRepository struct{}
+type Repository struct{}
 
-func NewShipmentRepository() *ShipmentRepository {
-	return &ShipmentRepository{}
+func New() *Repository {
+	return &Repository{}
 }
 
 const shipmentSelectCols = `
@@ -33,7 +33,7 @@ const shipmentSelectCols = `
 	created_at
 `
 
-func (r *ShipmentRepository) scanShipment(row transaction.Row) (*shipment.Shipment, error) {
+func (r *Repository) scanShipment(row transaction.Row) (*shipment.Shipment, error) {
 	var (
 		s                shipment.Shipment
 		originID, destID string
@@ -58,7 +58,7 @@ func (r *ShipmentRepository) scanShipment(row transaction.Row) (*shipment.Shipme
 	return &s, nil
 }
 
-func (r *ShipmentRepository) GetByID(
+func (r *Repository) GetByID(
 	ctx context.Context,
 	exec transaction.Executor,
 	id uuid.UUID,
@@ -79,7 +79,7 @@ func (r *ShipmentRepository) GetByID(
 	return s, nil
 }
 
-func (r *ShipmentRepository) GetByOrderID(
+func (r *Repository) GetByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
@@ -102,7 +102,7 @@ func (r *ShipmentRepository) GetByOrderID(
 	return s, nil
 }
 
-func (r *ShipmentRepository) ListByOrderID(
+func (r *Repository) ListByOrderID(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderID uuid.UUID,
@@ -148,7 +148,7 @@ func (r *ShipmentRepository) ListByOrderID(
 	return shipments, nil
 }
 
-func (r *ShipmentRepository) ListByOrderIDs(
+func (r *Repository) ListByOrderIDs(
 	ctx context.Context,
 	exec transaction.Executor,
 	orderIDs []uuid.UUID,
@@ -203,7 +203,7 @@ func (r *ShipmentRepository) ListByOrderIDs(
 	return shipments, nil
 }
 
-func (r *ShipmentRepository) Create(
+func (r *Repository) Create(
 	ctx context.Context,
 	exec transaction.Executor,
 	shipment shipment.Shipment,
@@ -245,7 +245,7 @@ func (r *ShipmentRepository) Create(
 	return nil
 }
 
-func (r *ShipmentRepository) Update(
+func (r *Repository) Update(
 	ctx context.Context,
 	exec transaction.Executor,
 	shipment shipment.Shipment,
