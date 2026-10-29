@@ -12,7 +12,7 @@ body:
     id: description
     attributes:
       label: Describe the bug
-      description: Executive summary of the defect: what went wrong, which package/endpoint is affected, and high-level fix.
+      description: "Executive summary of the defect: what went wrong, which package/endpoint is affected, and high-level fix."
       placeholder: |
         Executive summary of the defect and affected component.
 
@@ -69,7 +69,7 @@ body:
     id: checklist
     attributes:
       label: Defect Checklist
-      description: Please verify before submitting:
+      description: "Please verify before submitting:"
       options:
         - label: I have confirmed this bug exists on the latest `main` branch.
           required: true

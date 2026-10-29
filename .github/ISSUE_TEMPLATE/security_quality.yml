@@ -69,7 +69,7 @@ body:
     id: checklist
     attributes:
       label: Verification Checklist
-      description: Confirm the following:
+      description: "Confirm the following:"
       options:
         - label: This issue does not disclose unpatched critical production secrets or exploits publicly.
           required: true

@@ -75,7 +75,7 @@ body:
     id: contributor-checklist
     attributes:
       label: Contributor Checklist
-      description: Please confirm the following before opening this issue:
+      description: "Please confirm the following before opening this issue:"
       options:
         - label: I have verified this feature does not duplicate an existing issue or discussion.
           required: true
