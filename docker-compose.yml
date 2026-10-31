@@ -1,7 +1,3 @@
-# KomeCore — Backend Standalone Stack
-# Usage:
-#   docker compose up --build
-
 name: komecore
 services:
   postgres:
@@ -44,6 +40,27 @@ services:
       timeout: 5s
       retries: 5
 
+  komecore-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: komecore/api:local
+    container_name: komecore-migrate
+    command: ["migrate"]
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB_HOST: postgres
+      POSTGRES_DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_NAME: komecore
+      TZ: Asia/Jakarta
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   komecore:
     build:
       context: .
@@ -69,6 +86,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      komecore-migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:7129/health || exit 1"]
       interval: 30s

@@ -2,7 +2,7 @@
 # komecore — Developer Makefile
 # ==============================================================================
 
-.PHONY: all build version run dev test test-integration test-contract lint-api check migrate migrate-rollback migrate-version migrate-sqlserver migrate-sqlserver-rollback migrate-sqlserver-version seed seed-dev docker-up docker-down docker-logs clean
+.PHONY: all build version run dev dev-setup dev-start test test-integration test-contract lint-api check migrate migrate-rollback migrate-version migrate-sqlserver migrate-sqlserver-rollback migrate-sqlserver-version seed seed-dev docker-up docker-down docker-logs clean
 
 VERSION ?= v1.0.0
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
@@ -16,14 +16,21 @@ build:
 	go build -ldflags="$(LDFLAGS)" -o bin/komecore ./cmd/komecore
 
 version:
-	go run ./cmd/komecore --version
+	go run ./cmd/komecore version
 
 ## Run server locally
 run:
-	go run ./cmd/komecore
+	go run ./cmd/komecore serve
 ## Run server with live reload
 dev:
 	air
+
+## Reset, migrate, and seed local development environment
+dev-setup: migrate seed-dev
+	@echo "Local database migrated and seeded with development fixtures."
+
+## One-command local dev boot (migrate, seed, then start live-reload)
+dev-start: dev-setup dev
 
 ## Run full test suite with 0 caching
 test:
@@ -55,30 +62,30 @@ check:
 
 ## Apply database migrations (default: PostgreSQL)
 migrate:
-	go run ./cmd/komecore --migrate
+	go run ./cmd/komecore migrate up
 ## Rollback 1 migration step (default: PostgreSQL)
 migrate-rollback:
-	go run ./cmd/komecore --migrate-rollback
+	go run ./cmd/komecore migrate rollback
 ## Print current applied database migration version (PostgreSQL)
 migrate-version:
-	go run ./cmd/komecore --migrate-version
+	go run ./cmd/komecore migrate version
 
 ## Apply database migrations to Supabase
 migrate-supabase:
-	go run ./cmd/komecore --target=supabase --migrate
+	go run ./cmd/komecore migrate up --target=supabase
 ## Rollback 1 migration step on Supabase
 migrate-supabase-rollback:
-	go run ./cmd/komecore --target=supabase --migrate-rollback
+	go run ./cmd/komecore migrate rollback --target=supabase
 ## Print current applied migration version (Supabase)
 migrate-supabase-version:
-	go run ./cmd/komecore --target=supabase --migrate-version
+	go run ./cmd/komecore migrate version --target=supabase
 
 ## Populate base/production database seeds
 seed:
-	go run ./cmd/komecore --seed
+	go run ./cmd/komecore seed
 ## Populate development seeds (e.g. shops, products, customers)
 seed-dev:
-	go run ./cmd/komecore --seed-dev
+	go run ./cmd/komecore seed dev
 
 ## Start container stack in background
 docker-up:
