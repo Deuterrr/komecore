@@ -1,7 +1,3 @@
-# KomeCore — Fly.io Config
-# Region: sin (Singapore) — closest to Indonesia
-# Docs: https://fly.io/docs/reference/configuration/
-#
 # Setup:
 #   fly launch --no-deploy
 #   fly secrets set JWT_SECRET=... SUPABASE_SUPA_KEY=...
@@ -12,6 +8,9 @@ primary_region = "sin"
 
 [build]
   dockerfile = "Dockerfile"
+
+[deploy]
+  release_command = "/app/komecore migrate"
 
 [env]
   APP_NAME         = "komecore"
