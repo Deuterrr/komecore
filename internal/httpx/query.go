@@ -22,6 +22,10 @@ func QueryInt(r *http.Request, key string) (int, error) {
 
 func QueryUUID(r *http.Request, key string) (*uuid.UUID, error) {
 	value := Query(r, key)
+	if value == "" {
+		return nil, nil
+	}
+
 	parsed, err := uuid.Parse(value)
 	if err != nil {
 		return nil, err
