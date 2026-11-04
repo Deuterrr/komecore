@@ -89,7 +89,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 
 	msg := appErr.Message
-	if appErr.StatusCode >= http.StatusInternalServerError {
+	if appErr.StatusCode == http.StatusInternalServerError || appErr.Type == apperror.ErrTypeInternal {
 		msg = "internal server error"
 		code = apperror.CodeInternalServerError
 	}

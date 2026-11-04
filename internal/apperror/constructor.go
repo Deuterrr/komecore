@@ -126,6 +126,14 @@ func NewTooManyRequestsWithCode(code, msg string) *AppError {
 	return newAppErrorWithCode(ErrTypeTooManyRequests, code, msg, 429, applogger.LogLevelWarn, nil)
 }
 
+func NewNotImplemented(msg string) *AppError {
+	return newAppError(ErrTypeNotImplemented, msg, 501, applogger.LogLevelWarn, nil)
+}
+
+func NewNotImplementedWithCode(code, msg string) *AppError {
+	return newAppErrorWithCode(ErrTypeNotImplemented, code, msg, 501, applogger.LogLevelWarn, nil)
+}
+
 func NewInternal(err error) *AppError {
 	return newAppError(ErrTypeInternal, "internal server error", 500, applogger.LogLevelError, err)
 }

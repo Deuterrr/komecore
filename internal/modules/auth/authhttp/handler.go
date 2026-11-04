@@ -375,6 +375,11 @@ func (h *Handler) LogoutStaff(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) error {
+	if !h.googleCfg.IsConfigured() {
+		return apperror.NewNotImplemented("google oauth is disabled or not configured on this server").
+			WithCode(apperror.CodeAuthOAuthDisabled)
+	}
+
 	oauth2Config := &oauth2.Config{
 		ClientID:     h.googleCfg.ClientID,
 		ClientSecret: h.googleCfg.ClientSecret,
@@ -405,6 +410,11 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) error {
+	if !h.googleCfg.IsConfigured() {
+		return apperror.NewNotImplemented("google oauth is disabled or not configured on this server").
+			WithCode(apperror.CodeAuthOAuthDisabled)
+	}
+
 	cookie, err := appcookie.Extract(r, appcookie.CookieOAuthState)
 	if err != nil {
 		return apperror.NewBadRequest("missing oauth state cookie")
