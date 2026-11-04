@@ -17,6 +17,7 @@ const (
 	ErrTypeConflict         ErrorType = "CONFLICT"
 	ErrTypeMethodNotAllowed ErrorType = "METHOD_NOT_ALLOWED"
 	ErrTypeTooManyRequests  ErrorType = "TOO_MANY_REQUESTS"
+	ErrTypeNotImplemented   ErrorType = "NOT_IMPLEMENTED"
 	ErrTypeInternal         ErrorType = "INTERNAL_ERROR"
 )
 
@@ -29,6 +30,7 @@ var (
 	ErrConflict         = errors.New("conflict")
 	ErrMethodNotAllowed = errors.New("method not allowed")
 	ErrTooManyRequests  = errors.New("too many request")
+	ErrNotImplemented   = errors.New("not implemented")
 	ErrInternal         = errors.New("internal server error")
 )
 
@@ -77,4 +79,9 @@ func IsUnauthorized(err error) bool {
 func IsForbidden(err error) bool {
 	var appErr *AppError
 	return errors.As(err, &appErr) && appErr.Type == ErrTypeForbidden
+}
+
+func IsNotImplemented(err error) bool {
+	var appErr *AppError
+	return errors.As(err, &appErr) && appErr.Type == ErrTypeNotImplemented
 }

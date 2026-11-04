@@ -10,6 +10,7 @@ const (
 	CodeConflict            = "CONFLICT"
 	CodeMethodNotAllowed    = "METHOD_NOT_ALLOWED"
 	CodeRateLimitExceeded   = "RATE_LIMIT_EXCEEDED"
+	CodeNotImplemented      = "NOT_IMPLEMENTED"
 	CodeInternalServerError = "INTERNAL_SERVER_ERROR"
 
 	// Auth domain codes
@@ -17,6 +18,7 @@ const (
 	CodeAuthTokenExpired       = "AUTH_TOKEN_EXPIRED"
 	CodeAuthUnauthorized       = "AUTH_UNAUTHORIZED"
 	CodeAuthForbidden          = "AUTH_FORBIDDEN"
+	CodeAuthOAuthDisabled      = "AUTH_OAUTH_DISABLED"
 
 	// Catalog domain codes
 	CodeProductNotFound = "PRODUCT_NOT_FOUND"
@@ -64,6 +66,8 @@ func DefaultCodeForType(t ErrorType) string {
 		return CodeMethodNotAllowed
 	case ErrTypeTooManyRequests:
 		return CodeRateLimitExceeded
+	case ErrTypeNotImplemented:
+		return CodeNotImplemented
 	case ErrTypeInternal:
 		return CodeInternalServerError
 	default:

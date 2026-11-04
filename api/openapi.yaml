@@ -358,6 +358,12 @@ paths:
       responses:
         '302':
           description: Redirect to Google authorization screen
+        '501':
+          description: Google OAuth is disabled or not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/auth/google/callback:
     get:
@@ -380,6 +386,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
+        '501':
+          description: Google OAuth is disabled or not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   # ==============================================================================
   # PROFILE & USERS
