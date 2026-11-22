@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"komecore/internal/apperror"
 	"komecore/internal/httpx"
@@ -13,10 +14,14 @@ import (
 	"github.com/google/uuid"
 )
 
+const maxRequestIDLen = 128
+
+// Logging populates request correlation metadata (X-Request-ID and client IP) into
+// the request context and response headers, and records structured request outcome logs.
 func Logging(log applogger.Logger) Middleware {
 	return func(next httpx.AppHandler) httpx.AppHandler {
 		return func(w http.ResponseWriter, r *http.Request) error {
-			requestID := uuid.NewString()
+			requestID := resolveRequestID(r)
 			ctx := applogger.WithRequestID(r.Context(), requestID)
 			ctx = applogger.WithClientIP(ctx, httpx.ClientIP(r))
 			r = r.WithContext(ctx)
@@ -72,4 +77,17 @@ func Logging(log applogger.Logger) Middleware {
 			return err
 		}
 	}
+}
+
+// resolveRequestID preserves upstream gateway correlation IDs when valid, falling back
+// to a fresh UUID v4 when absent, blank, or tainted by control characters.
+func resolveRequestID(r *http.Request) string {
+	requestID := strings.TrimSpace(r.Header.Get("X-Request-ID"))
+	if requestID == "" || strings.IndexFunc(requestID, unicode.IsControl) != -1 {
+		return uuid.NewString()
+	}
+	if len(requestID) > maxRequestIDLen {
+		return requestID[:maxRequestIDLen]
+	}
+	return requestID
 }
